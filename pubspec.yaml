@@ -1,0 +1,58 @@
+name: ai_voice_notes_2
+description: "AI-powered voice notes app with intelligent organization"
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Audio recording
+  record: ^5.1.0
+  permission_handler: ^11.3.1
+  path_provider: ^2.1.4
+  
+  # OpenAI API
+  http: ^1.2.2
+  
+  # State management & storage
+  provider: ^6.1.2
+  shared_preferences: ^2.3.2
+  
+  # UI enhancements
+  flutter_animate: ^4.5.0
+  flutter_staggered_animations: ^1.1.1
+  shimmer: ^3.0.0
+  google_fonts: ^6.2.1
+  vibration: ^2.0.0
+  connectivity_plus: ^6.0.5
+  
+  # Environment variables
+  flutter_dotenv: ^5.2.1
+  
+  # Video player for onboarding
+  video_player: ^2.9.2
+  
+  # Paywall management
+  superwallkit_flutter: ^2.0.0
+  
+  # String similarity for fuzzy headline matching
+  string_similarity: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+dependency_overrides:
+  record_linux: ^1.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/onboarding/screenshots/
+    - assets/onboarding/videos/
