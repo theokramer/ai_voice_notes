@@ -5,6 +5,7 @@ import 'package:string_similarity/string_similarity.dart';
 import '../models/note.dart';
 import '../services/storage_service.dart';
 import '../services/openai_service.dart';
+import '../services/localization_service.dart';
 
 enum SortOption {
   recentlyUpdated,
@@ -34,7 +35,7 @@ class NotesProvider extends ChangeNotifier {
   Note? _deletedNote;
   SortOption _sortOption = SortOption.recentlyUpdated;
   SortDirection _sortDirection = SortDirection.descending;
-  NoteViewType _noteViewType = NoteViewType.standard;
+  NoteViewType _noteViewType = NoteViewType.grid;
   String _searchQuery = '';
   
   // AI processing state tracking
@@ -87,83 +88,84 @@ class NotesProvider extends ChangeNotifier {
   /// Creates sample tutorial notes for first-time users
   List<Note> _createSampleNotes() {
     final now = DateTime.now();
+    final loc = LocalizationService();
     
     return [
       // Sample Note 1: Welcome & Tutorial
       Note(
         id: 'sample_${now.millisecondsSinceEpoch}_1',
-        name: 'Welcome to Voice Notes',
+        name: loc.t('sample_note_1_name'),
         icon: '🎙️',
         createdAt: now.subtract(const Duration(hours: 2)),
         updatedAt: now.subtract(const Duration(hours: 2)),
         headlines: [
           Headline(
             id: 'sample_headline_1_1',
-            title: 'Getting Started',
+            title: loc.t('sample_note_1_headline_1'),
             createdAt: now.subtract(const Duration(hours: 2)),
             entries: [
               TextEntry(
                 id: 'sample_entry_1_1_1',
-                text: 'Welcome to Voice Notes! This app is designed to capture your thoughts effortlessly through voice recording. Simply tap the microphone button at the bottom of the screen to start recording. The app will automatically transcribe your speech into text using advanced speech recognition technology, so you can focus on your ideas instead of typing.',
+                text: loc.t('sample_note_1_entry_1_1'),
                 createdAt: now.subtract(const Duration(hours: 2)),
               ),
               TextEntry(
                 id: 'sample_entry_1_1_2',
-                text: 'Your recordings are intelligently organized. The AI creates headlines that group related content together. This happens automatically. You can record continuously and let the AI handle the organization - it\'s designed to understand context and create meaningful sections from your speech.',
+                text: loc.t('sample_note_1_entry_1_2'),
                 createdAt: now.subtract(const Duration(hours: 2, minutes: 30)),
               ),
               TextEntry(
                 id: 'sample_entry_1_1_3',
-                text: 'The interface is clean. Minimalist. You can switch between different view modes using the button in the top right. Try the grid view for a visual overview, or the minimalistic list for focus. Both work great!',
+                text: loc.t('sample_note_1_entry_1_3'),
                 createdAt: now.subtract(const Duration(hours: 2, minutes: 45)),
               ),
             ],
           ),
           Headline(
             id: 'sample_headline_1_2',
-            title: 'Core Features',
+            title: loc.t('sample_note_1_headline_2'),
             createdAt: now.subtract(const Duration(hours: 1, minutes: 45)),
             entries: [
               TextEntry(
                 id: 'sample_entry_1_2_1',
-                text: 'Search functionality allows you to quickly find any note or entry by typing keywords. The search works across all your content. You can also use the AI assistant by pulling down from the top. Just ask!',
+                text: loc.t('sample_note_1_entry_2_1'),
                 createdAt: now.subtract(const Duration(hours: 1, minutes: 45)),
               ),
               TextEntry(
                 id: 'sample_entry_1_2_2',
-                text: 'Pin important notes to keep them at the top. Perfect for ongoing projects or frequently referenced information. Pinned items stay at the top regardless of your sorting preferences, making them instantly accessible whenever you need them.',
+                text: loc.t('sample_note_1_entry_2_2'),
                 createdAt: now.subtract(const Duration(hours: 1, minutes: 30)),
               ),
               TextEntry(
                 id: 'sample_entry_1_2_3',
-                text: 'You have complete control. Tap any entry to edit it. Long-press to see more options including moving entries between sections or even to different notes. You can also manually create new sections by tapping on headline titles and reorganize everything.',
+                text: loc.t('sample_note_1_entry_2_3'),
                 createdAt: now.subtract(const Duration(hours: 1, minutes: 15)),
               ),
               TextEntry(
                 id: 'sample_entry_1_2_4',
-                text: 'The AI assistant is always available. Pull down from the top of the screen. Ask it to summarize your notes, find specific information, or create new notes from your questions. It has access to all your notes and provides contextual answers based on your content.',
+                text: loc.t('sample_note_1_entry_2_4'),
                 createdAt: now.subtract(const Duration(hours: 1, minutes: 5)),
               ),
             ],
           ),
           Headline(
             id: 'sample_headline_1_3',
-            title: 'Tips for Best Results',
+            title: loc.t('sample_note_1_headline_3'),
             createdAt: now.subtract(const Duration(hours: 1)),
             entries: [
               TextEntry(
                 id: 'sample_entry_1_3_1',
-                text: 'For best transcription quality, speak clearly. Natural pace works best. The AI understands complete sentences better, but it also handles fragments and quick thoughts. If you\'re in a noisy environment, stay close to your device and speak slightly louder than usual.',
+                text: loc.t('sample_note_1_entry_3_1'),
                 createdAt: now.subtract(const Duration(hours: 1)),
               ),
               TextEntry(
                 id: 'sample_entry_1_3_2',
-                text: 'Create different notes for different contexts. Work meetings. Personal ideas. Project planning. Daily journals. Learning notes. This organization helps you find information later and keeps your thoughts categorized naturally.',
+                text: loc.t('sample_note_1_entry_3_2'),
                 createdAt: now.subtract(const Duration(minutes: 45)),
               ),
               TextEntry(
                 id: 'sample_entry_1_3_3',
-                text: 'The AI learns from your usage patterns. It recognizes how you organize content. Feel free to manually adjust the AI\'s suggestions. This helps the system improve over time and adapt to your unique workflow and thinking style!',
+                text: loc.t('sample_note_1_entry_3_3'),
                 createdAt: now.subtract(const Duration(minutes: 30)),
               ),
             ],
@@ -175,68 +177,68 @@ class NotesProvider extends ChangeNotifier {
       // Sample Note 2: Meeting Notes Example
       Note(
         id: 'sample_${now.millisecondsSinceEpoch}_2',
-        name: 'Q4 Product Planning',
+        name: loc.t('sample_note_2_name'),
         icon: '📊',
         createdAt: now.subtract(const Duration(days: 1)),
         updatedAt: now.subtract(const Duration(days: 1)),
         headlines: [
           Headline(
             id: 'sample_headline_2_1',
-            title: 'Priority Action Items',
+            title: loc.t('sample_note_2_headline_1'),
             createdAt: now.subtract(const Duration(days: 1)),
             entries: [
               TextEntry(
                 id: 'sample_entry_2_1_1',
-                text: 'Schedule a comprehensive review session with the design team. We need their feedback by end of week. This is critical for the Q4 launch timeline. Make sure to include both the senior designers and the UX research team so everyone is aligned.',
+                text: loc.t('sample_note_2_entry_1_1'),
                 createdAt: now.subtract(const Duration(days: 1)),
               ),
               TextEntry(
                 id: 'sample_entry_2_1_2',
-                text: 'Follow-up meeting next Tuesday at 2 PM. Send calendar invites to all stakeholders. Product, engineering, and marketing teams. Prepare a brief status update document beforehand to keep the meeting focused and efficient.',
+                text: loc.t('sample_note_2_entry_1_2'),
                 createdAt: now.subtract(const Duration(days: 1, hours: 1)),
               ),
               TextEntry(
                 id: 'sample_entry_2_1_3',
-                text: 'Begin drafting the technical specification document. Work with the engineering leads. Ensure all requirements are technically feasible and clearly defined. Target completion by next Friday!',
+                text: loc.t('sample_note_2_entry_1_3'),
                 createdAt: now.subtract(const Duration(days: 1, hours: 2)),
               ),
             ],
           ),
           Headline(
             id: 'sample_headline_2_2',
-            title: 'Key Discussion Points',
+            title: loc.t('sample_note_2_headline_2'),
             createdAt: now.subtract(const Duration(days: 1, hours: 2)),
             entries: [
               TextEntry(
                 id: 'sample_entry_2_2_1',
-                text: 'We had an extensive discussion about the timeline for the new feature rollout. After considering various approaches, the team unanimously agreed on a phased rollout strategy. Phase 1 will target power users in October, Phase 2 will expand to all users in November, and Phase 3 introduces advanced features in December.',
+                text: loc.t('sample_note_2_entry_2_1'),
                 createdAt: now.subtract(const Duration(days: 1, hours: 2)),
               ),
               TextEntry(
                 id: 'sample_entry_2_2_2',
-                text: 'Budget concerns were initially raised by the finance team regarding the increased infrastructure costs. However, after presenting the revised proposal with optimized resource allocation and projected ROI, they approved the budget. We secured an additional 15% contingency fund for unexpected developments.',
+                text: loc.t('sample_note_2_entry_2_2'),
                 createdAt: now.subtract(const Duration(days: 1, hours: 3)),
               ),
               TextEntry(
                 id: 'sample_entry_2_2_3',
-                text: 'Marketing wants to align the product launch with the annual conference in December. This gives us a great platform for announcement but also adds pressure to the timeline. The team is confident we can meet this deadline with the current resource allocation.',
+                text: loc.t('sample_note_2_entry_2_3'),
                 createdAt: now.subtract(const Duration(days: 1, hours: 3, minutes: 30)),
               ),
             ],
           ),
           Headline(
             id: 'sample_headline_2_3',
-            title: 'Follow-up Required',
+            title: loc.t('sample_note_2_headline_3'),
             createdAt: now.subtract(const Duration(days: 1, hours: 4)),
             entries: [
               TextEntry(
                 id: 'sample_entry_2_3_1',
-                text: 'Send out a comprehensive meeting summary to all attendees by end of today. Include the key decisions made, action items with assigned owners, and the updated timeline. Make sure to CC the executive team for visibility.',
+                text: loc.t('sample_note_2_entry_3_1'),
                 createdAt: now.subtract(const Duration(days: 1, hours: 4)),
               ),
               TextEntry(
                 id: 'sample_entry_2_3_2',
-                text: 'Reach out to the legal team to ensure all compliance requirements are met for the new data handling features. Schedule a meeting with them early next week to go through the technical details.',
+                text: loc.t('sample_note_2_entry_3_2'),
                 createdAt: now.subtract(const Duration(days: 1, hours: 4, minutes: 30)),
               ),
             ],
@@ -247,68 +249,68 @@ class NotesProvider extends ChangeNotifier {
       // Sample Note 3: Ideas & Thoughts
       Note(
         id: 'sample_${now.millisecondsSinceEpoch}_3',
-        name: 'Innovation Brainstorm',
+        name: loc.t('sample_note_3_name'),
         icon: '💡',
         createdAt: now.subtract(const Duration(days: 2)),
         updatedAt: now.subtract(const Duration(days: 2)),
         headlines: [
           Headline(
             id: 'sample_headline_3_1',
-            title: 'App Concepts',
+            title: loc.t('sample_note_3_headline_1'),
             createdAt: now.subtract(const Duration(days: 2)),
             entries: [
               TextEntry(
                 id: 'sample_entry_3_1_1',
-                text: 'Idea for a personal productivity app that uses AI to track daily habits and provides intelligent insights. The app would learn from your patterns and suggest optimal times for different activities. It could integrate with calendar, health data, and even weather to provide contextual recommendations.',
+                text: loc.t('sample_note_3_entry_1_1'),
                 createdAt: now.subtract(const Duration(days: 2)),
               ),
               TextEntry(
                 id: 'sample_entry_3_1_2',
-                text: 'Concept for a collaborative workspace tool that seamlessly integrates voice notes with traditional task management. Teams could record quick updates, brainstorm sessions, or meeting notes, and the AI would automatically extract action items, assign tasks, and update project timelines. This could revolutionize how distributed teams work together.',
+                text: loc.t('sample_note_3_entry_1_2'),
                 createdAt: now.subtract(const Duration(days: 2, hours: 1)),
               ),
               TextEntry(
                 id: 'sample_entry_3_1_3',
-                text: 'Educational platform idea that uses spaced repetition and voice interaction to help people learn languages. Instead of traditional flashcards, users would have natural conversations with an AI that adapts to their learning pace and interests. The voice aspect makes it more natural than text-based learning.',
+                text: loc.t('sample_note_3_entry_1_3'),
                 createdAt: now.subtract(const Duration(days: 2, hours: 1, minutes: 30)),
               ),
             ],
           ),
           Headline(
             id: 'sample_headline_3_2',
-            title: 'Reflections',
+            title: loc.t('sample_note_3_headline_2'),
             createdAt: now.subtract(const Duration(days: 2, hours: 2)),
             entries: [
               TextEntry(
                 id: 'sample_entry_3_2_1',
-                text: 'Thinking about how voice interfaces are becoming more natural and intuitive. What if we could use voice notes not just for recording, but to create automatic daily summaries? Imagine ending each day by reviewing an AI-generated summary of everything you captured - your thoughts, tasks, and insights all organized.',
+                text: loc.t('sample_note_3_entry_2_1'),
                 createdAt: now.subtract(const Duration(days: 2, hours: 2)),
               ),
               TextEntry(
                 id: 'sample_entry_3_2_2',
-                text: 'The future of productivity tools might not be about adding more features, but about removing friction. Voice is inherently lower friction than typing. If we can make the organization and retrieval just as effortless, we might fundamentally change how people capture and use information.',
+                text: loc.t('sample_note_3_entry_2_2'),
                 createdAt: now.subtract(const Duration(days: 2, hours: 2, minutes: 30)),
               ),
             ],
           ),
           Headline(
             id: 'sample_headline_3_3',
-            title: 'Research Topics',
+            title: loc.t('sample_note_3_headline_3'),
             createdAt: now.subtract(const Duration(days: 2, hours: 3)),
             entries: [
               TextEntry(
                 id: 'sample_entry_3_3_1',
-                text: 'Need to research how AI can better understand context in voice recordings. Current systems are good at transcription, but struggle with understanding intent, emotion, and implicit context. What would it take to build a system that truly understands what someone means, not just what they say?',
+                text: loc.t('sample_note_3_entry_3_1'),
                 createdAt: now.subtract(const Duration(days: 2, hours: 3)),
               ),
               TextEntry(
                 id: 'sample_entry_3_3_2',
-                text: 'What are the best practices for organizing and retrieving large amounts of voice data? Traditional search works for text, but voice adds dimensions like tone, pace, and emotion. How can we make this searchable and useful? Are there new interaction paradigms we should explore?',
+                text: loc.t('sample_note_3_entry_3_2'),
                 createdAt: now.subtract(const Duration(days: 2, hours: 4)),
               ),
               TextEntry(
                 id: 'sample_entry_3_3_3',
-                text: 'Privacy and security considerations for voice data are crucial. Users need to trust that their personal thoughts and conversations are protected. Research end-to-end encryption options and explore local processing possibilities to minimize data sent to servers.',
+                text: loc.t('sample_note_3_entry_3_3'),
                 createdAt: now.subtract(const Duration(days: 2, hours: 4, minutes: 30)),
               ),
             ],
@@ -345,7 +347,7 @@ class NotesProvider extends ChangeNotifier {
       if (savedViewType != null) {
         _noteViewType = NoteViewType.values.firstWhere(
           (e) => e.name == savedViewType,
-          orElse: () => NoteViewType.standard,
+          orElse: () => NoteViewType.grid,
         );
       }
     } catch (e) {

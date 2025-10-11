@@ -1,7 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../providers/settings_provider.dart';
+import '../services/localization_service.dart';
 
 class AIAction {
   final String id;
@@ -31,141 +34,149 @@ class AIActionsMenu extends StatelessWidget {
     required this.onClose,
   });
 
-  static final List<AIAction> actions = [
-    // Note Management
-    AIAction(
-      id: 'consolidate',
-      title: 'Consolidate Entries',
-      description: 'Merge similar entries across notes into organized sections',
-      icon: Icons.merge,
-      category: 'Note Management',
-      example: 'Combine all meeting notes into a single document',
-    ),
-    AIAction(
-      id: 'move_entries',
-      title: 'Move Entries',
-      description: 'Intelligently suggest where entries should be moved',
-      icon: Icons.drive_file_move_outline,
-      category: 'Note Management',
-      example: 'Move related entries to appropriate notes',
-    ),
-    AIAction(
-      id: 'create_note',
-      title: 'Create Note from Chat',
-      description: 'Turn this conversation into a structured note',
-      icon: Icons.note_add,
-      category: 'Note Management',
-      example: 'Create a note with all discussed points',
-    ),
-    // Content Analysis
-    AIAction(
-      id: 'summarize',
-      title: 'Create Summary',
-      description: 'Generate a concise summary of selected notes',
-      icon: Icons.summarize,
-      category: 'Content Analysis',
-      example: 'Summarize all notes from this week',
-    ),
-    AIAction(
-      id: 'extract_actions',
-      title: 'Extract Action Items',
-      description: 'Find and list all action items from your notes',
-      icon: Icons.checklist,
-      category: 'Content Analysis',
-      example: 'List all TODOs mentioned in notes',
-    ),
-    AIAction(
-      id: 'find_insights',
-      title: 'Find Insights',
-      description: 'Discover patterns and connections in your notes',
-      icon: Icons.lightbulb_outline,
-      category: 'Content Analysis',
-      example: 'Show recurring themes in my project notes',
-    ),
-    // Organization
-    AIAction(
-      id: 'suggest_tags',
-      title: 'Suggest Tags',
-      description: 'Recommend relevant tags for better organization',
-      icon: Icons.label_outline,
-      category: 'Organization',
-      example: 'Tag all notes with relevant topics',
-    ),
-    AIAction(
-      id: 'search_notes',
-      title: 'Smart Search',
-      description: 'Search across all notes with natural language',
-      icon: Icons.search,
-      category: 'Organization',
-      example: 'Find notes about design decisions',
-    ),
-  ];
+  static List<AIAction> getActions() {
+    final loc = LocalizationService();
+    return [
+      // Note Management
+      AIAction(
+        id: 'consolidate',
+        title: loc.t('consolidate_entries'),
+        description: loc.t('action_consolidate_desc'),
+        icon: Icons.merge,
+        category: loc.t('note_management'),
+        example: loc.t('action_consolidate_example'),
+      ),
+      AIAction(
+        id: 'move_entries',
+        title: loc.t('move_entries'),
+        description: loc.t('action_move_entries_desc'),
+        icon: Icons.drive_file_move_outline,
+        category: loc.t('note_management'),
+        example: loc.t('action_move_example'),
+      ),
+      AIAction(
+        id: 'create_note',
+        title: loc.t('action_create_note_from_chat'),
+        description: loc.t('action_create_note_desc'),
+        icon: Icons.note_add,
+        category: loc.t('note_management'),
+        example: loc.t('action_create_note_example'),
+      ),
+      // Content Analysis
+      AIAction(
+        id: 'summarize',
+        title: loc.t('create_summary'),
+        description: loc.t('action_summarize_desc'),
+        icon: Icons.summarize,
+        category: loc.t('content_analysis'),
+        example: loc.t('action_summarize_example'),
+      ),
+      AIAction(
+        id: 'extract_actions',
+        title: loc.t('extract_action_items'),
+        description: loc.t('action_extract_actions_desc'),
+        icon: Icons.checklist,
+        category: loc.t('content_analysis'),
+        example: loc.t('action_extract_example'),
+      ),
+      AIAction(
+        id: 'find_insights',
+        title: loc.t('find_insights'),
+        description: loc.t('action_find_insights_desc'),
+        icon: Icons.lightbulb_outline,
+        category: loc.t('content_analysis'),
+        example: loc.t('action_insights_example'),
+      ),
+      // Organization
+      AIAction(
+        id: 'suggest_tags',
+        title: loc.t('suggest_tags'),
+        description: loc.t('action_suggest_tags_desc'),
+        icon: Icons.label_outline,
+        category: loc.t('organization'),
+        example: loc.t('action_tags_example'),
+      ),
+      AIAction(
+        id: 'search_notes',
+        title: loc.t('smart_search'),
+        description: loc.t('action_smart_search_desc'),
+        icon: Icons.search,
+        category: loc.t('organization'),
+        example: loc.t('action_search_example'),
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Group actions by category
-    final groupedActions = <String, List<AIAction>>{};
-    for (final action in actions) {
-      groupedActions.putIfAbsent(action.category, () => []).add(action);
-    }
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        final themeConfig = settingsProvider.currentThemeConfig;
+        
+        // Group actions by category
+        final actions = getActions();
+        final groupedActions = <String, List<AIAction>>{};
+        for (final action in actions) {
+          groupedActions.putIfAbsent(action.category, () => []).add(action);
+        }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.glassStrongSurface,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppTheme.radiusXLarge),
-        ),
-        border: Border.all(color: AppTheme.glassBorder, width: 1.5),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle
-          Container(
-            margin: const EdgeInsets.only(top: AppTheme.spacing12),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppTheme.glassBorder,
-              borderRadius: BorderRadius.circular(2),
+        return Container(
+          decoration: BoxDecoration(
+            color: AppTheme.glassStrongSurface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppTheme.radiusXLarge),
             ),
+            border: Border.all(color: AppTheme.glassBorder, width: 1.5),
           ),
-          const SizedBox(height: AppTheme.spacing16),
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(AppTheme.spacing8),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primary,
-                        AppTheme.primary.withValues(alpha: 0.7),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                  ),
-                  child: Icon(
-                    Icons.psychology,
-                    color: AppTheme.textPrimary,
-                    size: 20,
-                  ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: AppTheme.spacing12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.glassBorder,
+                  borderRadius: BorderRadius.circular(2),
                 ),
+              ),
+              const SizedBox(height: AppTheme.spacing16),
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppTheme.spacing8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            themeConfig.primaryColor,
+                            themeConfig.primaryColor.withValues(alpha: 0.7),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                      child: Icon(
+                        Icons.psychology,
+                        color: AppTheme.textPrimary,
+                        size: 20,
+                      ),
+                    ),
                 const SizedBox(width: AppTheme.spacing12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'AI Actions',
+                        LocalizationService().t('ai_actions'),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                       ),
                       Text(
-                        'Choose what AI should help with',
+                        LocalizationService().t('ai_actions_subtitle'),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppTheme.textTertiary,
                               fontSize: 11,
@@ -183,52 +194,54 @@ class AIActionsMenu extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppTheme.spacing16),
-          // Actions list
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing16),
-              children: groupedActions.entries.map((entry) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTheme.spacing8,
-                        vertical: AppTheme.spacing8,
-                      ),
-                      child: Text(
-                        entry.key.toUpperCase(),
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppTheme.textTertiary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.2,
-                            ),
-                      ),
-                    ),
-                    ...entry.value.map((action) => _buildActionCard(context, action)),
-                    const SizedBox(height: AppTheme.spacing12),
-                  ],
-                );
-              }).toList(),
-            ),
+              // Actions list
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing16),
+                  children: groupedActions.entries.map((entry) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppTheme.spacing8,
+                            vertical: AppTheme.spacing8,
+                          ),
+                          child: Text(
+                            entry.key.toUpperCase(),
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: AppTheme.textTertiary,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1.2,
+                                ),
+                          ),
+                        ),
+                        ...entry.value.map((action) => _buildActionCard(context, action, themeConfig)),
+                        const SizedBox(height: AppTheme.spacing12),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: AppTheme.spacing16),
+            ],
           ),
-          const SizedBox(height: AppTheme.spacing16),
-        ],
-      ),
-    )
-        .animate()
-        .slideY(
-          begin: 0.3,
-          end: 0,
-          duration: AppTheme.animationNormal,
-          curve: Curves.easeOutCubic,
         )
-        .fadeIn(duration: AppTheme.animationNormal);
+            .animate()
+            .slideY(
+              begin: 0.3,
+              end: 0,
+              duration: AppTheme.animationNormal,
+              curve: Curves.easeOutCubic,
+            )
+            .fadeIn(duration: AppTheme.animationNormal);
+      },
+    );
   }
 
-  Widget _buildActionCard(BuildContext context, AIAction action) {
+  Widget _buildActionCard(BuildContext context, AIAction action, ThemeConfig themeConfig) {
     return GestureDetector(
       onTap: () => onActionSelected(action),
       child: Container(
@@ -249,12 +262,12 @@ class AIActionsMenu extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(AppTheme.spacing8),
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.15),
+                      color: themeConfig.primaryColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                     ),
                     child: Icon(
                       action.icon,
-                      color: AppTheme.primary,
+                      color: themeConfig.primaryColor,
                       size: 18,
                     ),
                   ),

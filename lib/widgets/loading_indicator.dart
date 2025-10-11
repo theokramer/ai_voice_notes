@@ -51,7 +51,7 @@ class _LoadingIndicatorState extends State<LoadingIndicator>
               return CustomPaint(
                 painter: LoadingPainter(
                   progress: _controller.value,
-                  color: widget.color ?? AppTheme.primary,
+                  color: widget.color ?? Theme.of(context).colorScheme.primary,
                 ),
               );
             },
@@ -288,7 +288,7 @@ class _PulsingDotsState extends State<PulsingDots>
 
   @override
   Widget build(BuildContext context) {
-    final dotColor = widget.color ?? AppTheme.primary;
+    final dotColor = widget.color ?? Theme.of(context).colorScheme.primary;
 
     return AnimatedBuilder(
       animation: _controller,

@@ -10,6 +10,7 @@ import '../providers/settings_provider.dart';
 import '../services/haptic_service.dart';
 import '../services/recording_service.dart';
 import '../services/openai_service.dart';
+import '../services/localization_service.dart';
 import '../models/note.dart';
 import '../theme/app_theme.dart';
 import '../widgets/microphone_button.dart';
@@ -193,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             action = ChatAction(
               type: 'create_note',
               description: 'Create note "${response.actionData}"',
-              buttonLabel: 'Create Note',
+              buttonLabel: LocalizationService().t('create_note'),
               data: {'noteName': response.actionData},
             );
             break;
@@ -206,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               action = ChatAction(
                 type: 'add_entry',
                 description: 'Add to "${note.name}"',
-                buttonLabel: 'Add Entry',
+                buttonLabel: LocalizationService().t('add_entry'),
                 data: {'noteId': noteId, 'entryText': entryText},
               );
             }
@@ -219,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               action = ChatAction(
                 type: 'consolidate',
                 description: 'Consolidate ${noteIds.length} notes into "$targetName"',
-                buttonLabel: 'Consolidate',
+                buttonLabel: LocalizationService().t('consolidate_entries'),
                 data: {'targetName': targetName, 'noteIds': noteIds},
               );
             }
@@ -230,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               action = ChatAction(
                 type: 'move_entry',
                 description: 'Move entry between notes',
-                buttonLabel: 'Move Entry',
+                buttonLabel: LocalizationService().t('move_entry'),
                 data: {
                   'sourceNoteId': parts[0],
                   'targetNoteId': parts[1],
@@ -308,7 +309,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
         CustomSnackbar.show(
           context,
-          message: 'Action undone',
+          message: LocalizationService().t('action_undone'),
           type: SnackbarType.success,
           themeConfig: themeConfig,
         );
@@ -318,7 +319,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
         CustomSnackbar.show(
           context,
-          message: 'Failed to undo action',
+          message: LocalizationService().t('failed_undo'),
           type: SnackbarType.error,
           themeConfig: themeConfig,
         );
@@ -374,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
             CustomSnackbar.show(
               context,
-              message: 'Created note "${result['name']}"',
+              message: LocalizationService().t('created_note', {'name': result['name'] ?? ''}),
               type: SnackbarType.success,
               actionLabel: 'UNDO',
               onAction: _undoLastAction,
@@ -463,7 +464,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
           CustomSnackbar.show(
             context,
-            message: 'Added entry to "${note.name}"',
+            message: LocalizationService().t('added_entry_to', {'name': note.name}),
             type: SnackbarType.success,
             actionLabel: 'UNDO',
             onAction: _undoLastAction,
@@ -543,7 +544,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
           CustomSnackbar.show(
             context,
-            message: 'Consolidated ${notesToConsolidate.length} notes',
+            message: LocalizationService().t('consolidated_notes', {'count': notesToConsolidate.length.toString()}),
             type: SnackbarType.success,
             actionLabel: 'UNDO',
             onAction: _undoLastAction,
@@ -576,7 +577,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
         CustomSnackbar.show(
           context,
-          message: 'Failed to execute action: ${e.toString()}',
+          message: LocalizationService().t('failed_execute_action', {'error': e.toString()}),
           type: SnackbarType.error,
           themeConfig: themeConfig,
         );
@@ -700,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
         CustomSnackbar.show(
           context,
-          message: 'Failed to stop recording',
+          message: LocalizationService().t('failed_stop_recording'),
           type: SnackbarType.error,
           themeConfig: themeConfig,
         );
@@ -784,7 +785,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
         CustomSnackbar.show(
           context,
-          message: 'Transcription failed: $e',
+          message: LocalizationService().t('transcription_failed', {'error': e.toString()}),
           type: SnackbarType.error,
           themeConfig: themeConfig,
         );
@@ -953,7 +954,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
         CustomSnackbar.show(
           context,
-          message: 'Note updated',
+          message: LocalizationService().t('note_updated'),
           type: SnackbarType.success,
           themeConfig: themeConfig,
         );
@@ -996,7 +997,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                   const SizedBox(height: AppTheme.spacing16),
                   Text(
-                    'Delete Note?',
+                    LocalizationService().t('delete_note'),
                     style: Theme.of(context).textTheme.displaySmall,
                   ),
                   const SizedBox(height: AppTheme.spacing8),
@@ -1105,7 +1106,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
         CustomSnackbar.show(
           context,
-          message: 'Note deleted',
+          message: LocalizationService().t('note_deleted'),
           type: SnackbarType.info,
           actionLabel: 'Undo',
           onAction: () {
@@ -1155,7 +1156,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   const SizedBox(height: AppTheme.spacing24),
                   _buildOptionTile(
                     icon: note.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
-                    title: note.isPinned ? 'Unpin Note' : 'Pin Note',
+                    title: note.isPinned ? LocalizationService().t('unpin_note') : LocalizationService().t('pin_note'),
                     themeConfig: themeConfig,
                     onTap: () async {
                       Navigator.pop(context);
@@ -1165,7 +1166,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
                         CustomSnackbar.show(
                           context,
-                          message: note.isPinned ? 'Note unpinned' : 'Note pinned',
+                          message: note.isPinned ? LocalizationService().t('note_unpinned') : LocalizationService().t('note_pinned'),
                           type: SnackbarType.success,
                           themeConfig: themeConfig,
                         );
@@ -1174,7 +1175,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                   _buildOptionTile(
                     icon: Icons.edit,
-                    title: 'Edit Note',
+                    title: LocalizationService().t('edit_note'),
                     themeConfig: themeConfig,
                     onTap: () {
                       Navigator.pop(context);
@@ -1183,7 +1184,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                   _buildOptionTile(
                     icon: Icons.delete_outline,
-                    title: 'Delete Note',
+                    title: LocalizationService().t('delete_note'),
                     themeConfig: themeConfig,
                     isDestructive: true,
                     onTap: () {
@@ -1444,7 +1445,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     
                                     // Today section
                                     if (todayCount > 0 && index == 0) {
-                                      return _buildSectionHeader('Today');
+                                      return _buildSectionHeader(LocalizationService().t('today'));
                                     }
                                     if (index > 0 && index <= todayCount) {
                                       final note = groupedNotes['Today']![index - 1];
@@ -1473,9 +1474,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     
                                     // This Week section
                                     int weekStartIndex = todayCount > 0 ? todayCount + 1 : 0;
-                                    if (thisWeekCount > 0 && index == weekStartIndex) {
-                                      return _buildSectionHeader('This Week');
-                                    }
+                    if (thisWeekCount > 0 && index == weekStartIndex) {
+                      return _buildSectionHeader(LocalizationService().t('this_week'));
+                    }
                                     if (index > weekStartIndex && index <= weekStartIndex + thisWeekCount) {
                                       final note = groupedNotes['This Week']![index - weekStartIndex - 1];
                                       return GestureDetector(
@@ -1504,7 +1505,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     // More section
                                     int moreStartIndex = weekStartIndex + (thisWeekCount > 0 ? thisWeekCount + 1 : 0);
                                     if (groupedNotes['More']!.isNotEmpty && index == moreStartIndex) {
-                                      return _buildSectionHeader('More');
+                                      return _buildSectionHeader(LocalizationService().t('more'));
                                     }
                                     if (index > moreStartIndex) {
                                       final note = groupedNotes['More']![index - moreStartIndex - 1];
@@ -2149,8 +2150,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 style: Theme.of(context).textTheme.bodyLarge,
                                 decoration: InputDecoration(
                                   hintText: _isInChatMode
-                                      ? 'Ask AI...'
-                                      : 'Search notes or ask AI...',
+                                      ? LocalizationService().t('ask_ai_hint')
+                                      : LocalizationService().t('search_notes_or_ask_ai'),
                                   hintStyle: Theme.of(context)
                                       .textTheme
                                       .bodyMedium
@@ -2212,8 +2213,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final noResults = hasQuery && !hasResults;
     
     final buttonText = hasQuery 
-        ? 'Ask AI about "${_searchController.text}"'
-        : 'Ask AI';
+        ? LocalizationService().t('ask_ai_about', {'query': _searchController.text})
+        : LocalizationService().t('ask_ai');
     
     return AnimatedContainer(
       duration: AppTheme.animationNormal,
@@ -2535,7 +2536,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          'Ask AI',
+                                          LocalizationService().t('ask_ai'),
                                           style: TextStyle(
                                             color: AppTheme.textSecondary.withOpacity(0.7),
                                             fontSize: 14,

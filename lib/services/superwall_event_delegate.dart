@@ -56,13 +56,15 @@ class SuperwallEventDelegate extends SuperwallDelegate {
         debugPrint('🚩 Setting flag for onDismissHandler to show second paywall');
         _shouldShowSecondPaywall = true;
         
-        // Programmatically dismiss the first paywall so onDismissHandler fires
-        debugPrint('🎬 Dismissing first paywall programmatically...');
-        Superwall.shared.dismiss().then((_) {
-          debugPrint('✅ First paywall dismissed - onDismissHandler should fire now');
-        }).catchError((error) {
+        // STRATEGY: Dismiss immediately to trigger onDismissHandler
+        // The onDismissHandler will show second paywall instantly
+        debugPrint('🎬 Dismissing first paywall NOW to trigger second...');
+        try {
+          Superwall.shared.dismiss();
+          debugPrint('✅ Dismiss called - onDismissHandler will show second paywall');
+        } catch (error) {
           debugPrint('⚠️ Error dismissing paywall: $error');
-        });
+        }
       } else {
         debugPrint('ℹ️ First paywall not active - ignoring old event from previous session');
       }
@@ -75,12 +77,13 @@ class SuperwallEventDelegate extends SuperwallDelegate {
         debugPrint('🚩 Setting flag for onDismissHandler to show second paywall');
         _shouldShowSecondPaywall = true;
         
-        debugPrint('🎬 Dismissing first paywall programmatically...');
-        Superwall.shared.dismiss().then((_) {
-          debugPrint('✅ First paywall dismissed');
-        }).catchError((error) {
+        debugPrint('🎬 Dismissing first paywall programmatically (IMMEDIATE)...');
+        try {
+          Superwall.shared.dismiss();
+          debugPrint('✅ Dismiss called');
+        } catch (error) {
           debugPrint('⚠️ Error dismissing paywall: $error');
-        });
+        }
       }
     }
     

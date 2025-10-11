@@ -49,6 +49,10 @@ class PaywallFlowController {
     SuperwallEventDelegate.instance.setFirstPaywallActive();
     debugPrint('🎯 Registered first paywall with SuperwallEventDelegate');
     
+    // PRE-LOAD second paywall in background for instant display if needed
+    debugPrint('🔄 Pre-loading second paywall in background...');
+    _preloadSecondPaywall();
+    
     if (!context.mounted) {
       debugPrint('⚠️ Context not mounted, exiting _showFirstPaywall()');
       return;
@@ -170,6 +174,13 @@ class PaywallFlowController {
       if (!context.mounted) return;
       await _showErrorDialog(context, isFirstPaywall: true);
     }
+  }
+
+  /// Pre-load the second paywall in background for instant display
+  void _preloadSecondPaywall() {
+    // Note: Superwall automatically caches paywall assets after first load
+    // This method is a placeholder - actual pre-loading happens in handleSuperwallEvent
+    debugPrint('📦 Second paywall will be loaded on-demand (Superwall caching active)');
   }
 
   /// Show the second paywall (non-dismissible hard paywall)

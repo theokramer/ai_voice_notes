@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 import '../services/openai_service.dart';
 
 class AIChatOverlay extends StatefulWidget {
@@ -275,7 +276,7 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
             ),
             const SizedBox(height: AppTheme.spacing8),
             Text(
-              'Type your message in the search bar above',
+              LocalizationService().t('type_message_hint'),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.textTertiary,
                   ),
@@ -697,7 +698,7 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
                                   maxLines: null,
                                   textCapitalization: TextCapitalization.sentences,
                                   decoration: InputDecoration(
-                                    hintText: 'Type your message...',
+                                    hintText: LocalizationService().t('type_message_placeholder'),
                                     hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           color: AppTheme.textTertiary,
                                         ),

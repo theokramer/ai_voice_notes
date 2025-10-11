@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 
 class CustomRefreshIndicator extends StatefulWidget {
   final Widget child;
@@ -79,7 +78,7 @@ class _CustomRefreshIndicatorState extends State<CustomRefreshIndicator>
                       size: const Size(50, 50),
                       painter: _RefreshIndicatorPainter(
                         progress: _controller.value,
-                        color: widget.color ?? AppTheme.primary,
+                        color: widget.color ?? Theme.of(context).colorScheme.primary,
                       ),
                     );
                   },

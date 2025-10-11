@@ -6,21 +6,6 @@ enum AppLanguage {
   spanish,
   french,
   german,
-  italian,
-  portuguese,
-  dutch,
-  japanese,
-  korean,
-  chinese,
-  arabic,
-  russian,
-  hindi,
-  turkish,
-  polish,
-  swedish,
-  norwegian,
-  danish,
-  finnish,
 }
 
 /// Extension to provide metadata for each language
@@ -36,36 +21,6 @@ extension AppLanguageExtension on AppLanguage {
         return 'French';
       case AppLanguage.german:
         return 'German';
-      case AppLanguage.italian:
-        return 'Italian';
-      case AppLanguage.portuguese:
-        return 'Portuguese';
-      case AppLanguage.dutch:
-        return 'Dutch';
-      case AppLanguage.japanese:
-        return 'Japanese';
-      case AppLanguage.korean:
-        return 'Korean';
-      case AppLanguage.chinese:
-        return 'Chinese';
-      case AppLanguage.arabic:
-        return 'Arabic';
-      case AppLanguage.russian:
-        return 'Russian';
-      case AppLanguage.hindi:
-        return 'Hindi';
-      case AppLanguage.turkish:
-        return 'Turkish';
-      case AppLanguage.polish:
-        return 'Polish';
-      case AppLanguage.swedish:
-        return 'Swedish';
-      case AppLanguage.norwegian:
-        return 'Norwegian';
-      case AppLanguage.danish:
-        return 'Danish';
-      case AppLanguage.finnish:
-        return 'Finnish';
     }
   }
 
@@ -80,36 +35,6 @@ extension AppLanguageExtension on AppLanguage {
         return 'Français';
       case AppLanguage.german:
         return 'Deutsch';
-      case AppLanguage.italian:
-        return 'Italiano';
-      case AppLanguage.portuguese:
-        return 'Português';
-      case AppLanguage.dutch:
-        return 'Nederlands';
-      case AppLanguage.japanese:
-        return '日本語';
-      case AppLanguage.korean:
-        return '한국어';
-      case AppLanguage.chinese:
-        return '中文';
-      case AppLanguage.arabic:
-        return 'العربية';
-      case AppLanguage.russian:
-        return 'Русский';
-      case AppLanguage.hindi:
-        return 'हिन्दी';
-      case AppLanguage.turkish:
-        return 'Türkçe';
-      case AppLanguage.polish:
-        return 'Polski';
-      case AppLanguage.swedish:
-        return 'Svenska';
-      case AppLanguage.norwegian:
-        return 'Norsk';
-      case AppLanguage.danish:
-        return 'Dansk';
-      case AppLanguage.finnish:
-        return 'Suomi';
     }
   }
 
@@ -124,36 +49,6 @@ extension AppLanguageExtension on AppLanguage {
         return 'fr';
       case AppLanguage.german:
         return 'de';
-      case AppLanguage.italian:
-        return 'it';
-      case AppLanguage.portuguese:
-        return 'pt';
-      case AppLanguage.dutch:
-        return 'nl';
-      case AppLanguage.japanese:
-        return 'ja';
-      case AppLanguage.korean:
-        return 'ko';
-      case AppLanguage.chinese:
-        return 'zh';
-      case AppLanguage.arabic:
-        return 'ar';
-      case AppLanguage.russian:
-        return 'ru';
-      case AppLanguage.hindi:
-        return 'hi';
-      case AppLanguage.turkish:
-        return 'tr';
-      case AppLanguage.polish:
-        return 'pl';
-      case AppLanguage.swedish:
-        return 'sv';
-      case AppLanguage.norwegian:
-        return 'no';
-      case AppLanguage.danish:
-        return 'da';
-      case AppLanguage.finnish:
-        return 'fi';
     }
   }
 
@@ -168,36 +63,6 @@ extension AppLanguageExtension on AppLanguage {
         return '🇫🇷';
       case AppLanguage.german:
         return '🇩🇪';
-      case AppLanguage.italian:
-        return '🇮🇹';
-      case AppLanguage.portuguese:
-        return '🇵🇹';
-      case AppLanguage.dutch:
-        return '🇳🇱';
-      case AppLanguage.japanese:
-        return '🇯🇵';
-      case AppLanguage.korean:
-        return '🇰🇷';
-      case AppLanguage.chinese:
-        return '🇨🇳';
-      case AppLanguage.arabic:
-        return '🇸🇦';
-      case AppLanguage.russian:
-        return '🇷🇺';
-      case AppLanguage.hindi:
-        return '🇮🇳';
-      case AppLanguage.turkish:
-        return '🇹🇷';
-      case AppLanguage.polish:
-        return '🇵🇱';
-      case AppLanguage.swedish:
-        return '🇸🇪';
-      case AppLanguage.norwegian:
-        return '🇳🇴';
-      case AppLanguage.danish:
-        return '🇩🇰';
-      case AppLanguage.finnish:
-        return '🇫🇮';
     }
   }
 

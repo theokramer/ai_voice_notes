@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../providers/settings_provider.dart';
 
 class EmptyState extends StatelessWidget {
   final IconData icon;
@@ -20,34 +22,38 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget content = Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Animated icon
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppTheme.primary.withOpacity(0.2),
-                AppTheme.primary.withOpacity(0.1),
-              ],
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        final themeConfig = settingsProvider.currentThemeConfig;
+        
+        Widget content = Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Animated icon
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    themeConfig.primaryColor.withOpacity(0.2),
+                    themeConfig.primaryColor.withOpacity(0.1),
+                  ],
+                ),
+                border: Border.all(
+                  color: themeConfig.primaryColor.withOpacity(0.3),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                icon,
+                size: 60,
+                color: themeConfig.primaryColor,
+              ),
             ),
-            border: Border.all(
-              color: AppTheme.primary.withOpacity(0.3),
-              width: 2,
-            ),
-          ),
-          child: Icon(
-            icon,
-            size: 60,
-            color: AppTheme.primary,
-          ),
-        ),
         const SizedBox(height: AppTheme.spacing32),
         
         // Title with gradient
@@ -89,26 +95,28 @@ class EmptyState extends StatelessWidget {
       ],
     );
 
-    if (showAnimation) {
-      content = content
-          .animate()
-          .fadeIn(
-            duration: 600.ms,
-            curve: Curves.easeOut,
-          )
-          .slideY(
-            begin: 0.2,
-            end: 0,
-            duration: 600.ms,
-            curve: Curves.easeOutCubic,
-          );
-    }
+        if (showAnimation) {
+          content = content
+              .animate()
+              .fadeIn(
+                duration: 600.ms,
+                curve: Curves.easeOut,
+              )
+              .slideY(
+                begin: 0.2,
+                end: 0,
+                duration: 600.ms,
+                curve: Curves.easeOutCubic,
+              );
+        }
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing48),
-        child: content,
-      ),
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.spacing48),
+            child: content,
+          ),
+        );
+      },
     );
   }
 }
@@ -158,49 +166,53 @@ class _AnimatedEmptyStateState extends State<AnimatedEmptyState>
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing48),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Floating animated icon
-            AnimatedBuilder(
-              animation: _floatAnimation,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(0, _floatAnimation.value),
-                  child: child,
-                );
-              },
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppTheme.primary.withOpacity(0.3),
-                      AppTheme.primary.withOpacity(0.1),
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primary.withOpacity(0.2),
-                      blurRadius: 30,
-                      spreadRadius: 5,
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        final themeConfig = settingsProvider.currentThemeConfig;
+        
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.spacing48),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Floating animated icon
+                AnimatedBuilder(
+                  animation: _floatAnimation,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _floatAnimation.value),
+                      child: child,
+                    );
+                  },
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          themeConfig.primaryColor.withOpacity(0.3),
+                          themeConfig.primaryColor.withOpacity(0.1),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: themeConfig.primaryColor.withOpacity(0.2),
+                          blurRadius: 30,
+                          spreadRadius: 5,
+                        ),
+                      ],
                     ),
-                  ],
+                    child: Icon(
+                      widget.icon,
+                      size: 60,
+                      color: themeConfig.primaryColor,
+                    ),
+                  ),
                 ),
-                child: Icon(
-                  widget.icon,
-                  size: 60,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ),
             const SizedBox(height: AppTheme.spacing32),
             
             Text(
@@ -224,16 +236,18 @@ class _AnimatedEmptyStateState extends State<AnimatedEmptyState>
               ),
             ),
             
-            if (widget.action != null) ...[
-              const SizedBox(height: AppTheme.spacing32),
-              widget.action!,
-            ],
-          ],
-        )
-            .animate()
-            .fadeIn(duration: 600.ms)
-            .slideY(begin: 0.2, end: 0, duration: 600.ms),
-      ),
+                if (widget.action != null) ...[
+                  const SizedBox(height: AppTheme.spacing32),
+                  widget.action!,
+                ],
+              ],
+            )
+                .animate()
+                .fadeIn(duration: 600.ms)
+                .slideY(begin: 0.2, end: 0, duration: 600.ms),
+          ),
+        );
+      },
     );
   }
 }

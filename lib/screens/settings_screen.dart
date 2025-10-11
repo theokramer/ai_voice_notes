@@ -13,7 +13,6 @@ import '../services/localization_service.dart';
 import '../widgets/custom_snackbar.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/theme_preview_card.dart';
-import '../widgets/language_selector.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -61,7 +60,7 @@ class SettingsScreen extends StatelessWidget {
                     _buildSection(
                       context,
                       settingsProvider.currentThemeConfig,
-                      title: 'Language',
+                      title: LocalizationService().t('language'),
                       children: [
                         _buildLanguageSelector(context, settingsProvider.currentThemeConfig),
                       ],
@@ -70,7 +69,7 @@ class SettingsScreen extends StatelessWidget {
                     _buildSection(
                       context,
                       settingsProvider.currentThemeConfig,
-                      title: 'Appearance',
+                      title: LocalizationService().t('appearance'),
                       children: [
                         _buildThemeSelector(context, settingsProvider.currentThemeConfig),
                         _buildBackgroundStyleSelector(context, settingsProvider.currentThemeConfig),
@@ -80,7 +79,7 @@ class SettingsScreen extends StatelessWidget {
                     _buildSection(
                       context,
                       settingsProvider.currentThemeConfig,
-                      title: 'Recording',
+                      title: LocalizationService().t('recording'),
                       children: [
                         _buildAudioQualitySelector(context, settingsProvider.currentThemeConfig),
                       ],
@@ -89,7 +88,7 @@ class SettingsScreen extends StatelessWidget {
                     _buildSection(
                       context,
                       settingsProvider.currentThemeConfig,
-                      title: 'Preferences',
+                      title: LocalizationService().t('preferences'),
                       children: [
                         _buildHapticsToggle(context, settingsProvider.currentThemeConfig),
                         _buildUnifiedNoteViewToggle(context, settingsProvider.currentThemeConfig),
@@ -247,21 +246,234 @@ class SettingsScreen extends StatelessWidget {
           subtitle: '${currentLanguage.flag} ${currentLanguage.name} • ${localization.t('settings_language_subtitle')}',
           onTap: () async {
             await HapticService.light();
-            // Show language selector modal
+            // Show language selector modal directly
             if (context.mounted) {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) => const SizedBox(
-                  height: double.infinity,
-                  child: LanguageSelector(showPulseAnimation: false),
-                ),
-              );
+              _showLanguageModal(context, provider);
             }
           },
         );
       },
+    );
+  }
+
+  void _showLanguageModal(BuildContext context, SettingsProvider settingsProvider) {
+    final localization = LocalizationService();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: BoxDecoration(
+          color: AppTheme.background,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(24),
+          ),
+          border: Border.all(
+            color: AppTheme.glassBorder,
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.textTertiary.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      localization.t('select_language'),
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      HapticService.light();
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            
+            const Divider(height: 1, color: AppTheme.glassBorder),
+            
+            // Beta disclaimer
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.amber.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.amber.shade700,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      localization.t('language_beta_disclaimer'),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Language list
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: AppLanguage.values.length,
+                itemBuilder: (context, index) {
+                  final language = AppLanguage.values[index];
+                  final isSelected = language == settingsProvider.preferredLanguage;
+                  
+                  return _buildLanguageListItem(
+                    context,
+                    language,
+                    isSelected,
+                    settingsProvider,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageListItem(
+    BuildContext context,
+    AppLanguage language,
+    bool isSelected,
+    SettingsProvider settingsProvider,
+  ) {
+    return InkWell(
+      onTap: () async {
+        await HapticService.medium();
+        await settingsProvider.updatePreferredLanguage(language);
+        if (context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? settingsProvider.currentThemeConfig.primary.withValues(alpha: 0.1)
+              : Colors.transparent,
+          border: Border(
+            left: BorderSide(
+              color: isSelected
+                  ? settingsProvider.currentThemeConfig.primary
+                  : Colors.transparent,
+              width: 3,
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(
+              language.flag,
+              style: const TextStyle(fontSize: 32),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        language.name,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              color: isSelected
+                                  ? settingsProvider.currentThemeConfig.primary
+                                  : AppTheme.textPrimary,
+                            ),
+                      ),
+                      if (language != AppLanguage.english) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: Colors.amber.withValues(alpha: 0.4),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            'BETA',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.amber.shade700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    language.nativeName,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: settingsProvider.currentThemeConfig.primary,
+                size: 24,
+              ),
+          ],
+        ),
+      ),
     );
   }
 

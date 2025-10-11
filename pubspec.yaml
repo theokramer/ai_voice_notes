@@ -29,7 +29,6 @@ dependencies:
   flutter_animate: ^4.5.0
   flutter_staggered_animations: ^1.1.1
   shimmer: ^3.0.0
-  google_fonts: ^6.2.1
   vibration: ^2.0.0
   connectivity_plus: ^6.0.5
   
@@ -62,3 +61,17 @@ flutter:
     - .env
     - assets/onboarding/screenshots/
     - assets/onboarding/videos/
+  
+  fonts:
+    - family: EBGaramond
+      fonts:
+        - asset: assets/EB_Garamond,Poppins/EB_Garamond/static/EBGaramond-Regular.ttf
+          weight: 400
+        - asset: assets/EB_Garamond,Poppins/EB_Garamond/static/EBGaramond-Medium.ttf
+          weight: 500
+        - asset: assets/EB_Garamond,Poppins/EB_Garamond/static/EBGaramond-SemiBold.ttf
+          weight: 600
+        - asset: assets/EB_Garamond,Poppins/EB_Garamond/static/EBGaramond-Bold.ttf
+          weight: 700
+        - asset: assets/EB_Garamond,Poppins/EB_Garamond/static/EBGaramond-ExtraBold.ttf
+          weight: 800

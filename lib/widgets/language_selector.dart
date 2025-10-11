@@ -52,19 +52,9 @@ class LanguageSelector extends StatelessWidget {
               children: [
                 Text(
                   currentLanguage.flag,
-                  style: const TextStyle(fontSize: 20),
+                  style: const TextStyle(fontSize: 24),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  currentLanguage.code.toUpperCase(),
-                  style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 6),
                 const Icon(
                   Icons.expand_more,
                   color: AppTheme.textSecondary,
@@ -148,6 +138,40 @@ class LanguageSelector extends StatelessWidget {
             
             const Divider(height: 1, color: AppTheme.glassBorder),
             
+            // Beta disclaimer
+            Container(
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.amber.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.amber.shade700,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      localization.t('language_beta_disclaimer'),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
             // Language list
             Expanded(
               child: ListView.builder(
@@ -224,14 +248,44 @@ class _LanguageListItem extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        language.name,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: isSelected
-                                  ? settingsProvider.currentThemeConfig.primary
-                                  : AppTheme.textPrimary,
+                      Row(
+                        children: [
+                          Text(
+                            language.name,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                  color: isSelected
+                                      ? settingsProvider.currentThemeConfig.primary
+                                      : AppTheme.textPrimary,
+                                ),
+                          ),
+                          if (language != AppLanguage.english) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: Colors.amber.withValues(alpha: 0.4),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                'BETA',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.amber.shade700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                             ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(

@@ -11,6 +11,7 @@ import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/haptic_service.dart';
 import '../services/recording_service.dart';
+import '../services/localization_service.dart';
 import '../widgets/custom_snackbar.dart';
 import '../widgets/unified_note_view.dart';
 import '../widgets/animated_background.dart';
@@ -378,7 +379,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       if (mounted) {
         CustomSnackbar.show(
           context,
-          message: 'Note renamed',
+          message: LocalizationService().t('note_renamed'),
           type: SnackbarType.success,
         );
       }
@@ -411,7 +412,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         if (mounted) {
           CustomSnackbar.show(
             context,
-            message: 'Section renamed',
+            message: LocalizationService().t('section_renamed'),
             type: SnackbarType.success,
           );
         }
@@ -457,7 +458,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   const SizedBox(height: AppTheme.spacing24),
                   _buildOptionTile(
                       icon: Icons.copy,
-                      title: 'Copy Text',
+                      title: LocalizationService().t('copy_text'),
                       themeConfig: themeConfig,
                       onTap: () async {
                         Navigator.pop(context);
@@ -466,7 +467,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                         if (mounted) {
                           CustomSnackbar.show(
                             context,
-                            message: 'Text copied to clipboard',
+                            message: LocalizationService().t('copy_text'),
                             type: SnackbarType.success,
                           );
                         }
@@ -474,7 +475,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                     ),
                     _buildOptionTile(
                       icon: Icons.drive_file_move_outline,
-                      title: 'Move to Section',
+                      title: LocalizationService().t('move_to_section'),
                       themeConfig: themeConfig,
                     onTap: () {
                       Navigator.pop(context);
@@ -483,7 +484,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   ),
                   _buildOptionTile(
                       icon: Icons.note_add_outlined,
-                      title: 'Move to Note',
+                      title: LocalizationService().t('move_to_note'),
                       themeConfig: themeConfig,
                     onTap: () {
                       Navigator.pop(context);
@@ -496,7 +497,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                     ),
                     _buildOptionTile(
                       icon: headline.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                      title: headline.isPinned ? 'Unpin Section' : 'Pin Section',
+                      title: headline.isPinned ? LocalizationService().t('unpin_section') : LocalizationService().t('pin_section'),
                       themeConfig: themeConfig,
                       onTap: () async {
                         Navigator.pop(context);
@@ -506,7 +507,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                         if (mounted) {
                           CustomSnackbar.show(
                             context,
-                            message: headline.isPinned ? 'Section unpinned' : 'Section pinned',
+                            message: headline.isPinned ? LocalizationService().t('section_unpinned') : LocalizationService().t('section_pinned'),
                           type: SnackbarType.success,
                         );
                       }
@@ -518,7 +519,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   ),
                   _buildOptionTile(
                     icon: Icons.delete_outline,
-                    title: 'Delete Entry',
+                    title: LocalizationService().t('delete_entry'),
                     themeConfig: themeConfig,
                     isDestructive: true,
                     onTap: () {
@@ -603,7 +604,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     if (availableHeadlines.isEmpty) {
       CustomSnackbar.show(
         context,
-        message: 'No other sections available',
+        message: LocalizationService().t('no_other_sections'),
         type: SnackbarType.info,
       );
       return;
@@ -718,7 +719,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       if (mounted) {
         CustomSnackbar.show(
           context,
-          message: 'Entry moved',
+          message: LocalizationService().t('entry_moved'),
           type: SnackbarType.success,
         );
       }
@@ -759,7 +760,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           if (mounted) {
             CustomSnackbar.show(
               context,
-              message: 'Entry moved successfully',
+              message: LocalizationService().t('entry_moved'),
               type: SnackbarType.success,
             );
             // Navigate back if entry was moved to a different note
@@ -805,7 +806,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             if (mounted) {
               CustomSnackbar.show(
                 context,
-                message: 'Entry moved to new note',
+                message: LocalizationService().t('entry_moved'),
                 type: SnackbarType.success,
               );
               Navigator.pop(context);
@@ -852,7 +853,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   const SizedBox(height: AppTheme.spacing24),
                   _buildOptionTile(
                     icon: headline.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                    title: headline.isPinned ? 'Unpin Section' : 'Pin Section',
+                    title: headline.isPinned ? LocalizationService().t('unpin_section') : LocalizationService().t('pin_section'),
                     themeConfig: themeConfig,
                     onTap: () async {
                       Navigator.pop(context);
@@ -862,7 +863,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                       if (mounted) {
                         CustomSnackbar.show(
                           context,
-                          message: headline.isPinned ? 'Section unpinned' : 'Section pinned',
+                          message: headline.isPinned ? LocalizationService().t('section_unpinned') : LocalizationService().t('section_pinned'),
                           type: SnackbarType.success,
                         );
                       }
@@ -870,7 +871,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   ),
                   _buildOptionTile(
                     icon: Icons.edit,
-                    title: 'Rename Section',
+                    title: LocalizationService().t('rename_section'),
                     themeConfig: themeConfig,
                     onTap: () {
                       Navigator.pop(context);
@@ -879,7 +880,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   ),
                   _buildOptionTile(
                     icon: Icons.delete_outline,
-                    title: 'Delete Section',
+                    title: LocalizationService().t('delete_section'),
                     themeConfig: themeConfig,
                     isDestructive: true,
                     onTap: () {
@@ -1206,7 +1207,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       if (mounted) {
         CustomSnackbar.show(
           context,
-          message: 'Section deleted',
+          message: LocalizationService().t('section_deleted'),
           type: SnackbarType.info,
         );
       }
@@ -1252,7 +1253,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       if (mounted) {
         CustomSnackbar.show(
           context,
-          message: 'Failed to stop recording',
+          message: LocalizationService().t('failed_stop_recording'),
           type: SnackbarType.error,
         );
       }
@@ -1284,7 +1285,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         HapticService.success();
         CustomSnackbar.show(
           context,
-          message: 'Entry added',
+          message: LocalizationService().t('entry_added'),
           type: SnackbarType.success,
         );
         
@@ -1321,7 +1322,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         HapticService.error();
         CustomSnackbar.show(
           context,
-          message: 'Error processing recording: $e',
+          message: LocalizationService().t('transcription_failed', {'error': e.toString()}),
           type: SnackbarType.error,
         );
       }
@@ -1370,7 +1371,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   const SizedBox(height: AppTheme.spacing24),
                   _buildOptionTile(
                     icon: Icons.keyboard,
-                    title: 'Write Entry',
+                    title: LocalizationService().t('write_entry'),
                     themeConfig: themeConfig,
                     onTap: () {
                       Navigator.pop(context);
@@ -1379,7 +1380,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                   ),
                   _buildOptionTile(
                     icon: Icons.mic,
-                    title: 'Record Entry',
+                    title: LocalizationService().t('record_entry'),
                     themeConfig: themeConfig,
                     onTap: () {
                       Navigator.pop(context);
@@ -1551,7 +1552,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       if (mounted) {
         CustomSnackbar.show(
           context,
-          message: 'Entry added',
+          message: LocalizationService().t('entry_added'),
           type: SnackbarType.success,
         );
         
@@ -1866,7 +1867,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       if (mounted) {
         CustomSnackbar.show(
           context,
-          message: 'Entry deleted',
+          message: LocalizationService().t('entry_deleted'),
           type: SnackbarType.info,
         );
       }

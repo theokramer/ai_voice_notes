@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 
 class NoteOrganizationSheet extends StatelessWidget {
@@ -51,7 +52,7 @@ class NoteOrganizationSheet extends StatelessWidget {
                         horizontal: AppTheme.spacing24,
                       ),
                       child: Text(
-                        'Organize Notes',
+                        LocalizationService().t('organize_notes'),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
@@ -61,7 +62,7 @@ class NoteOrganizationSheet extends StatelessWidget {
                     const SizedBox(height: AppTheme.spacing24),
                     
                     // View Type Section
-                    _buildSectionHeader(context, 'View Type'),
+                    _buildSectionHeader(context, LocalizationService().t('view_type')),
                     const SizedBox(height: AppTheme.spacing12),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
@@ -99,11 +100,11 @@ class NoteOrganizationSheet extends StatelessWidget {
                     const SizedBox(height: AppTheme.spacing24),
                     
                     // Sort By Section
-                    _buildSectionHeader(context, 'Sort By'),
+                    _buildSectionHeader(context, LocalizationService().t('sort_by')),
                     const SizedBox(height: AppTheme.spacing12),
                     _buildSortOption(
                       context,
-                      'Date Updated',
+                      LocalizationService().t('date_updated'),
                       Icons.update,
                       SortOption.recentlyUpdated,
                       provider.sortOption == SortOption.recentlyUpdated,
@@ -112,7 +113,7 @@ class NoteOrganizationSheet extends StatelessWidget {
                     ),
                     _buildSortOption(
                       context,
-                      'Date Created',
+                      LocalizationService().t('date_created'),
                       Icons.calendar_today,
                       SortOption.dateCreated,
                       provider.sortOption == SortOption.dateCreated,

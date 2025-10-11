@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../theme/app_theme.dart';
 import '../models/settings.dart';
+import '../services/localization_service.dart';
 
 class ThemePreviewCard extends StatefulWidget {
   final ThemePreset preset;
@@ -43,17 +44,18 @@ class _ThemePreviewCardState extends State<ThemePreviewCard>
   }
 
   String _getThemeName() {
+    final loc = LocalizationService();
     switch (widget.preset) {
       case ThemePreset.modern:
-        return 'Modern Dark';
+        return loc.t('theme_modern');
       case ThemePreset.oceanBlue:
-        return 'Ocean Blue';
+        return loc.t('theme_ocean');
       case ThemePreset.sunsetOrange:
-        return 'Sunset Orange';
+        return loc.t('theme_sunset');
       case ThemePreset.forestGreen:
-        return 'Forest Green';
+        return loc.t('theme_forest');
       case ThemePreset.aurora:
-        return 'Aurora';
+        return loc.t('theme_aurora');
     }
   }
 

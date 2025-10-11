@@ -250,80 +250,74 @@ class _PaywallFlowScreenState extends State<_PaywallFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // App icon/logo
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppTheme.primary,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 30,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 10),
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        final themeConfig = settingsProvider.currentThemeConfig;
+        
+        return Scaffold(
+          backgroundColor: AppTheme.background,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App icon/logo
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: themeConfig.primaryColor,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: themeConfig.primaryColor.withValues(alpha: 0.3),
+                        blurRadius: 30,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.lock_open,
-                size: 60,
-                color: Colors.white,
-              ),
-            )
-                .animate()
-                .scale(
-                  duration: const Duration(milliseconds: 600),
-                  curve: Curves.easeOutBack,
+                  child: const Icon(
+                    Icons.lock_open,
+                    size: 60,
+                    color: Colors.white,
+                  ),
                 )
-                .fadeIn(duration: const Duration(milliseconds: 400)),
-            
-            const SizedBox(height: 32),
-            
-            // Loading text
-            const Text(
-              'Loading subscription options...',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: AppTheme.textSecondary,
-                height: 1.5,
-              ),
-            )
-                .animate()
-                .fadeIn(
-                  delay: const Duration(milliseconds: 300),
-                  duration: const Duration(milliseconds: 600),
-                ),
-            
-            const SizedBox(height: 60),
-            
-            // Loading indicator
-            SizedBox(
-              width: 40,
-              height: 40,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  AppTheme.primary.withValues(alpha: 0.5),
-                ),
-              ),
-            )
-                .animate()
-                .fadeIn(
-                  delay: const Duration(milliseconds: 500),
-                  duration: const Duration(milliseconds: 600),
-                ),
-          ],
-        ),
-      ),
+                    .animate()
+                    .scale(
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOutBack,
+                    )
+                    .fadeIn(duration: const Duration(milliseconds: 400)),
+                
+                const SizedBox(height: 32),
+                
+                // Loading text - removed for cleaner look
+                // User sees app logo instead of loading text
+                const SizedBox.shrink(),
+                
+                const SizedBox(height: 60),
+                
+                // Loading indicator
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      themeConfig.primaryColor.withValues(alpha: 0.5),
+                    ),
+                  ),
+                )
+                    .animate()
+                    .fadeIn(
+                      delay: const Duration(milliseconds: 500),
+                      duration: const Duration(milliseconds: 600),
+                    ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

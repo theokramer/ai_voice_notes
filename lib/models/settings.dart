@@ -31,7 +31,7 @@ class Settings {
     this.audioQuality = AudioQuality.high,
     this.hapticsEnabled = true,
     this.useUnifiedNoteView = true,
-    this.backgroundStyle = BackgroundStyle.none, // Default to no animation
+    this.backgroundStyle = BackgroundStyle.clouds, // Default to gentle clouds
     this.hasRequestedMicPermission = false,
     this.autoCloseAfterEntry = false,
     this.preferredLanguage,
@@ -97,7 +97,7 @@ class Settings {
       useUnifiedNoteView: json['useUnifiedNoteView'] ?? true,
       backgroundStyle: BackgroundStyle.values.firstWhere(
         (e) => e.name == json['backgroundStyle'],
-        orElse: () => BackgroundStyle.none,
+        orElse: () => BackgroundStyle.clouds,
       ),
       hasRequestedMicPermission: json['hasRequestedMicPermission'] ?? false,
       autoCloseAfterEntry: json['autoCloseAfterEntry'] ?? false,

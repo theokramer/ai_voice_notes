@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../models/settings.dart';
 
 class ThemeConfig {
@@ -151,79 +150,87 @@ class AppTheme {
         onPrimary: textPrimary,
         onSurface: textPrimary,
       ),
-      textTheme: GoogleFonts.interTextTheme(
-        const TextTheme(
-          displayLarge: TextStyle(
-            fontSize: 36,
-            fontWeight: FontWeight.w700,
-            color: textPrimary,
-            letterSpacing: -0.7,
-            height: 1.1,
-          ),
-          displayMedium: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w600,
-            color: textPrimary,
-            letterSpacing: -0.4,
-            height: 1.2,
-          ),
-          displaySmall: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w600,
-            color: textPrimary,
-            letterSpacing: -0.3,
-            height: 1.3,
-          ),
-          headlineMedium: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: textPrimary,
-            letterSpacing: -0.25,
-            height: 1.3,
-          ),
-          titleLarge: TextStyle(
-            fontSize: 19,
-            fontWeight: FontWeight.w600,
-            color: textPrimary,
-            letterSpacing: -0.2,
-            height: 1.3,
-          ),
-          titleMedium: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w500,
-            color: textPrimary,
-            height: 1.4,
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w400,
-            color: textPrimary,
-            height: 1.65,
-            letterSpacing: 0.1,
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w400,
-            color: textSecondary,
-            height: 1.5,
-            letterSpacing: 0.1,
-          ),
-          labelLarge: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            color: textPrimary,
-            letterSpacing: 0.1,
-          ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(
+          fontSize: 36,
+          fontWeight: FontWeight.w700,
+          color: textPrimary,
+          fontFamily: 'EBGaramond',
+          letterSpacing: -0.7,
+          height: 1.1,
+        ),
+        displayMedium: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w600,
+          color: textPrimary,
+          fontFamily: 'EBGaramond',
+          letterSpacing: -0.4,
+          height: 1.2,
+        ),
+        displaySmall: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: textPrimary,
+          fontFamily: 'EBGaramond',
+          letterSpacing: -0.3,
+          height: 1.3,
+        ),
+        headlineMedium: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+          color: textPrimary,
+          fontFamily: 'EBGaramond',
+          letterSpacing: -0.25,
+          height: 1.3,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 19,
+          fontWeight: FontWeight.w600,
+          color: textPrimary,
+          fontFamily: 'EBGaramond',
+          letterSpacing: -0.2,
+          height: 1.3,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w500,
+          color: textPrimary,
+          fontFamily: 'EBGaramond',
+          height: 1.4,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w400,
+          color: textPrimary,
+          fontFamily: 'EBGaramond',
+          height: 1.65,
+          letterSpacing: 0.1,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w400,
+          color: textSecondary,
+          fontFamily: 'EBGaramond',
+          height: 1.5,
+          letterSpacing: 0.1,
+        ),
+        labelLarge: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: textPrimary,
+          fontFamily: 'EBGaramond',
+          letterSpacing: 0.1,
         ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: background,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: const TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w700,
           color: textPrimary,
+          fontFamily: 'EBGaramond',
           letterSpacing: -0.5,
         ),
       ),

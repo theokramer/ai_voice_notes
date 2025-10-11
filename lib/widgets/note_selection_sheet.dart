@@ -1,8 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import '../models/note.dart';
 import '../theme/app_theme.dart';
+import '../providers/settings_provider.dart';
 
 class NoteSelectionSheet extends StatelessWidget {
   final List<Note> notes;
@@ -180,41 +182,47 @@ class NoteSelectionSheet extends StatelessWidget {
   }
 
   Widget _buildCreateNoteButton(BuildContext context) {
-    return GestureDetector(
-      onTap: onCreateNote,
-      child: Container(
-        padding: const EdgeInsets.all(AppTheme.spacing20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.primary,
-              AppTheme.primary.withValues(alpha: 0.8),
-            ],
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        final themeConfig = settingsProvider.currentThemeConfig;
+        
+        return GestureDetector(
+          onTap: onCreateNote,
+          child: Container(
+            padding: const EdgeInsets.all(AppTheme.spacing20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  themeConfig.primaryColor,
+                  themeConfig.primaryColor.withValues(alpha: 0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+              boxShadow: AppTheme.getThemedShadow(themeConfig),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.add_circle_outline,
+                  color: AppTheme.textPrimary,
+                  size: 24,
+                ),
+                const SizedBox(width: AppTheme.spacing12),
+                Text(
+                  'Create new note',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
           ),
-          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          boxShadow: AppTheme.buttonShadow,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.add_circle_outline,
-              color: AppTheme.textPrimary,
-              size: 24,
-            ),
-            const SizedBox(width: AppTheme.spacing12),
-            Text(
-              'Create new note',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
