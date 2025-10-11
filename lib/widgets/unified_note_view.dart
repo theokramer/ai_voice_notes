@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
+import '../providers/settings_provider.dart';
 import '../services/haptic_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/custom_snackbar.dart';
@@ -12,14 +13,14 @@ class UnifiedNoteView extends StatefulWidget {
   final Note note;
   final Function(String noteId, String headlineId, TextEntry entry, Headline headline) onEntryLongPress;
   final Function(String noteId, Headline headline) onHeadlineLongPress;
-  final bool highlightLastEntry;
+  final String? highlightedEntryId;
 
   const UnifiedNoteView({
     super.key,
     required this.note,
     required this.onEntryLongPress,
     required this.onHeadlineLongPress,
-    this.highlightLastEntry = false,
+    this.highlightedEntryId,
   });
 
   @override
@@ -159,6 +160,9 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
 
   @override
   Widget build(BuildContext context) {
+    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    final themeConfig = settingsProvider.currentThemeConfig;
+    
     if (widget.note.headlines.isEmpty) {
       return Center(
         child: Padding(
@@ -220,7 +224,6 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
           final headline = headlineEntry.value;
           final isFirstPinned = headline.isPinned && headlineIndex == 0;
           final isFirstUnpinned = !headline.isPinned && headlineIndex == pinnedHeadlines.length;
-          final isLastHeadline = headlineIndex == allHeadlines.length - 1;
 
           return [
             // Add "Pinned" label before first pinned section
@@ -234,32 +237,32 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
                         horizontal: AppTheme.spacing12,
                         vertical: AppTheme.spacing4,
                       ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primary.withValues(alpha: 0.3),
-                            AppTheme.primary.withValues(alpha: 0.15),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                        border: Border.all(
-                          color: AppTheme.primary.withValues(alpha: 0.4),
-                          width: 1,
-                        ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          themeConfig.primaryColor.withValues(alpha: 0.3),
+                          themeConfig.primaryColor.withValues(alpha: 0.15),
+                        ],
                       ),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      border: Border.all(
+                        color: themeConfig.primaryColor.withValues(alpha: 0.4),
+                        width: 1,
+                      ),
+                    ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.push_pin,
-                            size: 12,
-                            color: AppTheme.primary,
-                          ),
-                          const SizedBox(width: AppTheme.spacing4),
-                          Text(
-                            'PINNED SECTIONS',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.primary,
+                        Icon(
+                          Icons.push_pin,
+                          size: 12,
+                          color: themeConfig.primaryColor,
+                        ),
+                        const SizedBox(width: AppTheme.spacing4),
+                        Text(
+                          'PINNED SECTIONS',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: themeConfig.primaryColor,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 10,
                                   letterSpacing: 0.8,
@@ -274,13 +277,13 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
                         height: 1,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            colors: [
-                              AppTheme.primary.withValues(alpha: 0.3),
-                              Colors.transparent,
-                            ],
-                          ),
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            themeConfig.primaryColor.withValues(alpha: 0.3),
+                            Colors.transparent,
+                          ],
+                        ),
                         ),
                       ),
                     ),
@@ -325,18 +328,18 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
                     if (headline.isPinned)
                       Padding(
                         padding: const EdgeInsets.only(right: AppTheme.spacing8),
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Icon(
-                            Icons.push_pin,
-                            size: 12,
-                            color: AppTheme.primary,
-                          ),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: themeConfig.primaryColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(4),
                         ),
+                        child: Icon(
+                          Icons.push_pin,
+                          size: 12,
+                          color: themeConfig.primaryColor,
+                        ),
+                      ),
                       ),
                     Expanded(
                       child: _editingHeadlineId == headline.id
@@ -353,15 +356,15 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
                                         height: 1.3,
                                         letterSpacing: -0.3,
                                       ),
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                                      borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                                      borderSide: BorderSide(color: AppTheme.primary, width: 1.5),
-                                    ),
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                    borderSide: BorderSide(color: themeConfig.primaryColor, width: 1.5),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                    borderSide: BorderSide(color: themeConfig.primaryColor, width: 1.5),
+                                  ),
                                     contentPadding: const EdgeInsets.symmetric(
                                       horizontal: AppTheme.spacing8,
                                       vertical: AppTheme.spacing8,
@@ -403,14 +406,14 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
                                           horizontal: AppTheme.spacing12,
                                           vertical: AppTheme.spacing4,
                                         ),
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              AppTheme.primary,
-                                              AppTheme.primary.withValues(alpha: 0.8),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            themeConfig.primaryColor,
+                                            themeConfig.primaryColor.withValues(alpha: 0.8),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                                         ),
                                         child: Text(
                                           'Save',
@@ -441,10 +444,8 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
             ),
             // Text entries flowing underneath
             ...headline.entries.asMap().entries.map((entryEntry) {
-              final entryIndex = entryEntry.key;
               final textEntry = entryEntry.value;
-              final isLastEntry = entryIndex == headline.entries.length - 1;
-              final highlight = widget.highlightLastEntry && isLastHeadline && isLastEntry;
+              final highlight = widget.highlightedEntryId == textEntry.id;
               final isEditing = _editingEntryId == textEntry.id;
 
               return Padding(
@@ -464,13 +465,13 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                AppTheme.primary.withValues(alpha: 0.12),
-                                AppTheme.primary.withValues(alpha: 0.04),
+                                themeConfig.primaryColor.withValues(alpha: 0.12),
+                                themeConfig.primaryColor.withValues(alpha: 0.04),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                             border: Border.all(
-                              color: AppTheme.primary.withValues(alpha: isEditing ? 0.4 : 0.25),
+                              color: themeConfig.primaryColor.withValues(alpha: isEditing ? 0.4 : 0.25),
                               width: isEditing ? 1.5 : 1,
                             ),
                           )
@@ -513,19 +514,19 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             Icon(
-                              Icons.access_time,
-                              size: 13,
-                              color: highlight
-                                  ? AppTheme.primary
-                                  : AppTheme.textTertiary.withOpacity(0.6),
-                            ),
-                            const SizedBox(width: AppTheme.spacing8),
-                            Text(
-                              _formatDate(textEntry.createdAt),
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: highlight
-                                        ? AppTheme.primary
-                                        : AppTheme.textTertiary.withOpacity(0.6),
+                            Icons.access_time,
+                            size: 13,
+                            color: highlight
+                                ? themeConfig.primaryColor
+                                : AppTheme.textTertiary.withOpacity(0.6),
+                          ),
+                          const SizedBox(width: AppTheme.spacing8),
+                          Text(
+                            _formatDate(textEntry.createdAt),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: highlight
+                                      ? themeConfig.primaryColor
+                                      : AppTheme.textTertiary.withOpacity(0.6),
                                     fontSize: 13,
                                     letterSpacing: 0.3,
                                     ),

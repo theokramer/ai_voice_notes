@@ -763,8 +763,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         throw Exception('Transcription failed or returned empty text');
       }
 
-      // Add transcription to note (non-blocking UI - happens in background)
-      provider.addTranscriptionToNote(transcribedText, note.id);
+      // Add transcription to note and get the created entry ID
+      final entryId = await provider.addTranscriptionToNote(transcribedText, note.id);
 
       // Close dialog immediately
       if (mounted) {
@@ -775,15 +775,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       HapticService.success();
       
       if (mounted) {
+        final settingsProvider = context.read<SettingsProvider>();
+        
         await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => NoteDetailScreen(
               noteId: note.id,
-              highlightLastEntry: true,
+              highlightedEntryId: entryId,
             ),
           ),
         );
+        
+        // Auto-close after 2 seconds if setting is enabled
+        if (settingsProvider.autoCloseAfterEntry && mounted) {
+          await Future.delayed(const Duration(seconds: 2));
+          if (mounted) {
+            Navigator.pop(context);
+          }
+        }
       }
 
       _transcribedText = null;
@@ -1790,6 +1800,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       );
                       // Chat will still be active when user returns
                     },
+                    themeConfig: themeConfig,
                   ),
                 ),
               

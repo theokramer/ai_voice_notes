@@ -684,14 +684,14 @@ class NotesProvider extends ChangeNotifier {
     return bestIndex;
   }
 
-  Future<void> addTranscriptionToNote(
+  Future<String?> addTranscriptionToNote(
     String transcribedText,
     String noteId,
   ) async {
     if (_openAIService == null) throw Exception('API key not set');
 
     final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return;
+    if (noteIndex == -1) return null;
 
     final note = _notes[noteIndex];
 
@@ -764,9 +764,12 @@ class NotesProvider extends ChangeNotifier {
     );
 
     await updateNote(updatedNote, notify: true);
-
+    
     // Generate tags asynchronously (don't block the UI, don't notify immediately)
     _generateAndUpdateTags(updatedNote.id);
+    
+    // Return the created entry ID
+    return textEntry.id;
   }
 
   Future<void> _generateAndUpdateTags(String noteId) async {

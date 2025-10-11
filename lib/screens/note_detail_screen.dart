@@ -20,13 +20,13 @@ import '../theme/app_theme.dart';
 
 class NoteDetailScreen extends StatefulWidget {
   final String noteId;
-  final bool highlightLastEntry;
+  final String? highlightedEntryId;
   final String? searchQuery;
 
   const NoteDetailScreen({
     super.key,
     required this.noteId,
-    this.highlightLastEntry = false,
+    this.highlightedEntryId,
     this.searchQuery,
   });
 
@@ -53,10 +53,42 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   final AudioRecorder _audioRecorder = AudioRecorder();
   String? _recordingPath;
   bool _isTranscribing = false;
+  
+  // Scroll controller and highlight management
+  final ScrollController _scrollController = ScrollController();
+  final Map<String, GlobalKey> _entryKeys = {};
+  String? _currentHighlightedEntryId;
+  Timer? _highlightTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentHighlightedEntryId = widget.highlightedEntryId;
+    
+    // Set up auto-scrolling and highlight fade-out
+    if (_currentHighlightedEntryId != null || widget.searchQuery != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToTargetEntry();
+        
+        // Set up timer to clear highlight after 3 seconds
+        if (_currentHighlightedEntryId != null) {
+          _highlightTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted) {
+              setState(() {
+                _currentHighlightedEntryId = null;
+              });
+            }
+          });
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _highlightTimer?.cancel();
+    _scrollController.dispose();
     _audioRecorder.dispose();
     // Clean up controllers and focus nodes
     for (var controller in _editControllers.values) {
@@ -74,6 +106,98 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     _titleController.dispose();
     _titleFocusNode.dispose();
     super.dispose();
+  }
+  
+  void _scrollToTargetEntry() {
+    final provider = context.read<NotesProvider>();
+    final note = provider.notes.firstWhere((n) => n.id == widget.noteId);
+    
+    String? targetEntryId = _currentHighlightedEntryId;
+    
+    // If no highlighted entry but we have a search query, find the first match
+    if (targetEntryId == null && widget.searchQuery != null && widget.searchQuery!.isNotEmpty) {
+      final query = widget.searchQuery!.toLowerCase();
+      
+      for (final headline in note.headlines) {
+        for (final entry in headline.entries) {
+          if (entry.text.toLowerCase().contains(query)) {
+            targetEntryId = entry.id;
+            setState(() {
+              _currentHighlightedEntryId = entry.id;
+            });
+            
+            // Set up timer to clear highlight after 3 seconds for search results too
+            _highlightTimer?.cancel();
+            _highlightTimer = Timer(const Duration(seconds: 3), () {
+              if (mounted) {
+                setState(() {
+                  _currentHighlightedEntryId = null;
+                });
+              }
+            });
+            break;
+          }
+        }
+        if (targetEntryId != null) break;
+      }
+    }
+    
+    if (targetEntryId != null) {
+      // Wait longer for the layout to complete and keys to be registered
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
+        
+        final key = _entryKeys[targetEntryId];
+        final keyContext = key?.currentContext;
+        
+        if (keyContext != null && _scrollController.hasClients) {
+          try {
+            final RenderBox? renderBox = keyContext.findRenderObject() as RenderBox?;
+            if (renderBox != null && renderBox.hasSize) {
+              final position = renderBox.localToGlobal(Offset.zero);
+              final viewportHeight = MediaQuery.of(context).size.height;
+              // Calculate offset to center the entry, accounting for header
+              final scrollOffset = _scrollController.offset + position.dy - (viewportHeight * 0.3);
+              
+              _scrollController.animateTo(
+                scrollOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOutCubic,
+              );
+            }
+          } catch (e) {
+            debugPrint('Error scrolling to entry: $e');
+          }
+        } else {
+          // Retry once more if context not available yet
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (!mounted) return;
+            
+            final retryKey = _entryKeys[targetEntryId];
+            final retryContext = retryKey?.currentContext;
+            
+            if (retryContext != null && _scrollController.hasClients) {
+              try {
+                final RenderBox? renderBox = retryContext.findRenderObject() as RenderBox?;
+                if (renderBox != null && renderBox.hasSize) {
+                  final position = renderBox.localToGlobal(Offset.zero);
+                  final viewportHeight = MediaQuery.of(context).size.height;
+                  final scrollOffset = _scrollController.offset + position.dy - (viewportHeight * 0.3);
+                  
+                  _scrollController.animateTo(
+                    scrollOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOutCubic,
+                  );
+                }
+              } catch (e) {
+                debugPrint('Error scrolling to entry on retry: $e');
+              }
+            }
+          });
+        }
+      });
+    }
   }
 
   void _startEditing(TextEntry entry) {
@@ -1723,6 +1847,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                           if (settingsProvider.settings.useUnifiedNoteView) {
                             // Unified flowing document view - needs CustomScrollView wrapper for header
                             return CustomScrollView(
+                              controller: _scrollController,
                               physics: const AlwaysScrollableScrollPhysics(
                                 parent: BouncingScrollPhysics(),
                               ),
@@ -1755,7 +1880,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                                     note: note,
                                     onEntryLongPress: _showEntryOptions,
                                     onHeadlineLongPress: _showHeadlineOptions,
-                                    highlightLastEntry: widget.highlightLastEntry,
+                                    highlightedEntryId: _currentHighlightedEntryId,
                                   ),
                                 ),
                                 // Add bottom padding to prevent cropping
@@ -1768,6 +1893,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                             // Traditional card-based view
                             if (note.headlines.isEmpty) {
                               return CustomScrollView(
+                                controller: _scrollController,
                                 physics: const AlwaysScrollableScrollPhysics(
                                   parent: BouncingScrollPhysics(),
                                 ),
@@ -1856,6 +1982,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                             final allHeadlines = [...pinnedHeadlines, ...unpinnedHeadlines];
                             
                             return CustomScrollView(
+                              controller: _scrollController,
                               physics: const AlwaysScrollableScrollPhysics(
                                 parent: BouncingScrollPhysics(),
                               ),
@@ -2000,12 +2127,10 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                                         }
                                         
                                         final headline = allHeadlines[adjustedIndex];
-                                        final isLastHeadline = adjustedIndex == allHeadlines.length - 1;
                                         return RepaintBoundary(
                                           child: _buildHeadlineSection(
                                             note.id,
                                             headline,
-                                            isLastHeadline && widget.highlightLastEntry,
                                             themeConfig,
                                           ),
                                         );
@@ -2087,7 +2212,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   Widget _buildHeadlineSection(
     String noteId, 
     Headline headline, 
-    bool shouldHighlight,
     ThemeConfig themeConfig,
   ) {
     return Column(
@@ -2167,11 +2291,15 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         ),
         // Entries
         ...headline.entries.asMap().entries.map((entry) {
-          final entryIndex = entry.key;
           final textEntry = entry.value;
-          final isLastEntry = entryIndex == headline.entries.length - 1;
-          final highlight = shouldHighlight && isLastEntry;
+          final highlight = _currentHighlightedEntryId == textEntry.id;
           final isEditing = _editingEntryId == textEntry.id;
+          
+          // Create or get the GlobalKey for this entry
+          if (!_entryKeys.containsKey(textEntry.id)) {
+            _entryKeys[textEntry.id] = GlobalKey();
+          }
+          final entryKey = _entryKeys[textEntry.id]!;
 
           final container = GestureDetector(
             onTap: () {
@@ -2182,6 +2310,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             },
             onLongPress: () => _showEntryOptions(noteId, headline.id, textEntry, headline),
             child: Container(
+            key: entryKey,
             margin: const EdgeInsets.only(bottom: AppTheme.spacing32),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
@@ -2211,7 +2340,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                           : (highlight ? themeConfig.primaryColor : AppTheme.glassBorder.withOpacity(0.2)),
                       width: isEditing ? 1.5 : (highlight ? 2 : 1),
                     ),
-                    boxShadow: highlight ? AppTheme.buttonShadow : [
+                    boxShadow: highlight ? AppTheme.getThemedShadow(themeConfig) : [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.15),
                         blurRadius: 20,

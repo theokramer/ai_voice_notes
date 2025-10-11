@@ -74,6 +74,12 @@ class SettingsProvider extends ChangeNotifier {
 
   bool get hasRequestedMicPermission => _settings.hasRequestedMicPermission;
 
+  Future<void> updateAutoCloseAfterEntry(bool enabled) async {
+    await updateSettings(_settings.copyWith(autoCloseAfterEntry: enabled));
+  }
+
+  bool get autoCloseAfterEntry => _settings.autoCloseAfterEntry;
+
   Future<void> clearCache() async {
     // Placeholder for cache clearing logic
     notifyListeners();

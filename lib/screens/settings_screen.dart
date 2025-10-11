@@ -89,6 +89,7 @@ class SettingsScreen extends StatelessWidget {
                       children: [
                         _buildHapticsToggle(context, settingsProvider.currentThemeConfig),
                         _buildUnifiedNoteViewToggle(context, settingsProvider.currentThemeConfig),
+                        _buildAutoCloseToggle(context, settingsProvider.currentThemeConfig),
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
@@ -199,6 +200,28 @@ class SettingsScreen extends StatelessWidget {
             onChanged: (value) async {
               await HapticService.light();
               await provider.updateUnifiedNoteView(value);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAutoCloseToggle(BuildContext context, ThemeConfig themeConfig) {
+    return Consumer<SettingsProvider>(
+      builder: (context, provider, child) {
+        return _buildTile(
+          context,
+          themeConfig,
+          icon: Icons.timer,
+          title: 'Auto-Close After Entry',
+          subtitle: 'Automatically close note after 2 seconds',
+          trailing: Switch(
+            value: provider.settings.autoCloseAfterEntry,
+            activeTrackColor: themeConfig.primaryColor,
+            onChanged: (value) async {
+              await HapticService.light();
+              await provider.updateAutoCloseAfterEntry(value);
             },
           ),
         );
@@ -736,6 +759,8 @@ class SettingsScreen extends StatelessWidget {
         return 'Gentle Clouds';
       case BackgroundStyle.meshGradient:
         return 'Mesh Gradient';
+      case BackgroundStyle.softBlobs:
+        return 'Soft Blobs';
     }
   }
 
@@ -807,22 +832,33 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // All backgrounds grouped together
+                      // Gentle Clouds (Recommended)
                       _buildBackgroundStyleOption(
                         context,
                         BackgroundStyle.clouds,
                         'Gentle Clouds',
-                        'Soft floating clouds (Recommended)',
+                        'Ultra-subtle floating clouds (Recommended)',
                         Icons.cloud_outlined,
                         provider,
                         themeConfig,
                       ),
+                      const SizedBox(height: AppTheme.spacing8),
+                      // Other options
                       _buildBackgroundStyleOption(
                         context,
                         BackgroundStyle.meshGradient,
                         'Mesh Gradient',
                         'Flowing morphing gradients',
                         Icons.grain,
+                        provider,
+                        themeConfig,
+                      ),
+                      _buildBackgroundStyleOption(
+                        context,
+                        BackgroundStyle.softBlobs,
+                        'Soft Blobs',
+                        'Colorful floating blobs',
+                        Icons.bubble_chart,
                         provider,
                         themeConfig,
                       ),

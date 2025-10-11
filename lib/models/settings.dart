@@ -22,14 +22,16 @@ class Settings {
   final bool useUnifiedNoteView;
   final BackgroundStyle backgroundStyle;
   final bool hasRequestedMicPermission;
+  final bool autoCloseAfterEntry;
   
   Settings({
     this.themePreset = ThemePreset.modern,
     this.audioQuality = AudioQuality.high,
     this.hapticsEnabled = true,
     this.useUnifiedNoteView = true,
-    this.backgroundStyle = BackgroundStyle.clouds, // Default to subtle clouds
+    this.backgroundStyle = BackgroundStyle.clouds, // Default to gentle clouds
     this.hasRequestedMicPermission = false,
+    this.autoCloseAfterEntry = false,
   });
 
   Settings copyWith({
@@ -39,6 +41,7 @@ class Settings {
     bool? useUnifiedNoteView,
     BackgroundStyle? backgroundStyle,
     bool? hasRequestedMicPermission,
+    bool? autoCloseAfterEntry,
   }) {
     return Settings(
       themePreset: themePreset ?? this.themePreset,
@@ -47,6 +50,7 @@ class Settings {
       useUnifiedNoteView: useUnifiedNoteView ?? this.useUnifiedNoteView,
       backgroundStyle: backgroundStyle ?? this.backgroundStyle,
       hasRequestedMicPermission: hasRequestedMicPermission ?? this.hasRequestedMicPermission,
+      autoCloseAfterEntry: autoCloseAfterEntry ?? this.autoCloseAfterEntry,
     );
   }
 
@@ -58,6 +62,7 @@ class Settings {
       'useUnifiedNoteView': useUnifiedNoteView,
       'backgroundStyle': backgroundStyle.name,
       'hasRequestedMicPermission': hasRequestedMicPermission,
+      'autoCloseAfterEntry': autoCloseAfterEntry,
     };
   }
 
@@ -78,6 +83,7 @@ class Settings {
         orElse: () => BackgroundStyle.clouds,
       ),
       hasRequestedMicPermission: json['hasRequestedMicPermission'] ?? false,
+      autoCloseAfterEntry: json['autoCloseAfterEntry'] ?? false,
     );
   }
 

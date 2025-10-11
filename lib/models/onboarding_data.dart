@@ -6,12 +6,14 @@ class OnboardingData {
   String? noteFrequency;
   String? useCase;
   AudioQuality? audioQuality;
+  bool? autoCloseAfterEntry;
 
   /// Check if all onboarding questions have been answered
   bool get isComplete =>
       noteFrequency != null &&
       useCase != null &&
-      audioQuality != null;
+      audioQuality != null &&
+      autoCloseAfterEntry != null;
 
   /// Save onboarding data to SharedPreferences
   Future<void> save() async {
@@ -27,6 +29,10 @@ class OnboardingData {
     
     if (audioQuality != null) {
       await prefs.setString('onboarding_audio_quality', audioQuality!.name);
+    }
+    
+    if (autoCloseAfterEntry != null) {
+      await prefs.setBool('onboarding_auto_close_after_entry', autoCloseAfterEntry!);
     }
   }
 
@@ -45,6 +51,8 @@ class OnboardingData {
         orElse: () => AudioQuality.medium,
       );
     }
+    
+    data.autoCloseAfterEntry = prefs.getBool('onboarding_auto_close_after_entry');
     
     return data;
   }

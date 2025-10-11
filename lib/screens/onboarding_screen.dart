@@ -29,12 +29,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
 
-  // Total pages: 1 video + 4 features + 3 questions + 1 value prop = 9 pages
-  static const int totalPages = 9;
+  // Total pages: 1 video + 4 features + 4 questions + 1 value prop = 10 pages
+  static const int totalPages = 10;
   static const int firstFeatureIndex = 1;
   static const int lastFeatureIndex = 4;
   static const int firstQuestionIndex = 5;
-  static const int lastQuestionIndex = 7;
+  static const int lastQuestionIndex = 8;
 
   @override
   void initState() {
@@ -95,6 +95,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
             .updateAudioQuality(_onboardingData.audioQuality!);
       }
       
+      // Apply auto-close after entry setting
+      if (_onboardingData.autoCloseAfterEntry != null && mounted) {
+        await Provider.of<SettingsProvider>(context, listen: false)
+            .updateAutoCloseAfterEntry(_onboardingData.autoCloseAfterEntry!);
+      }
+      
       if (!mounted) return;
 
       // Mark onboarding as complete
@@ -122,6 +128,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       case 5: return _onboardingData.noteFrequency != null;
       case 6: return _onboardingData.useCase != null;
       case 7: return _onboardingData.audioQuality != null;
+      case 8: return _onboardingData.autoCloseAfterEntry != null;
       default: return true;
     }
   }
@@ -189,12 +196,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                           delay: 0,
                         ),
                         
-                        // Pages 5-7: Questions
+                        // Pages 5-8: Questions
                         _buildQuestionFrequency(),
                         _buildQuestionUseCase(),
                         _buildQuestionAudioQuality(),
+                        _buildQuestionAutoClose(),
                         
-                        // Page 8: Value Proposition
+                        // Page 9: Value Proposition
                         _buildValuePropositionPage(),
                       ],
                     ),
@@ -943,6 +951,60 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
             isSelected: _onboardingData.audioQuality == AudioQuality.high,
             onTap: () => setState(() => _onboardingData.audioQuality = AudioQuality.high),
             animationDelay: 200,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionAutoClose() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppTheme.spacing32),
+      child: Column(
+        children: [
+          const SizedBox(height: AppTheme.spacing24),
+          
+          Text(
+            'Quick recording\nworkflow?',
+            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+              fontSize: 28,
+              height: 1.2,
+            ),
+            textAlign: TextAlign.center,
+          )
+              .animate()
+              .fadeIn(duration: 600.ms)
+              .slideY(begin: 0.2, end: 0),
+          
+          const SizedBox(height: AppTheme.spacing16),
+          
+          Text(
+            'Auto-close notes to record multiple entries faster',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textTertiary,
+            ),
+            textAlign: TextAlign.center,
+          )
+              .animate()
+              .fadeIn(delay: 300.ms, duration: 600.ms),
+          
+          const SizedBox(height: AppTheme.spacing48),
+          
+          OnboardingQuestionCard(
+            emoji: '🏃',
+            title: 'Yes, Auto-Close',
+            subtitle: 'Close note after 2 seconds (faster workflow)',
+            isSelected: _onboardingData.autoCloseAfterEntry == true,
+            onTap: () => setState(() => _onboardingData.autoCloseAfterEntry = true),
+            animationDelay: 0,
+          ),
+          OnboardingQuestionCard(
+            emoji: '✋',
+            title: 'No, Keep Open',
+            subtitle: 'I\'ll close notes manually (more control)',
+            isSelected: _onboardingData.autoCloseAfterEntry == false,
+            onTap: () => setState(() => _onboardingData.autoCloseAfterEntry = false),
+            animationDelay: 100,
           ),
         ],
       ),

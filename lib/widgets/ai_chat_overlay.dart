@@ -13,6 +13,7 @@ class AIChatOverlay extends StatefulWidget {
   final Function(String message) onSendMessage;
   final Function(String noteId)? onNoteTap;
   final bool isProcessing;
+  final ThemeConfig themeConfig;
 
   const AIChatOverlay({
     super.key,
@@ -23,6 +24,7 @@ class AIChatOverlay extends StatefulWidget {
     required this.onSendMessage,
     this.onNoteTap,
     this.isProcessing = false,
+    required this.themeConfig,
   });
 
   @override
@@ -156,13 +158,13 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
               Container(
                 padding: const EdgeInsets.all(AppTheme.spacing8),
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.2),
+                  color: widget.themeConfig.primaryColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                 ),
                 child: Icon(
                   Icons.psychology,
                   size: 20,
-                  color: AppTheme.primary,
+                  color: widget.themeConfig.primaryColor,
                 ),
               ),
               const SizedBox(width: AppTheme.spacing12),
@@ -200,10 +202,10 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
                 vertical: AppTheme.spacing8,
               ),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
+                color: widget.themeConfig.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                 border: Border.all(
-                  color: AppTheme.primary.withValues(alpha: 0.3),
+                  color: widget.themeConfig.primaryColor.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
@@ -219,7 +221,7 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
                     child: Text(
                       '"${widget.context}"',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.primary,
+                            color: widget.themeConfig.primaryColor,
                             fontWeight: FontWeight.w600,
                           ),
                       overflow: TextOverflow.ellipsis,
@@ -298,13 +300,13 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
               padding: const EdgeInsets.all(AppTheme.spacing8),
               margin: const EdgeInsets.only(right: AppTheme.spacing8),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.2),
+                color: widget.themeConfig.primaryColor.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
               ),
               child: Icon(
                 Icons.psychology,
                 size: 16,
-                color: AppTheme.primary,
+                color: widget.themeConfig.primaryColor,
               ),
             ),
           Flexible(
@@ -323,8 +325,8 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
                         gradient: message.isUser
                             ? LinearGradient(
                                 colors: [
-                                  AppTheme.primary,
-                                  AppTheme.primary.withValues(alpha: 0.8),
+                                  widget.themeConfig.primaryColor,
+                                  widget.themeConfig.primaryColor.withValues(alpha: 0.8),
                                 ],
                               )
                             : null,
@@ -332,7 +334,7 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
                         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                         border: Border.all(
                           color: message.isUser
-                              ? AppTheme.primary.withValues(alpha: 0.5)
+                              ? widget.themeConfig.primaryColor.withValues(alpha: 0.5)
                               : AppTheme.glassBorder,
                         ),
                       ),
@@ -369,7 +371,7 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
     // Get icon and emoji based on action type
     IconData actionIcon;
     String actionEmoji;
-    Color accentColor = AppTheme.primary;
+    Color accentColor = widget.themeConfig.primaryColor;
     
     switch (action.type) {
       case 'create_note':
@@ -379,17 +381,12 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
       case 'add_entry':
         actionIcon = Icons.add_circle_outline;
         actionEmoji = '➕';
-        accentColor = const Color(0xFF10b981);
-        break;
-      case 'consolidate':
-        actionIcon = Icons.merge;
-        actionEmoji = '🔄';
-        accentColor = const Color(0xFF8b5cf6);
+        accentColor = widget.themeConfig.accentColor;
         break;
       case 'move_entry':
         actionIcon = Icons.drive_file_move_outline;
         actionEmoji = '📦';
-        accentColor = const Color(0xFFf59e0b);
+        accentColor = widget.themeConfig.secondaryColor;
         break;
       default:
         actionIcon = Icons.psychology;
@@ -580,7 +577,7 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
             Icon(
               Icons.note,
               size: 16,
-              color: AppTheme.primary,
+              color: widget.themeConfig.primaryColor,
             ),
             const SizedBox(width: AppTheme.spacing8),
             Expanded(
@@ -613,13 +610,13 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
             padding: const EdgeInsets.all(AppTheme.spacing8),
             margin: const EdgeInsets.only(right: AppTheme.spacing8),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.2),
+              color: widget.themeConfig.primaryColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
             ),
             child: Icon(
               Icons.psychology,
               size: 16,
-              color: AppTheme.primary,
+              color: widget.themeConfig.primaryColor,
             ),
           ),
           Container(
@@ -731,8 +728,8 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
                 gradient: _messageController.text.trim().isNotEmpty && !widget.isProcessing
                     ? LinearGradient(
                         colors: [
-                          AppTheme.primary,
-                          AppTheme.primary.withValues(alpha: 0.8),
+                          widget.themeConfig.primaryColor,
+                          widget.themeConfig.primaryColor.withValues(alpha: 0.8),
                         ],
                       )
                     : null,
@@ -742,7 +739,7 @@ class _AIChatOverlayState extends State<AIChatOverlay> {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: _messageController.text.trim().isNotEmpty && !widget.isProcessing
-                      ? AppTheme.primary
+                      ? widget.themeConfig.primaryColor
                       : AppTheme.glassBorder,
                 ),
               ),
