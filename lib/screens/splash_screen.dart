@@ -63,7 +63,7 @@ class _SplashScreenState extends State<SplashScreen> {
             builder: (context) => const OnboardingScreen(),
           ),
         );
-      } else if (!subscriptionService.isSubscribed) {
+      } else if (subscriptionService.isSubscribed) {
         // User completed onboarding and is subscribed → go to home
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -245,7 +245,7 @@ class _PaywallFlowScreenState extends State<_PaywallFlowScreen> {
 
   Future<void> _launchPaywallFlow() async {
     if (!mounted) return;
-    await PaywallFlowController().showOnboardingPaywallFlow(context);
+    await PaywallFlowController.instance.showOnboardingPaywallFlow(context);
   }
 
   @override

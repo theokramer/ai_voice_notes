@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   
   # Audio recording
   record: ^5.1.0
@@ -21,6 +23,7 @@ dependencies:
   # State management & storage
   provider: ^6.1.2
   shared_preferences: ^2.3.2
+  intl: ^0.20.2
   
   # UI enhancements
   flutter_animate: ^4.5.0
@@ -41,6 +44,9 @@ dependencies:
   
   # String similarity for fuzzy headline matching
   string_similarity: ^2.0.0
+  
+  # In-app review for rating prompt
+  in_app_review: ^2.0.9
 
 dev_dependencies:
   flutter_test:

@@ -473,24 +473,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                       },
                     ),
                     _buildOptionTile(
-                      icon: Icons.content_copy,
-                      title: 'Duplicate Entry',
-                      themeConfig: themeConfig,
-                      onTap: () async {
-                        Navigator.pop(context);
-                        final provider = context.read<NotesProvider>();
-                        await provider.duplicateEntry(noteId, headlineId, entry.id);
-                        await HapticService.success();
-                        if (mounted) {
-                          CustomSnackbar.show(
-                            context,
-                            message: 'Entry duplicated',
-                            type: SnackbarType.success,
-                          );
-                        }
-                      },
-                    ),
-                    _buildOptionTile(
                       icon: Icons.drive_file_move_outline,
                       title: 'Move to Section',
                       themeConfig: themeConfig,
@@ -508,24 +490,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                         _showMoveToNoteDialog(noteId, headlineId, entry);
                     },
                   ),
-                  _buildOptionTile(
-                      icon: Icons.share,
-                      title: 'Share Entry',
-                      themeConfig: themeConfig,
-                    onTap: () async {
-                      Navigator.pop(context);
-                        // We'll need to add share_plus package for this
-                      await Clipboard.setData(ClipboardData(text: entry.text));
-                      await HapticService.success();
-        if (mounted) {
-                        CustomSnackbar.show(
-                          context,
-                            message: 'Text copied to clipboard (Share feature coming soon)',
-                            type: SnackbarType.info,
-                          );
-                        }
-                      },
-                    ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
                       child: Divider(color: AppTheme.glassBorder, height: 1),
@@ -1313,8 +1277,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         throw Exception('Transcription returned empty text');
       }
 
-      // Add transcription to note
-      await provider.addTranscriptionToNote(transcribedText, widget.noteId);
+      // Add transcription to note and get the created entry ID
+      final entryId = await provider.addTranscriptionToNote(transcribedText, widget.noteId);
 
       if (mounted) {
         HapticService.success();
@@ -1323,6 +1287,32 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           message: 'Entry added',
           type: SnackbarType.success,
         );
+        
+        // Highlight and scroll to the newly created entry
+        if (entryId != null) {
+          setState(() {
+            _currentHighlightedEntryId = entryId;
+            _hasScrolledToEntry = false; // Reset to allow scrolling
+          });
+          
+          // Wait a bit for the UI to update
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) {
+              final note = provider.notes.firstWhere((n) => n.id == widget.noteId);
+              _attemptScrollByPosition(note, entryId);
+              
+              // Set up timer to clear highlight after 3 seconds
+              _highlightTimer?.cancel();
+              _highlightTimer = Timer(const Duration(seconds: 3), () {
+                if (mounted) {
+                  setState(() {
+                    _currentHighlightedEntryId = null;
+                  });
+                }
+              });
+            }
+          });
+        }
       }
 
       _recordingPath = null;
@@ -1555,7 +1545,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
     if (result != null && result.trim().isNotEmpty && mounted) {
       final provider = context.read<NotesProvider>();
-      await provider.addTranscriptionToNote(result.trim(), widget.noteId);
+      final entryId = await provider.addTranscriptionToNote(result.trim(), widget.noteId);
       
       HapticService.success();
       if (mounted) {
@@ -1564,6 +1554,32 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           message: 'Entry added',
           type: SnackbarType.success,
         );
+        
+        // Highlight and scroll to the newly created entry
+        if (entryId != null) {
+          setState(() {
+            _currentHighlightedEntryId = entryId;
+            _hasScrolledToEntry = false; // Reset to allow scrolling
+          });
+          
+          // Wait a bit for the UI to update
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted) {
+              final note = provider.notes.firstWhere((n) => n.id == widget.noteId);
+              _attemptScrollByPosition(note, entryId);
+              
+              // Set up timer to clear highlight after 3 seconds
+              _highlightTimer?.cancel();
+              _highlightTimer = Timer(const Duration(seconds: 3), () {
+                if (mounted) {
+                  setState(() {
+                    _currentHighlightedEntryId = null;
+                  });
+                }
+              });
+            }
+          });
+        }
       }
     }
   }
@@ -2208,46 +2224,111 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                           }
                         },
                       ),
+                      // AI Processing Indicator
+                      if (provider.isAIProcessing(widget.noteId))
+                        Positioned(
+                          top: MediaQuery.of(context).padding.top + 70,
+                          left: 0,
+                          right: 0,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppTheme.spacing16,
+                                    vertical: AppTheme.spacing12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        themeConfig.primaryColor.withValues(alpha: 0.2),
+                                        themeConfig.primaryColor.withValues(alpha: 0.1),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                                    border: Border.all(
+                                      color: themeConfig.primaryColor.withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            themeConfig.primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppTheme.spacing12),
+                                      Text(
+                                        'AI is organizing your entry...',
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: AppTheme.textSecondary,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ).animate().fadeIn(duration: 200.ms).slideY(begin: -0.2, end: 0, duration: 300.ms),
+                          ),
+                        ),
                       // Floating + button
                       Positioned(
                         bottom: 24,
                         right: 24,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(60),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                            child: GestureDetector(
-                              onTap: _showAddEntryOptions,
-                              child: Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      themeConfig.primaryColor,
-                                      themeConfig.primaryColor.withValues(alpha: 0.8),
-                                    ],
-                                  ),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: AppTheme.glassBorder,
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: themeConfig.primaryColor.withValues(alpha: 0.4),
-                                      blurRadius: 20,
-                                      offset: const Offset(0, 8),
-                                    ),
-                                  ],
+                        child: GestureDetector(
+                          onTap: _showAddEntryOptions,
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  themeConfig.primaryColor.withValues(alpha: 0.9),
+                                  themeConfig.primaryColor.withValues(alpha: 0.7),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: themeConfig.primaryColor.withValues(alpha: 0.3),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                  spreadRadius: 0,
                                 ),
-                                child: const Icon(
-                                  Icons.add,
-                                  size: 32,
-                                  color: AppTheme.textPrimary,
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                  spreadRadius: 0,
                                 ),
+                              ],
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppTheme.glassBorder.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.add_rounded,
+                                size: 28,
+                                color: AppTheme.textPrimary,
                               ),
                             ),
                           ),

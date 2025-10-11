@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../widgets/animated_background.dart';
+import 'app_language.dart';
 
 enum ThemePreset {
   modern,
@@ -23,15 +24,17 @@ class Settings {
   final BackgroundStyle backgroundStyle;
   final bool hasRequestedMicPermission;
   final bool autoCloseAfterEntry;
+  final AppLanguage? preferredLanguage;
   
   Settings({
     this.themePreset = ThemePreset.modern,
     this.audioQuality = AudioQuality.high,
     this.hapticsEnabled = true,
     this.useUnifiedNoteView = true,
-    this.backgroundStyle = BackgroundStyle.clouds, // Default to gentle clouds
+    this.backgroundStyle = BackgroundStyle.none, // Default to no animation
     this.hasRequestedMicPermission = false,
     this.autoCloseAfterEntry = false,
+    this.preferredLanguage,
   });
 
   Settings copyWith({
@@ -42,6 +45,7 @@ class Settings {
     BackgroundStyle? backgroundStyle,
     bool? hasRequestedMicPermission,
     bool? autoCloseAfterEntry,
+    AppLanguage? preferredLanguage,
   }) {
     return Settings(
       themePreset: themePreset ?? this.themePreset,
@@ -51,6 +55,7 @@ class Settings {
       backgroundStyle: backgroundStyle ?? this.backgroundStyle,
       hasRequestedMicPermission: hasRequestedMicPermission ?? this.hasRequestedMicPermission,
       autoCloseAfterEntry: autoCloseAfterEntry ?? this.autoCloseAfterEntry,
+      preferredLanguage: preferredLanguage ?? this.preferredLanguage,
     );
   }
 
@@ -63,10 +68,22 @@ class Settings {
       'backgroundStyle': backgroundStyle.name,
       'hasRequestedMicPermission': hasRequestedMicPermission,
       'autoCloseAfterEntry': autoCloseAfterEntry,
+      'preferredLanguage': preferredLanguage?.name,
     };
   }
 
   factory Settings.fromJson(Map<String, dynamic> json) {
+    AppLanguage? language;
+    if (json['preferredLanguage'] != null) {
+      try {
+        language = AppLanguage.values.firstWhere(
+          (e) => e.name == json['preferredLanguage'],
+        );
+      } catch (e) {
+        language = null;
+      }
+    }
+    
     return Settings(
       themePreset: ThemePreset.values.firstWhere(
         (e) => e.name == json['themePreset'],
@@ -80,10 +97,11 @@ class Settings {
       useUnifiedNoteView: json['useUnifiedNoteView'] ?? true,
       backgroundStyle: BackgroundStyle.values.firstWhere(
         (e) => e.name == json['backgroundStyle'],
-        orElse: () => BackgroundStyle.clouds,
+        orElse: () => BackgroundStyle.none,
       ),
       hasRequestedMicPermission: json['hasRequestedMicPermission'] ?? false,
       autoCloseAfterEntry: json['autoCloseAfterEntry'] ?? false,
+      preferredLanguage: language,
     );
   }
 

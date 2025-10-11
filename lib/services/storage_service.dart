@@ -5,6 +5,9 @@ class StorageService {
   static const String _notesKey = 'notes';
   static const String _apiKeyKey = 'openai_api_key';
   static const String _viewTypeKey = 'note_view_type';
+  static const String _sortOptionKey = 'sort_option';
+  static const String _sortDirectionKey = 'sort_direction';
+  static const String _firstLaunchKey = 'is_first_launch';
 
   Future<List<Note>> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
@@ -36,6 +39,36 @@ class StorageService {
   Future<void> saveViewType(String viewType) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_viewTypeKey, viewType);
+  }
+
+  Future<String?> loadSortOption() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_sortOptionKey);
+  }
+
+  Future<void> saveSortOption(String sortOption) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sortOptionKey, sortOption);
+  }
+
+  Future<String?> loadSortDirection() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_sortDirectionKey);
+  }
+
+  Future<void> saveSortDirection(String sortDirection) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_sortDirectionKey, sortDirection);
+  }
+
+  Future<bool> isFirstLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_firstLaunchKey) ?? true;
+  }
+
+  Future<void> setFirstLaunchComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_firstLaunchKey, false);
   }
 }
 

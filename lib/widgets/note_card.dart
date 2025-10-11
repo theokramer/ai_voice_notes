@@ -138,10 +138,15 @@ class _NoteCardState extends State<NoteCard>
                                     )
                                   : null,
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppTheme.spacing20,
-                              vertical: AppTheme.spacing16,
-                            ),
+                            padding: widget.isGridView
+                                ? const EdgeInsets.symmetric(
+                                    horizontal: AppTheme.spacing16,
+                                    vertical: AppTheme.spacing12,
+                                  )
+                                : const EdgeInsets.symmetric(
+                                    horizontal: AppTheme.spacing20,
+                                    vertical: AppTheme.spacing16,
+                                  ),
                             child: Row(
                               children: [
                                 // Content  
@@ -379,16 +384,27 @@ class _NoteCardState extends State<NoteCard>
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
+    
+    // Normalize dates to compare calendar days (ignoring time)
+    final today = DateTime(now.year, now.month, now.day);
+    final dateDay = DateTime(date.year, date.month, date.day);
+    final daysDifference = today.difference(dateDay).inDays;
 
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inHours < 1) {
       return '${difference.inMinutes}m ago';
-    } else if (difference.inDays < 1) {
+    } else if (daysDifference == 0) {
+      // Same calendar day
       return '${difference.inHours}h ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays}d ago';
+    } else if (daysDifference == 1) {
+      // Yesterday
+      return 'Yesterday';
+    } else if (daysDifference < 7) {
+      // Within the last week
+      return '${daysDifference}d ago';
     } else {
+      // Older than a week
       return '${date.day}/${date.month}/${date.year}';
     }
   }
@@ -403,26 +419,26 @@ class _NoteCardState extends State<NoteCard>
     // Split into words
     final words = latestText.split(RegExp(r'\s+'));
     
-    // If less than 40 words, return everything
-    if (words.length <= 40) {
+    // If less than 35 words, return everything
+    if (words.length <= 35) {
       return latestText.trim();
     }
     
-    // Get first 40 words
-    final first40Words = words.take(40).join(' ');
+    // Get first 35 words
+    final first35Words = words.take(35).join(' ');
     
-    // Find the last sentence-ending punctuation within the 40-word range
+    // Find the last sentence-ending punctuation within the 35-word range
     final sentenceEndPattern = RegExp(r'[.!?]');
-    final matches = sentenceEndPattern.allMatches(first40Words);
+    final matches = sentenceEndPattern.allMatches(first35Words);
     
     if (matches.isNotEmpty) {
-      // Get the last match within the 40-word range
+      // Get the last match within the 35-word range
       final lastMatch = matches.last;
-      return first40Words.substring(0, lastMatch.end).trim();
+      return first35Words.substring(0, lastMatch.end).trim();
     }
     
-    // If no sentence end found in 40 words, return 40 words with ellipsis
-    return '$first40Words...';
+    // If no sentence end found in 35 words, return 35 words with ellipsis
+    return '$first35Words...';
   }
 }
 

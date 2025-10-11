@@ -31,6 +31,13 @@ class SubscriptionService {
 
       debugPrint('SubscriptionService initialized: subscribed=$_isSubscribed, completed flow=$_hasCompletedPaywallFlow');
 
+      // CRITICAL: Set Superwall subscription status
+      // Paywalls won't show if status is .unknown
+      // Note: In Flutter, subscription status is read-only
+      // We need to let Superwall know about subscription status through purchases
+      debugPrint('ℹ️ Subscription status: ${_isSubscribed ? "ACTIVE" : "INACTIVE"}');
+      debugPrint('ℹ️ Superwall will be notified through purchase events');
+
       // Listen to subscription status changes from Superwall
       _startListeningToSubscriptionStatus();
     } catch (e) {
@@ -69,6 +76,7 @@ class SubscriptionService {
   /// Update subscription status and persist to storage
   Future<void> _updateSubscriptionStatus(bool isSubscribed) async {
     _isSubscribed = isSubscribed;
+    
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_isSubscribedKey, isSubscribed);
@@ -82,11 +90,13 @@ class SubscriptionService {
   Future<void> markPaywallFlowComplete() async {
     _hasCompletedPaywallFlow = true;
     _isSubscribed = true; // If they completed the paywall flow, they must have purchased
+    
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_hasCompletedPaywallFlowKey, true);
       await prefs.setBool(_isSubscribedKey, true);
-      debugPrint('Paywall flow marked as complete');
+      debugPrint('✅ Paywall flow marked as complete');
+      debugPrint('✅ User is now subscribed');
     } catch (e) {
       debugPrint('Error marking paywall flow complete: $e');
     }
@@ -96,11 +106,12 @@ class SubscriptionService {
   Future<void> resetPaywallFlowStatus() async {
     _hasCompletedPaywallFlow = false;
     _isSubscribed = false;
+    
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_hasCompletedPaywallFlowKey, false);
       await prefs.setBool(_isSubscribedKey, false);
-      debugPrint('Paywall flow status reset');
+      debugPrint('✅ Paywall flow status reset');
     } catch (e) {
       debugPrint('Error resetting paywall flow status: $e');
     }

@@ -4,13 +4,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import '../models/settings.dart';
+import '../models/app_language.dart';
 import '../providers/settings_provider.dart';
 import '../providers/notes_provider.dart';
 import '../theme/app_theme.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 import '../widgets/custom_snackbar.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/theme_preview_card.dart';
+import '../widgets/language_selector.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -55,6 +58,15 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
+                    _buildSection(
+                      context,
+                      settingsProvider.currentThemeConfig,
+                      title: 'Language',
+                      children: [
+                        _buildLanguageSelector(context, settingsProvider.currentThemeConfig),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.spacing24),
                     _buildSection(
                       context,
                       settingsProvider.currentThemeConfig,
@@ -216,6 +228,38 @@ class SettingsScreen extends StatelessWidget {
               await provider.updateAutoCloseAfterEntry(value);
             },
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLanguageSelector(BuildContext context, ThemeConfig themeConfig) {
+    return Consumer<SettingsProvider>(
+      builder: (context, provider, child) {
+        final localization = LocalizationService();
+        final currentLanguage = provider.preferredLanguage;
+        
+        return _buildTile(
+          context,
+          themeConfig,
+          icon: Icons.language,
+          title: localization.t('settings_language'),
+          subtitle: '${currentLanguage.flag} ${currentLanguage.name} • ${localization.t('settings_language_subtitle')}',
+          onTap: () async {
+            await HapticService.light();
+            // Show language selector modal
+            if (context.mounted) {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const SizedBox(
+                  height: double.infinity,
+                  child: LanguageSelector(showPulseAnimation: false),
+                ),
+              );
+            }
+          },
         );
       },
     );
@@ -752,7 +796,7 @@ class SettingsScreen extends StatelessWidget {
       case BackgroundStyle.meshGradient:
         return 'Mesh Gradient';
       case BackgroundStyle.softBlobs:
-        return 'Soft Blobs';
+        return 'Soft Blobs'; // Legacy support only
     }
   }
 
@@ -824,13 +868,13 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Gentle Clouds (Recommended)
+                      // None (Default/Recommended)
                       _buildBackgroundStyleOption(
                         context,
-                        BackgroundStyle.clouds,
-                        'Gentle Clouds',
-                        'Ultra-subtle floating clouds (Recommended)',
-                        Icons.cloud_outlined,
+                        BackgroundStyle.none,
+                        'None',
+                        'Clean static gradient (Recommended)',
+                        Icons.gradient,
                         provider,
                         themeConfig,
                       ),
@@ -838,28 +882,19 @@ class SettingsScreen extends StatelessWidget {
                       // Other options
                       _buildBackgroundStyleOption(
                         context,
+                        BackgroundStyle.clouds,
+                        'Gentle Clouds',
+                        'Ultra-subtle floating clouds',
+                        Icons.cloud_outlined,
+                        provider,
+                        themeConfig,
+                      ),
+                      _buildBackgroundStyleOption(
+                        context,
                         BackgroundStyle.meshGradient,
                         'Mesh Gradient',
                         'Flowing morphing gradients',
                         Icons.grain,
-                        provider,
-                        themeConfig,
-                      ),
-                      _buildBackgroundStyleOption(
-                        context,
-                        BackgroundStyle.softBlobs,
-                        'Soft Blobs',
-                        'Colorful floating blobs',
-                        Icons.bubble_chart,
-                        provider,
-                        themeConfig,
-                      ),
-                      _buildBackgroundStyleOption(
-                        context,
-                        BackgroundStyle.none,
-                        'None',
-                        'Static gradient, no animation',
-                        Icons.gradient,
                         provider,
                         themeConfig,
                       ),

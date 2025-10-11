@@ -6,6 +6,7 @@ import 'package:superwallkit_flutter/superwallkit_flutter.dart';
 import 'providers/notes_provider.dart';
 import 'providers/settings_provider.dart';
 import 'services/connectivity_service.dart';
+import 'services/superwall_event_delegate.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -21,8 +22,20 @@ void main() async {
 
   if (superwallApiKey.isNotEmpty) {
     debugPrint('⚙️ Configuring Superwall...');
+    
     Superwall.configure(superwallApiKey);
-    debugPrint('✅ Superwall configuration call completed');
+    
+    // Set up event delegate for payment cancellation detection
+    Superwall.shared.setDelegate(SuperwallEventDelegate.instance);
+    
+    debugPrint('✅ Superwall configured with SuperwallEventDelegate');
+    debugPrint('📋 Payment cancellation detection active');
+    debugPrint('   Events being monitored:');
+    debugPrint('   - transactionAborted (payment cancelled)');
+    debugPrint('   - transactionFail (payment failed)');
+    debugPrint('   - paywallDecline (paywall declined)');
+    debugPrint('   When user cancels Apple Payment Sheet → Second paywall appears');
+    
     await Future.delayed(const Duration(milliseconds: 500));
   } else {
     debugPrint('❌ Warning: SUPERWALL_API_KEY not found in environment variables');

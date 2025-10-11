@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/settings.dart';
+import '../models/app_language.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/animated_background.dart';
 
@@ -84,5 +86,16 @@ class SettingsProvider extends ChangeNotifier {
     // Placeholder for cache clearing logic
     notifyListeners();
   }
+
+  Future<void> updatePreferredLanguage(AppLanguage language) async {
+    // Update settings
+    await updateSettings(_settings.copyWith(preferredLanguage: language));
+    // Update localization service
+    LocalizationService().setLanguage(language);
+    notifyListeners();
+  }
+
+  AppLanguage get preferredLanguage => 
+      _settings.preferredLanguage ?? LanguageHelper.detectDeviceLanguage();
 }
 

@@ -382,6 +382,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               themeConfig: themeConfig,
             );
           }
+          
+          // Navigate to the newly created note so user can see it
+          if (mounted) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NoteDetailScreen(noteId: newNote.id),
+              ),
+            );
+          }
         }
         break;
         
@@ -459,6 +469,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             onAction: _undoLastAction,
             duration: const Duration(seconds: 4),
             themeConfig: themeConfig,
+          );
+        }
+        
+        // Navigate to the note with the newly created entry highlighted
+        if (mounted) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NoteDetailScreen(
+                noteId: note.id,
+                highlightedEntryId: entry.id,
+                autoCloseAfterDelay: false,
+              ),
+            ),
           );
         }
         break;
@@ -585,6 +609,50 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
     
     return snippets;
+  }
+
+  // Estimate the height of a note card for grid layout balancing
+  // This must match the actual NoteCard rendering in grid view
+  double _estimateNoteCardHeight(Note note) {
+    // Base structure for grid view (reduced padding):
+    // top padding (12) + icon (48) + name row (16) + spacing (4) + date (13) + spacing (8)
+    double height = 12.0 + 48.0 + 16.0 + 4.0 + 13.0 + 8.0; // ~101px
+    
+    // Get the latest entry text (same logic as NoteCard._getFirstSentence)
+    final latestText = note.latestEntryText;
+    
+    if (latestText == null || latestText.isEmpty) {
+      // "No content" text
+      height += 12.0 * 1.4; // fontSize 12, height 1.4
+      height += 12.0; // bottom padding (reduced)
+      return height + 12.0; // margin bottom
+    }
+    
+    // Calculate text that will actually be shown (first 35 words or less)
+    final words = latestText.split(RegExp(r'\s+'));
+    final displayedWords = words.length <= 35 ? words : words.take(35).toList();
+    final displayedText = displayedWords.join(' ');
+    
+    // Estimate how many lines this text will take
+    // In grid view, cards are narrower - estimate ~30-35 characters per line
+    const charsPerLine = 32; // conservative estimate for grid width
+    final estimatedLines = (displayedText.length / charsPerLine).ceil().clamp(1, 15);
+    
+    // Text height: fontSize 12 * lineHeight 1.4 = 16.8px per line
+    final textHeight = estimatedLines * 16.8;
+    height += textHeight;
+    
+    // Add search snippet height if there's a search query
+    // (Note: we don't have search query here, but typically adds ~30-50px per snippet)
+    
+    // Bottom padding (reduced for grid view)
+    height += 12.0;
+    
+    // Bottom margin
+    height += 12.0;
+    
+    // Round to prevent floating point issues
+    return height.roundToDouble().clamp(130.0, 600.0);
   }
 
   Future<void> _startRecording() async {
@@ -1200,6 +1268,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             onTap: () {
               // Unfocus when tapping background
               FocusScope.of(context).unfocus();
+              // Hide search overlay when tapping background
+              _hideSearchOverlay();
             },
             child: AnimatedBackground(
             style: settingsProvider.settings.backgroundStyle,
@@ -1346,13 +1416,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         pinned: true,
                         delegate: _AnimatedHeaderDelegate(
                           builder: _buildAnimatedHeader,
-                          expandedHeight: 120.0 + MediaQuery.of(context).padding.top, // Add safe area to expanded height
-                          collapsedHeight: 60.0 + MediaQuery.of(context).padding.top, // Add safe area to collapsed height
+                          expandedHeight: 140.0 + MediaQuery.of(context).padding.top, // Increased by 10px to prevent overflow (greeting + search bar)
+                          collapsedHeight: 56.0 + MediaQuery.of(context).padding.top, // Smaller collapsed height
                         ),
-                      ),
-                      // Add spacing between header and notes
-                      const SliverToBoxAdapter(
-                        child: SizedBox(height: AppTheme.spacing16),
                       ),
                       // Add top padding when search is active
                       if (_showSearchOverlay)
@@ -1477,10 +1543,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               final crossAxisCount = MediaQuery.of(context).size.width > 600 ? 3 : 2;
                               final notes = provider.notes;
                               
-                              // Group notes into columns for masonry effect
+                              // Group notes into columns for masonry effect with balanced heights
+                              // Track column heights to balance the layout
                               final columns = List.generate(crossAxisCount, (_) => <Note>[]);
+                              final columnHeights = List.generate(crossAxisCount, (_) => 0.0);
+                              
+                              // Distribute notes by adding each to the shortest column
+                              // This maintains roughly the same sort order while balancing heights
                               for (var i = 0; i < notes.length; i++) {
-                                columns[i % crossAxisCount].add(notes[i]);
+                                final note = notes[i];
+                                
+                                // Estimate note height based on content
+                                final estimatedHeight = _estimateNoteCardHeight(note);
+                                
+                                // Find the shortest column
+                                // When heights are equal, prefer the column with fewer items (better distribution)
+                                var shortestColumnIndex = 0;
+                                var shortestHeight = columnHeights[0];
+                                
+                                for (var col = 1; col < crossAxisCount; col++) {
+                                  // Use <= to ensure we check all columns
+                                  // Prefer the column with shorter height, or if equal, the one with fewer items
+                                  if (columnHeights[col] < shortestHeight ||
+                                      (columnHeights[col] == shortestHeight && 
+                                       columns[col].length < columns[shortestColumnIndex].length)) {
+                                    shortestHeight = columnHeights[col];
+                                    shortestColumnIndex = col;
+                                  }
+                                }
+                                
+                                // Add note to the shortest column
+                                columns[shortestColumnIndex].add(note);
+                                columnHeights[shortestColumnIndex] += estimatedHeight;
                               }
                               
                               return SliverPadding(
@@ -1783,10 +1877,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     onNoteTap: (noteId) async {
                       HapticService.light();
                       // Don't exit chat mode - let it persist in the background
+                      
+                      // Simply open the note - AI citations are general references
+                      // not specific search queries, so we don't try to highlight anything
                       await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => NoteDetailScreen(noteId: noteId),
+                          builder: (context) => NoteDetailScreen(
+                            noteId: noteId,
+                          ),
                         ),
                       );
                       // Chat will still be active when user returns
@@ -2000,10 +2099,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                GestureDetector(
-                  onTap: _hideSearchOverlay,
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
+                Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -2021,11 +2117,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     top: AppTheme.spacing48,
                     bottom: AppTheme.spacing8,
                   ),
-                  child: GestureDetector(
-                    onTap: () {}, // Prevent tap from closing when tapping on search field
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacing20),
-                      child: ClipRRect(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
+                    child: ClipRRect(
                       borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
@@ -2102,8 +2196,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       ),
                     ),
-                  ),
-                ),
                   ),
                 ),
               ],
@@ -2246,33 +2338,129 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
   
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    final now = DateTime.now();
+    final isWeekend = now.weekday == DateTime.saturday || now.weekday == DateTime.sunday;
+    
+    // Get note context
+    final provider = context.read<NotesProvider>();
+    final noteCount = provider.notes.length;
+    final hasNotes = noteCount > 0;
+    
+    // Check if user created notes today
+    final today = DateTime.now();
+    int notesToday = 0;
+    for (final note in provider.notes) {
+      if (note.updatedAt.year == today.year && 
+          note.updatedAt.month == today.month && 
+          note.updatedAt.day == today.day) {
+        notesToday++;
+      }
+    }
+    
+    // Weekend morning override
+    if (isWeekend && hour >= 6 && hour < 12) {
+      return 'Weekend vibes 🎉';
+    }
+    
+    // Context-aware messages
+    if (notesToday >= 5) {
+      return 'On a roll today 🔥';
+    }
+    
+    if (!hasNotes) {
+      return 'Ready to capture?';
+    }
+    
+    // Time-based greetings with randomization
+    final greetings = _getGreetingsForHour(hour);
+    final randomIndex = (hour + now.minute) % greetings.length;
+    return greetings[randomIndex];
+  }
+  
+  List<String> _getGreetingsForHour(int hour) {
+    if (hour >= 5 && hour < 8) {
+      // Early Morning
+      return [
+        'Rise & shine ☀️',
+        'Early bird gets the notes 🐦',
+        'Fresh start, fresh ideas',
+      ];
+    } else if (hour >= 8 && hour < 12) {
+      // Morning
+      return [
+        'Let\'s do this ✨',
+        'Morning, genius 💡',
+        'What\'s brewing?',
+      ];
+    } else if (hour >= 12 && hour < 14) {
+      // Lunch
+      return [
+        'Midday brain dump 🧠',
+        'Lunch thoughts?',
+        'Afternoon fuel ⚡',
+      ];
+    } else if (hour >= 14 && hour < 17) {
+      // Afternoon
+      return [
+        'Keep it rolling 🔥',
+        'Afternoon vibes',
+        'Ideas flowing?',
+      ];
+    } else if (hour >= 17 && hour < 21) {
+      // Evening
+      return [
+        'Evening wind down 🌙',
+        'Day\'s not over yet',
+        'Golden hour thoughts ✨',
+      ];
+    } else if (hour >= 21 && hour < 24) {
+      // Night
+      return [
+        'Night owl mode 🦉',
+        'Late night genius',
+        'Still going strong',
+      ];
+    } else {
+      // Late Night (12am-5am)
+      return [
+        'Midnight thoughts 🌃',
+        'Can\'t sleep? 💭',
+        'Burning midnight oil 🕯️',
+      ];
+    }
+  }
+  
   Widget _buildAnimatedHeader(double progress) {
     // Get safe area insets
     final safePadding = MediaQuery.of(context).padding.top;
     
     // Interpolate values based on scroll progress
-    final double fontSize = 48 - (progress * 26); // 48 -> 22
-    final double topPadding = 56 - (progress * 40); // 56 -> 16 (reduced from 60)
-    final double bottomPadding = 24 - (progress * 8); // 24 -> 16 (reduced from 32)
-    final double horizontalPadding = 24 - (progress * 4); // 24 -> 20
-    final double iconOpacity = 0.85 + ((1 - progress) * 0.15); // Slightly higher base opacity
+    final double fontSize = 28 - (progress * 10); // 28 -> 18
+    final double topPadding = 40 - (progress * 24); // 40 -> 16
+    final double horizontalPadding = 24.0; // Fixed 24px to align with note cards
+    final double iconOpacity = 0.85 + ((1 - progress) * 0.15);
     
-    // Background opacity increases as we scroll - only show when scrolling
-    final double backgroundOpacity = progress * 0.4; // 0 -> 0.4 (starts transparent, becomes glass)
-    final double blurAmount = progress * 20; // 0 -> 20 (no blur at top, full blur when scrolled)
+    // Search bar and greeting scale down during transition
+    final double searchBarHeight = 40 - (progress * 15); // 40 -> 25 (shrinks)
+    final double greetingBottomPadding = 20 - (progress * 16); // 20 -> 4 (shrinks spacing)
+    
+    // Control when elements appear/disappear - better transition timing
+    // Only show expanded when progress < 0.8 (mostly expanded)
+    final double expandedOpacity = (1.0 - progress).clamp(0.0, 1.0);
+    // Only show collapsed when progress > 0.7 (mostly scrolled)  
+    final double collapsedOpacity = ((progress - 0.7) * 3.33).clamp(0.0, 1.0);
+    
+    // Background opacity increases as we scroll
+    final double backgroundOpacity = progress * 0.5; // More visible when scrolled
+    final double blurAmount = progress * 20;
     
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: blurAmount, sigmaY: blurAmount),
         child: Container(
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            safePadding + topPadding, // Add safe area to top padding
-            horizontalPadding,
-            bottomPadding,
-          ),
           decoration: BoxDecoration(
-            // Dark glassmorphism frosting - only visible when scrolling
             color: AppTheme.glassDarkSurface.withValues(alpha: backgroundOpacity),
             border: progress > 0.5 ? const Border(
               bottom: BorderSide(
@@ -2281,63 +2469,206 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ) : null,
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(top: progress * 4), // Subtle offset when scrolling
-                  child: Text(
-                    'Notes',
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          fontSize: fontSize,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.8,
-                          height: 1.0,
-                          color: AppTheme.textPrimary,
-                        ),
-                    overflow: TextOverflow.visible,
-                    maxLines: 1,
+              // EXPANDED STATE: Greeting + Search Bar
+              if (expandedOpacity > 0)
+                Positioned(
+                  left: horizontalPadding,
+                  right: horizontalPadding,
+                  top: safePadding + topPadding,
+                  child: Opacity(
+                    opacity: expandedOpacity.clamp(0.0, 1.0),
+                    child: IgnorePointer(
+                      ignoring: expandedOpacity < 0.3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Greeting text with dynamic padding
+                          Padding(
+                            padding: EdgeInsets.only(bottom: greetingBottomPadding.clamp(4.0, 20.0)),
+                            child: Text(
+                              _getGreeting(),
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontSize: fontSize,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: -0.5,
+                                    height: 1.0,
+                                    color: AppTheme.textPrimary.withOpacity(0.9),
+                                  ),
+                              overflow: TextOverflow.clip,
+                              maxLines: 1,
+                            ),
+                          ),
+                          // Search bar with ellipsis - shrinks during scroll
+                          Row(
+                            children: [
+                              // Search bar - fills available width
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    HapticService.light();
+                                    setState(() {
+                                      _showSearchOverlay = true;
+                                    });
+                                    _searchAnimationController.forward();
+                                  },
+                                  child: Container(
+                                    height: searchBarHeight.clamp(25.0, 40.0),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.glassSurface.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: AppTheme.glassBorder.withOpacity(0.25),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.auto_awesome,
+                                          size: 16,
+                                          color: AppTheme.textSecondary.withOpacity(0.7),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Ask AI',
+                                          style: TextStyle(
+                                            color: AppTheme.textSecondary.withOpacity(0.7),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              // Ellipsis button - matches search bar height
+                              GestureDetector(
+                                onTap: () {
+                                  HapticService.light();
+                                  _showOrganizeBottomSheet();
+                                },
+                                child: Container(
+                                  width: searchBarHeight.clamp(25.0, 40.0),
+                                  height: searchBarHeight.clamp(25.0, 40.0),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.glassSurface.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: AppTheme.glassBorder.withOpacity(0.25),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.more_horiz,
+                                      size: 18,
+                                      color: AppTheme.textPrimary.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              // Clean icon buttons without background
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Organize Icon Button
-                  GestureDetector(
-                    onTap: () {
-                      HapticService.light();
-                      _showOrganizeBottomSheet();
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Icon(
-                        Icons.tune,
-                        size: 24,
-                        color: AppTheme.textPrimary.withOpacity(iconOpacity),
+              
+              // COLLAPSED STATE: Home title with search and settings icons
+              if (collapsedOpacity > 0)
+                Positioned.fill(
+                  top: safePadding,
+                  child: Opacity(
+                    opacity: collapsedOpacity.clamp(0.0, 1.0),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Search icon on left
+                          GestureDetector(
+                            onTap: () {
+                              HapticService.light();
+                              setState(() {
+                                _showSearchOverlay = true;
+                              });
+                              _searchAnimationController.forward();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              child: Icon(
+                                Icons.search,
+                                size: 22,
+                                color: AppTheme.textPrimary.withOpacity(iconOpacity),
+                              ),
+                            ),
+                          ),
+                          // "Home" title - centered
+                          Expanded(
+                            child: Text(
+                              'Home',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: -0.5,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                              overflow: TextOverflow.visible,
+                              maxLines: 1,
+                            ),
+                          ),
+                          // Settings icon on right
+                          GestureDetector(
+                            onTap: () async {
+                              await HapticService.light();
+                              await context.pushHero(const SettingsScreen());
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              child: Icon(
+                                Icons.settings_outlined,
+                                size: 22,
+                                color: AppTheme.textPrimary.withOpacity(iconOpacity),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // Settings Icon
-                  GestureDetector(
-                    onTap: () async {
-                      await HapticService.light();
-                      await context.pushHero(const SettingsScreen());
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
+                ),
+              
+              // Settings icon for expanded state (top-right)
+              if (expandedOpacity > 0)
+                Positioned(
+                  top: safePadding + 8,
+                  right: 24,
+                  child: Opacity(
+                    opacity: expandedOpacity.clamp(0.0, 1.0),
+                    child: GestureDetector(
+                      onTap: () async {
+                        await HapticService.light();
+                        await context.pushHero(const SettingsScreen());
+                      },
                       child: Icon(
                         Icons.settings_outlined,
-                        size: 24,
+                        size: 22,
                         color: AppTheme.textPrimary.withOpacity(iconOpacity),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
             ],
           ),
         ),

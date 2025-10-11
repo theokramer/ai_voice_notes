@@ -30,11 +30,11 @@ class RecordingService {
 
       _isInitialized = true;
       if (kDebugMode) {
-        print('RecordingService pre-warmed successfully');
+        debugPrint('RecordingService pre-warmed successfully');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('RecordingService pre-warm failed: $e');
+        debugPrint('RecordingService pre-warm failed: $e');
       }
       // Non-critical failure, continue anyway
     }
@@ -78,7 +78,7 @@ class RecordingService {
       );
     } catch (e) {
       if (kDebugMode) {
-        print('Recording start failed: $e');
+        debugPrint('Recording start failed: $e');
       }
       return RecordingStartResult(
         success: false,
@@ -94,7 +94,7 @@ class RecordingService {
       return await recorder.stop();
     } catch (e) {
       if (kDebugMode) {
-        print('Recording stop failed: $e');
+        debugPrint('Recording stop failed: $e');
       }
       return null;
     }

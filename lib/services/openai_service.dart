@@ -1,19 +1,27 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/note.dart';
+import '../models/app_language.dart';
 
 class OpenAIService {
   final String apiKey;
 
   OpenAIService({required this.apiKey});
 
-  Future<String> transcribeAudio(String audioPath) async {
+  Future<String> transcribeAudio(String audioPath, {AppLanguage? language}) async {
     try {
       final uri = Uri.parse('https://api.openai.com/v1/audio/transcriptions');
       final request = http.MultipartRequest('POST', uri);
 
       request.headers['Authorization'] = 'Bearer $apiKey';
       request.fields['model'] = 'whisper-1';
+      
+      // Add language parameter if provided for better transcription accuracy
+      if (language != null) {
+        request.fields['language'] = language.code;
+      }
+      
       request.files.add(await http.MultipartFile.fromPath('file', audioPath));
 
       final response = await request.send();
@@ -200,14 +208,14 @@ Recent content: "${contextText.length > 100 ? contextText.substring(0, 100) : co
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('🔍 Full API Response: ${response.body}');
+        debugPrint('🔍 Full API Response: ${response.body}');
         
         final content = data['choices'][0]['message']['content'];
-        print('🔍 AI Response Content: "$content"');
+        debugPrint('🔍 AI Response Content: "$content"');
         
         // Check if content is empty or null
         if (content == null || content.toString().trim().isEmpty) {
-          print('❌ AI returned empty response! Falling back to default.');
+          debugPrint('❌ AI returned empty response! Falling back to default.');
           return HeadlineMatch(
             action: HeadlineAction.createNew,
             headline: 'Notes',
@@ -229,15 +237,15 @@ Recent content: "${contextText.length > 100 ? contextText.substring(0, 100) : co
               (title) => title.toLowerCase() == headline.toLowerCase()
             );
             if (!exactMatch) {
-              print('⚠️ HEADLINE MISMATCH WARNING:');
-              print('   AI returned: "$headline"');
-              print('   Available: ${existingTitles.join(", ")}');
-              print('   This will create a duplicate headline!');
+              debugPrint('⚠️ HEADLINE MISMATCH WARNING:');
+              debugPrint('   AI returned: "$headline"');
+              debugPrint('   Available: ${existingTitles.join(", ")}');
+              debugPrint('   This will create a duplicate headline!');
             } else {
-              print('✓ Headline match successful: "$headline"');
+              debugPrint('✓ Headline match successful: "$headline"');
             }
           } else {
-            print('✓ Creating new headline: "$headline"');
+            debugPrint('✓ Creating new headline: "$headline"');
           }
           
           return HeadlineMatch(
@@ -245,9 +253,9 @@ Recent content: "${contextText.length > 100 ? contextText.substring(0, 100) : co
             headline: headline,
           );
         } catch (e) {
-          print('❌ Failed to parse AI response: $content');
-          print('   Error: $e');
-          print('   Response was: ${content.runtimeType}');
+          debugPrint('❌ Failed to parse AI response: $content');
+          debugPrint('   Error: $e');
+          debugPrint('   Response was: ${content.runtimeType}');
           // If parsing fails, create a new generic headline
           return HeadlineMatch(
             action: HeadlineAction.createNew,
@@ -258,7 +266,7 @@ Recent content: "${contextText.length > 100 ? contextText.substring(0, 100) : co
         throw Exception('GPT request failed: ${response.body}');
       }
     } catch (e) {
-      print('❌ Headline matching error: $e');
+      debugPrint('❌ Headline matching error: $e');
       // Fallback: create a default headline
       return HeadlineMatch(
         action: HeadlineAction.createNew,

@@ -39,6 +39,17 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
   }
 
   @override
+  void didUpdateWidget(AnimatedBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Trigger rebuild when theme changes
+    if (oldWidget.themeConfig != widget.themeConfig) {
+      setState(() {
+        // Forces a rebuild with new theme
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -48,14 +59,18 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Animated background layer
+        // Animated background layer with smooth theme transitions
         Positioned.fill(
           child: RepaintBoundary(
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, child) {
-                return CustomPaint(
-                  painter: _getPainter(),
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeInOut,
+                  child: CustomPaint(
+                    painter: _getPainter(),
+                  ),
                 );
               },
             ),
@@ -69,9 +84,9 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withOpacity(0.35),  // Darker at top
-                  Colors.black.withOpacity(0.25),  // Lighter in middle
-                  Colors.black.withOpacity(0.30),  // Slightly darker at bottom
+                  Colors.black.withValues(alpha: 0.35),  // Darker at top
+                  Colors.black.withValues(alpha: 0.25),  // Lighter in middle
+                  Colors.black.withValues(alpha: 0.30),  // Slightly darker at bottom
                 ],
               ),
             ),
@@ -174,8 +189,8 @@ class MeshGradientPainter extends CustomPainter {
         center: Alignment.center,
         radius: 1.5,
         colors: [
-          colors[i].withOpacity(0.3),  // Reduced from 0.6
-          colors[i].withOpacity(0.0),
+          colors[i].withValues(alpha: 0.3),  // Reduced from 0.6
+          colors[i].withValues(alpha: 0.0),
         ],
       );
 
@@ -194,7 +209,10 @@ class MeshGradientPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(MeshGradientPainter oldDelegate) => false;
+  bool shouldRepaint(MeshGradientPainter oldDelegate) {
+    // Repaint when theme changes
+    return oldDelegate.themeConfig != themeConfig;
+  }
 }
 
 
@@ -231,7 +249,10 @@ class StaticGradientPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(StaticGradientPainter oldDelegate) => false;
+  bool shouldRepaint(StaticGradientPainter oldDelegate) {
+    // Repaint when theme changes
+    return oldDelegate.themeConfig != themeConfig;
+  }
 }
 
 
@@ -412,7 +433,7 @@ class CloudsPainter extends CustomPainter {
       )!;
       
       final paint = Paint()
-        ..color = cloudColor.withOpacity(layerOpacity * (1.0 - colorMix * 0.2))
+        ..color = cloudColor.withValues(alpha: layerOpacity * (1.0 - colorMix * 0.2))
         ..maskFilter = MaskFilter.blur(
           BlurStyle.normal, 
           blurAmount.clamp(50.0, 60.0),
@@ -463,7 +484,10 @@ class CloudsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(CloudsPainter oldDelegate) => false;
+  bool shouldRepaint(CloudsPainter oldDelegate) {
+    // Repaint when theme changes
+    return oldDelegate.themeConfig != themeConfig;
+  }
 }
 
 class _Cloud {
@@ -574,9 +598,9 @@ class SoftBlobsPainter extends CustomPainter {
       center: Alignment.center,
       radius: 0.85,
       colors: [
-        color.withOpacity(blob.opacity),
-        color.withOpacity(blob.opacity * 0.6),
-        color.withOpacity(0.0),
+        color.withValues(alpha: blob.opacity),
+        color.withValues(alpha: blob.opacity * 0.6),
+        color.withValues(alpha: 0.0),
       ],
       stops: const [0.0, 0.5, 1.0],
     );
@@ -592,7 +616,10 @@ class SoftBlobsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(SoftBlobsPainter oldDelegate) => false;
+  bool shouldRepaint(SoftBlobsPainter oldDelegate) {
+    // Repaint when theme changes
+    return oldDelegate.themeConfig != themeConfig;
+  }
 }
 
 class _Blob {
