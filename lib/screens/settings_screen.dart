@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -18,51 +19,42 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
+        final themeConfig = settingsProvider.currentThemeConfig;
         return Scaffold(
           body: AnimatedBackground(
             style: settingsProvider.settings.backgroundStyle,
-            themeConfig: settingsProvider.currentThemeConfig,
+            themeConfig: themeConfig,
             child: SafeArea(
-          child: Column(
-            children: [
-              // Header - simplified without BackdropFilter for better performance
-              Padding(
-                padding: const EdgeInsets.all(AppTheme.spacing24),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
+              top: false, // Allow header to extend into safe area
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                slivers: [
+                  // Animated Header with smooth collapsing effect
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _SettingsHeaderDelegate(
+                      onBackPressed: () {
                         HapticService.light();
                         Navigator.pop(context);
                       },
-                      child: Container(
-                        padding: const EdgeInsets.all(AppTheme.spacing12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.glassStrongSurface,
-                          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                          border: Border.all(color: AppTheme.glassBorder, width: 1.5),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back,
-                          size: 22,
-                        ),
-                      ),
+                      expandedHeight: 120.0 + MediaQuery.of(context).padding.top,
+                      collapsedHeight: 60.0 + MediaQuery.of(context).padding.top,
+                      themeConfig: themeConfig,
                     ),
-                    const SizedBox(width: AppTheme.spacing16),
-                    Text(
-                      'Settings',
-                      style: Theme.of(context).textTheme.displayLarge,
-                    ),
-                  ],
-                ),
-              ),
-              // Settings list
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.spacing24,
                   ),
-                  children: [
+                  // Add spacing between header and content
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: AppTheme.spacing16),
+                  ),
+                  // Settings list
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacing24,
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
                     _buildSection(
                       context,
                       settingsProvider.currentThemeConfig,
@@ -112,13 +104,13 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing32),
-                  ],
-                ),
+                      ]),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
         );
       },
     );
@@ -976,6 +968,124 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// Custom SliverPersistentHeaderDelegate for animated settings header
+class _SettingsHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final VoidCallback onBackPressed;
+  final double expandedHeight;
+  final double collapsedHeight;
+  final ThemeConfig themeConfig;
+
+  _SettingsHeaderDelegate({
+    required this.onBackPressed,
+    required this.expandedHeight,
+    required this.collapsedHeight,
+    required this.themeConfig,
+  });
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    // Calculate progress based on how much the header has shrunk
+    final double shrinkProgress = (shrinkOffset / (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
+    
+    // Get safe area insets
+    final safePadding = MediaQuery.of(context).padding.top;
+    
+    // Interpolate values based on scroll progress
+    final double fontSize = 48 - (shrinkProgress * 26); // 48 -> 22
+    final double topPadding = 56 - (shrinkProgress * 40); // 56 -> 16
+    final double bottomPadding = 24 - (shrinkProgress * 8); // 24 -> 16
+    final double horizontalPadding = 24 - (shrinkProgress * 4); // 24 -> 20
+    final double backButtonSize = 46 - (shrinkProgress * 6); // 46 -> 40
+    
+    // Background opacity increases as we scroll - only show when scrolling
+    final double backgroundOpacity = shrinkProgress * 0.4; // 0 -> 0.4 (starts transparent, becomes glass)
+    final double blurAmount = shrinkProgress * 20; // 0 -> 20 (no blur at top, full blur when scrolled)
+    
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: blurAmount, sigmaY: blurAmount),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            safePadding + topPadding, // Add safe area to top padding
+            horizontalPadding,
+            bottomPadding,
+          ),
+          decoration: BoxDecoration(
+            // Dark glassmorphism frosting - only visible when scrolling
+            color: AppTheme.glassDarkSurface.withValues(alpha: backgroundOpacity),
+            border: shrinkProgress > 0.5 ? const Border(
+              bottom: BorderSide(
+                color: AppTheme.glassBorder,
+                width: 1.5,
+              ),
+            ) : null,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Back button - clean and properly sized
+              GestureDetector(
+                onTap: onBackPressed,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      width: backButtonSize,
+                      height: backButtonSize,
+                      decoration: AppTheme.glassDecoration(
+                        radius: AppTheme.radiusMedium,
+                        color: AppTheme.glassDarkSurface,
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.arrow_back,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacing12),
+              // Settings title
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(top: shrinkProgress * 4), // Subtle offset when scrolling
+                  child: Text(
+                    'Settings',
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.8,
+                          height: 1.0,
+                          color: AppTheme.textPrimary,
+                        ),
+                    overflow: TextOverflow.visible,
+                    maxLines: 1,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  double get maxExtent => expandedHeight;
+
+  @override
+  double get minExtent => collapsedHeight;
+
+  @override
+  bool shouldRebuild(covariant _SettingsHeaderDelegate oldDelegate) {
+    return true; // Always rebuild for smooth animation
   }
 }
 

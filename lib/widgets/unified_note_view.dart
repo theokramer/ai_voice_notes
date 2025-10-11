@@ -14,6 +14,7 @@ class UnifiedNoteView extends StatefulWidget {
   final Function(String noteId, String headlineId, TextEntry entry, Headline headline) onEntryLongPress;
   final Function(String noteId, Headline headline) onHeadlineLongPress;
   final String? highlightedEntryId;
+  final Map<String, GlobalKey>? entryKeys;
 
   const UnifiedNoteView({
     super.key,
@@ -21,6 +22,7 @@ class UnifiedNoteView extends StatefulWidget {
     required this.onEntryLongPress,
     required this.onHeadlineLongPress,
     this.highlightedEntryId,
+    this.entryKeys,
   });
 
   @override
@@ -449,6 +451,7 @@ class _UnifiedNoteViewState extends State<UnifiedNoteView> {
               final isEditing = _editingEntryId == textEntry.id;
 
               return Padding(
+                key: widget.entryKeys?[textEntry.id],
                 padding: const EdgeInsets.only(bottom: AppTheme.spacing24),
                 child: GestureDetector(
                   onTap: () {

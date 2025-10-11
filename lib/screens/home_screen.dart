@@ -775,25 +775,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       HapticService.success();
       
       if (mounted) {
-        final settingsProvider = context.read<SettingsProvider>();
-        
         await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => NoteDetailScreen(
               noteId: note.id,
               highlightedEntryId: entryId,
+              autoCloseAfterDelay: true,
             ),
           ),
         );
-        
-        // Auto-close after 2 seconds if setting is enabled
-        if (settingsProvider.autoCloseAfterEntry && mounted) {
-          await Future.delayed(const Duration(seconds: 2));
-          if (mounted) {
-            Navigator.pop(context);
-          }
-        }
       }
 
       _transcribedText = null;
@@ -2281,8 +2272,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             bottomPadding,
           ),
           decoration: BoxDecoration(
-            // White glassmorphism like microphone button - only visible when scrolling
-            color: AppTheme.glassStrongSurface.withValues(alpha: backgroundOpacity),
+            // Dark glassmorphism frosting - only visible when scrolling
+            color: AppTheme.glassDarkSurface.withValues(alpha: backgroundOpacity),
             border: progress > 0.5 ? const Border(
               bottom: BorderSide(
                 color: AppTheme.glassBorder,

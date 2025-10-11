@@ -129,6 +129,7 @@ class AppTheme {
   static const Color glassSurface = Color(0x30FFFFFF); // 19% white
   static const Color glassBorder = Color(0x40FFFFFF); // 25% white
   static const Color glassStrongSurface = Color(0x40FFFFFF); // 25% white (for cards)
+  static const Color glassDarkSurface = Color(0x60000000); // 38% black (dark frosting for headers)
   
   // Backward compatibility - use default theme
   static final ThemeConfig _defaultConfig = getThemeConfig(ThemePreset.modern);

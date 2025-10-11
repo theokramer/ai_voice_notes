@@ -22,12 +22,14 @@ class NoteDetailScreen extends StatefulWidget {
   final String noteId;
   final String? highlightedEntryId;
   final String? searchQuery;
+  final bool autoCloseAfterDelay;
 
   const NoteDetailScreen({
     super.key,
     required this.noteId,
     this.highlightedEntryId,
     this.searchQuery,
+    this.autoCloseAfterDelay = false,
   });
 
   @override
@@ -56,9 +58,24 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   
   // Scroll controller and highlight management
   final ScrollController _scrollController = ScrollController();
-  final Map<String, GlobalKey> _entryKeys = {};
   String? _currentHighlightedEntryId;
   Timer? _highlightTimer;
+  Timer? _autoCloseTimer;
+  bool _hasScrolledToEntry = false;
+  
+  // GlobalKeys for accurate entry positioning
+  final Map<String, GlobalKey> _entryKeys = {};
+
+  // Ensure GlobalKeys exist for all entries in the note
+  void _ensureEntryKeys(Note note) {
+    for (final headline in note.headlines) {
+      for (final entry in headline.entries) {
+        if (!_entryKeys.containsKey(entry.id)) {
+          _entryKeys[entry.id] = GlobalKey();
+        }
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -67,8 +84,16 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     
     // Set up auto-scrolling and highlight fade-out
     if (_currentHighlightedEntryId != null || widget.searchQuery != null) {
+      // Wait for multiple frames to ensure layout is complete
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToTargetEntry();
+        // First frame - widgets are built
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Second frame - layout is complete
+          Future.delayed(const Duration(milliseconds: 100), () {
+            // Additional delay for complex layouts
+            _scrollToTargetEntry();
+          });
+        });
         
         // Set up timer to clear highlight after 3 seconds
         if (_currentHighlightedEntryId != null) {
@@ -82,12 +107,28 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         }
       });
     }
+    
+    // Set up auto-close timer if enabled
+    if (widget.autoCloseAfterDelay) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final settingsProvider = context.read<SettingsProvider>();
+        if (settingsProvider.autoCloseAfterEntry) {
+          _autoCloseTimer = Timer(const Duration(seconds: 2), () {
+            // Check if still mounted and user hasn't navigated away
+            if (mounted && Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          });
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
     _highlightTimer?.cancel();
+    _autoCloseTimer?.cancel();
     _scrollController.dispose();
     _audioRecorder.dispose();
     // Clean up controllers and focus nodes
@@ -105,10 +146,14 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     }
     _titleController.dispose();
     _titleFocusNode.dispose();
+    // Clear entry keys
+    _entryKeys.clear();
     super.dispose();
   }
   
   void _scrollToTargetEntry() {
+    if (_hasScrolledToEntry) return;
+    
     final provider = context.read<NotesProvider>();
     final note = provider.notes.firstWhere((n) => n.id == widget.noteId);
     
@@ -143,59 +188,63 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     }
     
     if (targetEntryId != null) {
-      // Wait longer for the layout to complete and keys to be registered
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (!mounted) return;
-        
-        final key = _entryKeys[targetEntryId];
-        final keyContext = key?.currentContext;
-        
-        if (keyContext != null && _scrollController.hasClients) {
-          try {
-            final RenderBox? renderBox = keyContext.findRenderObject() as RenderBox?;
-            if (renderBox != null && renderBox.hasSize) {
-              final position = renderBox.localToGlobal(Offset.zero);
-              final viewportHeight = MediaQuery.of(context).size.height;
-              // Calculate offset to center the entry, accounting for header
-              final scrollOffset = _scrollController.offset + position.dy - (viewportHeight * 0.3);
-              
-              _scrollController.animateTo(
-                scrollOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
-                duration: const Duration(milliseconds: 600),
-                curve: Curves.easeOutCubic,
-              );
-            }
-          } catch (e) {
-            debugPrint('Error scrolling to entry: $e');
-          }
-        } else {
-          // Retry once more if context not available yet
-          Future.delayed(const Duration(milliseconds: 300), () {
-            if (!mounted) return;
-            
-            final retryKey = _entryKeys[targetEntryId];
-            final retryContext = retryKey?.currentContext;
-            
-            if (retryContext != null && _scrollController.hasClients) {
-              try {
-                final RenderBox? renderBox = retryContext.findRenderObject() as RenderBox?;
-                if (renderBox != null && renderBox.hasSize) {
-                  final position = renderBox.localToGlobal(Offset.zero);
-                  final viewportHeight = MediaQuery.of(context).size.height;
-                  final scrollOffset = _scrollController.offset + position.dy - (viewportHeight * 0.3);
-                  
-                  _scrollController.animateTo(
-                    scrollOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeOutCubic,
-                  );
-                }
-              } catch (e) {
-                debugPrint('Error scrolling to entry on retry: $e');
-              }
-            }
-          });
-        }
+      _attemptScrollByPosition(note, targetEntryId);
+    }
+  }
+  
+  void _attemptScrollByPosition(Note note, String targetEntryId) {
+    if (!mounted || !_scrollController.hasClients) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) _attemptScrollByPosition(note, targetEntryId);
+      });
+      return;
+    }
+    
+    // Get the GlobalKey for the target entry
+    final entryKey = _entryKeys[targetEntryId];
+    if (entryKey == null) {
+      debugPrint('No GlobalKey found for entry: $targetEntryId');
+      return;
+    }
+    
+    // Try to get the RenderBox for accurate positioning
+    final keyContext = entryKey.currentContext;
+    if (keyContext == null) {
+      // Widget not yet rendered, try again after a delay
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) _attemptScrollByPosition(note, targetEntryId);
+      });
+      return;
+    }
+    
+    try {
+      final RenderBox renderBox = keyContext.findRenderObject() as RenderBox;
+      final position = renderBox.localToGlobal(Offset.zero);
+      
+      // Position entry just below the collapsed header with small padding
+      // Collapsed header is ~60px + safe area + 20px padding = ~100px from top of screen
+      final safePadding = MediaQuery.of(context).padding.top;
+      final collapsedHeaderHeight = 60.0 + safePadding;
+      final topPadding = 20.0;
+      final targetOffset = collapsedHeaderHeight + topPadding;
+      
+      // Calculate scroll position: current scroll + entry's screen position - target offset
+      final scrollPosition = _scrollController.offset + position.dy - targetOffset;
+      
+      debugPrint('Scrolling to entry with actual position. Screen Y: ${position.dy}, Target scroll: $scrollPosition');
+      
+      _hasScrolledToEntry = true;
+      
+      _scrollController.animateTo(
+        scrollPosition.clamp(0.0, _scrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeOutCubic,
+      );
+    } catch (e) {
+      debugPrint('Error scrolling with GlobalKey: $e');
+      // Fall back to trying again
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted) _attemptScrollByPosition(note, targetEntryId);
       });
     }
   }
@@ -1876,11 +1925,18 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                                 ),
                                 // Unified Note View as sliver
                                 SliverToBoxAdapter(
-                                  child: UnifiedNoteView(
-                                    note: note,
-                                    onEntryLongPress: _showEntryOptions,
-                                    onHeadlineLongPress: _showHeadlineOptions,
-                                    highlightedEntryId: _currentHighlightedEntryId,
+                                  child: Builder(
+                                    builder: (context) {
+                                      // Ensure GlobalKeys exist for all entries
+                                      _ensureEntryKeys(note);
+                                      return UnifiedNoteView(
+                                        note: note,
+                                        onEntryLongPress: _showEntryOptions,
+                                        onHeadlineLongPress: _showHeadlineOptions,
+                                        highlightedEntryId: _currentHighlightedEntryId,
+                                        entryKeys: _entryKeys,
+                                      );
+                                    },
                                   ),
                                 ),
                                 // Add bottom padding to prevent cropping
@@ -2294,12 +2350,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           final textEntry = entry.value;
           final highlight = _currentHighlightedEntryId == textEntry.id;
           final isEditing = _editingEntryId == textEntry.id;
-          
-          // Create or get the GlobalKey for this entry
-          if (!_entryKeys.containsKey(textEntry.id)) {
-            _entryKeys[textEntry.id] = GlobalKey();
-          }
-          final entryKey = _entryKeys[textEntry.id]!;
 
           final container = GestureDetector(
             onTap: () {
@@ -2310,7 +2360,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             },
             onLongPress: () => _showEntryOptions(noteId, headline.id, textEntry, headline),
             child: Container(
-            key: entryKey,
             margin: const EdgeInsets.only(bottom: AppTheme.spacing32),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
@@ -2508,8 +2557,8 @@ class _NoteDetailHeaderDelegate extends SliverPersistentHeaderDelegate {
             bottomPadding,
           ),
           decoration: BoxDecoration(
-            // White glassmorphism like microphone button - only visible when scrolling
-            color: AppTheme.glassStrongSurface.withValues(alpha: backgroundOpacity),
+            // Dark glassmorphism frosting - only visible when scrolling
+            color: AppTheme.glassDarkSurface.withValues(alpha: backgroundOpacity),
             border: shrinkProgress > 0.5 ? const Border(
               bottom: BorderSide(
                 color: AppTheme.glassBorder,
@@ -2532,6 +2581,7 @@ class _NoteDetailHeaderDelegate extends SliverPersistentHeaderDelegate {
                       height: backButtonSize,
                       decoration: AppTheme.glassDecoration(
                         radius: AppTheme.radiusMedium,
+                        color: AppTheme.glassDarkSurface,
                       ),
                       child: const Center(
                         child: Icon(
