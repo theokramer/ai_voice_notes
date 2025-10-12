@@ -6,13 +6,11 @@ import 'app_language.dart';
 class OnboardingData {
   // Engagement questions
   String? hearAboutUs;
-  String? noteTakingStyle;
-  String? captureIdeasTiming;
   
   // Settings questions
   String? useCase;
   AudioQuality? audioQuality;
-  bool? autoCloseAfterEntry;
+  bool? aiAutopilot; // true = autopilot, false = hybrid/assisted
   
   // Language selection
   AppLanguage? selectedLanguage;
@@ -20,11 +18,9 @@ class OnboardingData {
   /// Check if all required onboarding questions have been answered
   bool get isComplete =>
       hearAboutUs != null &&
-      noteTakingStyle != null &&
-      captureIdeasTiming != null &&
       useCase != null &&
       audioQuality != null &&
-      autoCloseAfterEntry != null;
+      aiAutopilot != null;
 
   /// Save onboarding data to SharedPreferences
   Future<void> save() async {
@@ -33,14 +29,6 @@ class OnboardingData {
     // Engagement questions
     if (hearAboutUs != null) {
       await prefs.setString('onboarding_hear_about_us', hearAboutUs!);
-    }
-    
-    if (noteTakingStyle != null) {
-      await prefs.setString('onboarding_note_taking_style', noteTakingStyle!);
-    }
-    
-    if (captureIdeasTiming != null) {
-      await prefs.setString('onboarding_capture_ideas_timing', captureIdeasTiming!);
     }
     
     // Settings questions
@@ -52,8 +40,8 @@ class OnboardingData {
       await prefs.setString('onboarding_audio_quality', audioQuality!.name);
     }
     
-    if (autoCloseAfterEntry != null) {
-      await prefs.setBool('onboarding_auto_close_after_entry', autoCloseAfterEntry!);
+    if (aiAutopilot != null) {
+      await prefs.setBool('onboarding_ai_autopilot', aiAutopilot!);
     }
     
     // Language
@@ -69,8 +57,6 @@ class OnboardingData {
     
     // Engagement questions
     data.hearAboutUs = prefs.getString('onboarding_hear_about_us');
-    data.noteTakingStyle = prefs.getString('onboarding_note_taking_style');
-    data.captureIdeasTiming = prefs.getString('onboarding_capture_ideas_timing');
     
     // Settings questions
     data.useCase = prefs.getString('onboarding_use_case');
@@ -83,7 +69,7 @@ class OnboardingData {
       );
     }
     
-    data.autoCloseAfterEntry = prefs.getBool('onboarding_auto_close_after_entry');
+    data.aiAutopilot = prefs.getBool('onboarding_ai_autopilot');
     
     // Language
     final languageString = prefs.getString('onboarding_selected_language');

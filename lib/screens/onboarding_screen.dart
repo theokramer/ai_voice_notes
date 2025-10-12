@@ -14,14 +14,18 @@ import '../models/onboarding_data.dart';
 import '../models/settings.dart';
 import '../models/app_language.dart';
 import '../widgets/onboarding_question_card.dart';
+import '../widgets/onboarding_screenshot.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/onboarding_interstitial.dart';
 import '../widgets/customization_loading.dart';
 
 /// Professional onboarding flow optimized for maximum conversion
-/// Flow: Video + Language → Engagement Questions → Interstitial 1 → Settings Questions → 
-///       Interstitial 2 → Rating → Loading + Mic Permission → Completion → Paywall
+/// Flow: Video + Language → 3 Explanation Pages with Screenshots → Theme Selector →
+///       4 Questions (Source, Use Case, Audio Quality, AI Autonomy) → Privacy Interstitial →
+///       Rating → Loading + Mic Permission → Completion → Paywall
+/// 
+/// Philosophy: "Tap. Speak. Done. AI handles the rest."
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -39,24 +43,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   bool _isVideoInitialized = false;
   bool _videoHasFlownOut = false;
 
-  // Page indices
+  // Page indices (only those used for logic are defined as constants)
   static const int videoPageIndex = 0;
-  static const int voiceExplainIndex = 1;  // Voice power explanation
-  static const int aiExplainIndex = 2;  // AI organization explanation
-  static const int speedExplainIndex = 3;  // Speed & simplicity explanation
-  static const int themeSelectorIndex = 4;  // Theme selector
   static const int question1Index = 5;  // Where did you hear about us
-  static const int question2Index = 6;  // Note-taking style
-  static const int question3Index = 7;  // When capture ideas
-  static const int interstitial2Index = 8;  // Almost There
-  static const int question4Index = 9;  // Use case (formerly Q5)
-  static const int question5Index = 10;  // Audio quality (formerly Q6)
-  static const int question6Index = 11;  // Auto-close (formerly Q7)
-  static const int interstitial1Index = 12;  // Privacy & Security - moved to end
-  static const int ratingIndex = 13;  // Rating prompt
-  static const int loadingIndex = 14;  // Loading + mic permission
-  static const int completionIndex = 15;  // Completion screen
-  static const int totalPages = 16;
+  static const int question2Index = 6;  // Use case
+  static const int question3Index = 7;  // Audio quality
+  static const int question4Index = 8;  // AI Autonomy Level
+  static const int ratingIndex = 10;  // Rating prompt
+  static const int loadingIndex = 11;  // Loading + mic permission
+  static const int completionIndex = 12;  // Completion screen
+  static const int totalPages = 13;
   
   // State for preventing double rating prompt
   bool _hasShownRatingPrompt = false;
@@ -182,8 +178,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         await settingsProvider.updateAudioQuality(_onboardingData.audioQuality!);
       }
       
-      if (_onboardingData.autoCloseAfterEntry != null) {
-        await settingsProvider.updateAutoCloseAfterEntry(_onboardingData.autoCloseAfterEntry!);
+      // Apply AI Autonomy setting
+      if (_onboardingData.aiAutopilot != null) {
+        final mode = _onboardingData.aiAutopilot! 
+            ? OrganizationMode.autoOrganize 
+            : OrganizationMode.manualOrganize;
+        await settingsProvider.updateOrganizationMode(mode);
       }
       
       // Note: Language is already saved when changed via LanguageSelector
@@ -216,15 +216,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       case question1Index:
         return _onboardingData.hearAboutUs != null;
       case question2Index:
-        return _onboardingData.noteTakingStyle != null;
-      case question3Index:
-        return _onboardingData.captureIdeasTiming != null;
-      case question4Index:
         return _onboardingData.useCase != null;
-      case question5Index:
+      case question3Index:
         return _onboardingData.audioQuality != null;
-      case question6Index:
-        return _onboardingData.autoCloseAfterEntry != null;
+      case question4Index:
+        return _onboardingData.aiAutopilot != null;
       default:
         return true;
     }
@@ -254,18 +250,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       },
                       children: [
                         _buildVideoPage(),
-                        _buildVoiceExplainPage(),
-                        _buildAIExplainPage(),
-                        _buildSpeedExplainPage(),
+                        _buildRecordExplainPage(),
+                        _buildBeautifyExplainPage(),
+                        _buildOrganizeExplainPage(),
                         _buildThemeSelectorPage(),
-                        _buildQuestion1(),
-                        _buildQuestion2(),
-                        _buildQuestion3(),
-                        _buildInterstitial2(), // Almost There
-                        _buildQuestion4(),
-                        _buildQuestion5(),
-                        _buildQuestion6(),
-                        _buildInterstitial1(), // Privacy - moved to end
+                        _buildQuestion1(), // Where heard about us
+                        _buildQuestion2(), // Use case
+                        _buildQuestion3(), // Audio quality
+                        _buildQuestion4(), // AI Autonomy
+                        _buildInterstitial1(), // Privacy
                         _buildRatingScreen(),
                         _buildLoadingScreen(),
                         _buildCompletionScreen(),
@@ -301,10 +294,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       );
     }
     
-    // Show progress indicator for question pages and "Almost There" interstitial
-    if ((_currentPage >= question1Index && _currentPage <= question6Index) || _currentPage == interstitial2Index) {
+    // Show progress indicator for question pages
+    if (_currentPage >= question1Index && _currentPage <= question4Index) {
       final questionNumber = _getQuestionNumber(_currentPage);
-      final totalQuestions = 6;
+      final totalQuestions = 4;
       
       return Padding(
         padding: const EdgeInsets.all(AppTheme.spacing16),
@@ -342,10 +335,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (pageIndex == question1Index) return 1;
     if (pageIndex == question2Index) return 2;
     if (pageIndex == question3Index) return 3;
-    if (pageIndex == interstitial2Index) return 3; // "Almost There" shows after Q3
     if (pageIndex == question4Index) return 4;
-    if (pageIndex == question5Index) return 5;
-    if (pageIndex == question6Index) return 6;
     return 0;
   }
 
@@ -572,48 +562,48 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // Voice Power Explanation Page
-  Widget _buildVoiceExplainPage() {
-    return _buildExplanationPage(
-      icon: Icons.mic_rounded,
-      title: LocalizationService().t('onboarding_voice_title'),
+  // Record Explanation Page - "Just Tap & Speak"
+  Widget _buildRecordExplainPage() {
+    return _buildExplanationPageWithScreenshot(
+      screenshotPath: 'assets/onboarding/screenshots/recording_active.png',
+      title: LocalizationService().t('onboarding_record_title'),
       benefits: [
-        LocalizationService().t('onboarding_voice_benefit_1'),
-        LocalizationService().t('onboarding_voice_benefit_2'),
-        LocalizationService().t('onboarding_voice_benefit_3'),
+        LocalizationService().t('onboarding_record_benefit_1'),
+        LocalizationService().t('onboarding_record_benefit_2'),
+        LocalizationService().t('onboarding_record_benefit_3'),
       ],
     );
   }
 
-  // AI Magic Explanation Page
-  Widget _buildAIExplainPage() {
-    return _buildExplanationPage(
-      icon: Icons.auto_awesome_rounded,
-      title: LocalizationService().t('onboarding_ai_title'),
+  // Beautify Explanation Page - "AI Beautifies Your Words"
+  Widget _buildBeautifyExplainPage() {
+    return _buildExplanationPageWithScreenshot(
+      screenshotPath: 'assets/onboarding/screenshots/note_detail_organized.png',
+      title: LocalizationService().t('onboarding_beautify_title'),
       benefits: [
-        LocalizationService().t('onboarding_ai_benefit_1'),
-        LocalizationService().t('onboarding_ai_benefit_2'),
-        LocalizationService().t('onboarding_ai_benefit_3'),
+        LocalizationService().t('onboarding_beautify_benefit_1'),
+        LocalizationService().t('onboarding_beautify_benefit_2'),
+        LocalizationService().t('onboarding_beautify_benefit_3'),
       ],
     );
   }
 
-  // Speed & Simplicity Explanation Page
-  Widget _buildSpeedExplainPage() {
-    return _buildExplanationPage(
-      icon: Icons.bolt_rounded,
-      title: LocalizationService().t('onboarding_speed_title'),
+  // Organize Explanation Page - "AI Organizes Everything"
+  Widget _buildOrganizeExplainPage() {
+    return _buildExplanationPageWithScreenshot(
+      screenshotPath: 'assets/onboarding/screenshots/home_with_notes.png',
+      title: LocalizationService().t('onboarding_organize_title'),
       benefits: [
-        LocalizationService().t('onboarding_speed_benefit_1'),
-        LocalizationService().t('onboarding_speed_benefit_2'),
-        LocalizationService().t('onboarding_speed_benefit_3'),
+        LocalizationService().t('onboarding_organize_benefit_1'),
+        LocalizationService().t('onboarding_organize_benefit_2'),
+        LocalizationService().t('onboarding_organize_benefit_3'),
       ],
     );
   }
 
-  // Generic explanation page builder
-  Widget _buildExplanationPage({
-    required IconData icon,
+  // Explanation page with screenshot
+  Widget _buildExplanationPageWithScreenshot({
+    required String screenshotPath,
     required String title,
     required List<String> benefits,
   }) {
@@ -623,110 +613,91 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         final isSmallScreen = availableHeight < 700;
         final theme = settingsProvider.currentThemeConfig;
         
-        return Column(
-          children: [
-            SizedBox(height: isSmallScreen ? availableHeight * 0.08 : availableHeight * 0.15),
-            
-            // Animated icon
-            Container(
-              width: isSmallScreen ? 90 : 120,
-              height: isSmallScreen ? 90 : 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    theme.primary.withValues(alpha: 0.3),
-                    theme.primary.withValues(alpha: 0.1),
-                    Colors.transparent,
-                  ],
-                  stops: const [0.2, 0.6, 1.0],
-                ),
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              SizedBox(height: isSmallScreen ? availableHeight * 0.04 : availableHeight * 0.08),
+              
+              // Screenshot
+              OnboardingScreenshot(
+                screenshotPath: screenshotPath,
+                animationDelay: 200,
               ),
-              child: Icon(
-                icon,
-                size: isSmallScreen ? 45 : 60,
-                color: theme.primary,
+              
+              SizedBox(height: isSmallScreen ? availableHeight * 0.04 : availableHeight * 0.06),
+              
+              // Title
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                        fontSize: isSmallScreen ? 22 : 28,
+                        height: 1.15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                )
+                    .animate()
+                    .fadeIn(delay: 600.ms, duration: 600.ms)
+                    .slideY(begin: 0.2, end: 0),
               ),
-            )
-                .animate()
-                .fadeIn(duration: 800.ms)
-                .scale(
-                  begin: const Offset(0.5, 0.5),
-                  end: const Offset(1, 1),
-                  curve: Curves.easeOutBack,
-                ),
-            
-            SizedBox(height: isSmallScreen ? availableHeight * 0.04 : availableHeight * 0.08),
-            
-            // Title
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontSize: isSmallScreen ? 22 : 28,
-                      height: 1.15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              )
-                  .animate()
-                  .fadeIn(delay: 400.ms, duration: 600.ms)
-                  .slideY(begin: 0.2, end: 0),
-            ),
-            
-            SizedBox(height: isSmallScreen ? availableHeight * 0.03 : availableHeight * 0.05),
-            
-            // Benefits
-            Expanded(
-              child: ListView.builder(
+              
+              SizedBox(height: isSmallScreen ? availableHeight * 0.02 : availableHeight * 0.04),
+              
+              // Benefits
+              Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: isSmallScreen ? AppTheme.spacing24 : AppTheme.spacing32,
                 ),
-                itemCount: benefits.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 6),
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: theme.primary,
+                child: Column(
+                  children: benefits.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final benefit = entry.value;
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(top: 6),
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: theme.primary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            benefits[index],
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                  height: 1.5,
-                                  fontSize: isSmallScreen ? 15 : 17,
-                                ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              benefit,
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                    height: 1.5,
+                                    fontSize: isSmallScreen ? 15 : 17,
+                                  ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  )
-                      .animate()
-                      .fadeIn(
-                        delay: Duration(milliseconds: 600 + (index * 150)),
-                        duration: 600.ms,
-                      )
-                      .slideX(begin: -0.2, end: 0);
-                },
+                        ],
+                      ),
+                    )
+                        .animate()
+                        .fadeIn(
+                          delay: Duration(milliseconds: 800 + (index * 150)),
+                          duration: 600.ms,
+                        )
+                        .slideX(begin: -0.2, end: 0);
+                  }).toList(),
+                ),
               ),
-            ),
-            
-            SizedBox(height: isSmallScreen ? 12 : 24),
-          ],
+              
+              SizedBox(height: isSmallScreen ? 12 : 24),
+            ],
+          ),
         );
       },
     );
@@ -933,89 +904,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // Question 2: Note-taking style
+  // Question 2: Use case
   Widget _buildQuestion2() {
-    final localization = LocalizationService();
-    return _buildQuestionPage(
-      title: localization.t('onboarding_question_2_title'),
-      options: [
-        (
-          emoji: '⚡',
-          title: localization.t('onboarding_question_2_option_1'),
-          subtitle: localization.t('onboarding_question_2_option_1_sub'),
-          value: 'quick',
-        ),
-        (
-          emoji: '📝',
-          title: localization.t('onboarding_question_2_option_2'),
-          subtitle: localization.t('onboarding_question_2_option_2_sub'),
-          value: 'detailed',
-        ),
-        (
-          emoji: '🎯',
-          title: localization.t('onboarding_question_2_option_3'),
-          subtitle: localization.t('onboarding_question_2_option_3_sub'),
-          value: 'mixed',
-        ),
-      ],
-      selectedValue: _onboardingData.noteTakingStyle,
-      onSelect: (value) => setState(() => _onboardingData.noteTakingStyle = value as String),
-    );
-  }
-
-  // Question 3: When do you capture ideas?
-  Widget _buildQuestion3() {
-    final localization = LocalizationService();
-    return _buildQuestionPage(
-      title: localization.t('onboarding_question_3_title'),
-      options: [
-        (
-          emoji: '🌅',
-          title: localization.t('onboarding_question_3_option_1'),
-          subtitle: localization.t('onboarding_question_3_option_1_sub'),
-          value: 'throughout_day',
-        ),
-        (
-          emoji: '☀️',
-          title: localization.t('onboarding_question_3_option_2'),
-          subtitle: localization.t('onboarding_question_3_option_2_sub'),
-          value: 'morning',
-        ),
-        (
-          emoji: '🌙',
-          title: localization.t('onboarding_question_3_option_3'),
-          subtitle: localization.t('onboarding_question_3_option_3_sub'),
-          value: 'evening',
-        ),
-        (
-          emoji: '💡',
-          title: localization.t('onboarding_question_3_option_4'),
-          subtitle: localization.t('onboarding_question_3_option_4_sub'),
-          value: 'spontaneous',
-        ),
-      ],
-      selectedValue: _onboardingData.captureIdeasTiming,
-      onSelect: (value) => setState(() => _onboardingData.captureIdeasTiming = value as String),
-    );
-  }
-
-  // Interstitial 1: Privacy & Security
-  Widget _buildInterstitial1() {
-    final localization = LocalizationService();
-    return OnboardingInterstitial(
-      icon: Icons.shield_rounded,
-      title: localization.t('interstitial_privacy_title'),
-      message: localization.t('interstitial_privacy_message'),
-      features: [
-        localization.t('interstitial_privacy_feature_1'),
-        localization.t('interstitial_privacy_feature_2'),
-        localization.t('interstitial_privacy_feature_3'),
-      ],
-    );
-  }
-
-  // Question 4: Use case (formerly Question 5)
-  Widget _buildQuestion4() {
     final localization = LocalizationService();
     return _buildQuestionPage(
       title: localization.t('onboarding_question_5_title'),
@@ -1050,8 +940,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // Question 5: Audio quality (formerly Question 6)
-  Widget _buildQuestion5() {
+  // Question 3: Audio quality
+  Widget _buildQuestion3() {
     final localization = LocalizationService();
     final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
     
@@ -1085,44 +975,43 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // Question 6: Auto-close (formerly Question 7)
-  Widget _buildQuestion6() {
+  // Question 4: AI Autonomy Level
+  Widget _buildQuestion4() {
     final localization = LocalizationService();
     return _buildQuestionPage(
       title: localization.t('onboarding_question_7_title'),
       subtitle: localization.t('onboarding_question_7_subtitle'),
       options: [
         (
-          emoji: '🏃',
+          emoji: '🚀',
           title: localization.t('onboarding_question_7_option_1'),
           subtitle: localization.t('onboarding_question_7_option_1_sub'),
-          value: true,
+          value: true, // true = autopilot
         ),
         (
-          emoji: '✋',
+          emoji: '🎯',
           title: localization.t('onboarding_question_7_option_2'),
           subtitle: localization.t('onboarding_question_7_option_2_sub'),
-          value: false,
+          value: false, // false = hybrid/assisted
         ),
       ],
-      selectedValue: _onboardingData.autoCloseAfterEntry,
-      onSelect: (value) => setState(() => _onboardingData.autoCloseAfterEntry = value as bool),
+      selectedValue: _onboardingData.aiAutopilot,
+      onSelect: (value) => setState(() => _onboardingData.aiAutopilot = value as bool),
     );
   }
 
-  // Interstitial 2: Personalization complete
-  Widget _buildInterstitial2() {
-    return Consumer<SettingsProvider>(
-      builder: (context, settingsProvider, child) {
-        final localization = LocalizationService();
-        return OnboardingInterstitial(
-          icon: Icons.auto_awesome_rounded,
-          title: localization.t('interstitial_personalize_title'),
-          message: localization.t('interstitial_personalize_message'),
-          subtitle: localization.t('interstitial_personalize_subtitle'),
-          iconColor: settingsProvider.currentThemeConfig.accentColor,
-        );
-      },
+  // Interstitial 1: Privacy & Security
+  Widget _buildInterstitial1() {
+    final localization = LocalizationService();
+    return OnboardingInterstitial(
+      icon: Icons.shield_rounded,
+      title: localization.t('interstitial_privacy_title'),
+      message: localization.t('interstitial_privacy_message'),
+      features: [
+        localization.t('interstitial_privacy_feature_1'),
+        localization.t('interstitial_privacy_feature_2'),
+        localization.t('interstitial_privacy_feature_3'),
+      ],
     );
   }
 

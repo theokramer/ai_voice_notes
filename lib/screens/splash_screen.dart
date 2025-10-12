@@ -86,7 +86,7 @@ class _SplashScreenState extends State<SplashScreen> {
             builder: (context) => const OnboardingScreen(),
           ),
         );
-      } else if (!subscriptionService.isSubscribed) {
+      } else if (subscriptionService.isSubscribed) {
         // User completed onboarding and is subscribed → go to home
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(

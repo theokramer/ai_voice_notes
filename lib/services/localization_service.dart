@@ -38,26 +38,26 @@ class LocalizationService {
     AppLanguage.english: {
       // Onboarding - Video Screen
       'onboarding_welcome': 'Welcome to\nAI Voice Notes',
-      'onboarding_subtitle': 'Transform your voice into organized notes',
-      'onboarding_sub_subtitle': 'Capture thoughts instantly with AI-powered intelligence',
+      'onboarding_subtitle': 'Tap. Speak. Done.\nAI handles the rest.',
+      'onboarding_sub_subtitle': 'Just dump your thoughts. AI transcribes, beautifies, and organizes everything for you.',
       'onboarding_get_started': 'Get Started',
       'onboarding_continue': 'Continue',
       
       // Onboarding - Explanation Pages
-      'onboarding_voice_title': 'Speak, Don\'t Type',
-      'onboarding_voice_benefit_1': 'Capture thoughts 10x faster',
-      'onboarding_voice_benefit_2': 'No more fighting autocorrect',
-      'onboarding_voice_benefit_3': 'Your natural voice, perfectly transcribed',
+      'onboarding_record_title': 'Just Tap & Speak',
+      'onboarding_record_benefit_1': 'One tap to record. That\'s it.',
+      'onboarding_record_benefit_2': 'No formatting, no organizing, no thinking',
+      'onboarding_record_benefit_3': 'Your raw thoughts captured instantly',
       
-      'onboarding_ai_title': 'Your Notes Organize Themselves',
-      'onboarding_ai_benefit_1': 'AI creates perfect headlines',
-      'onboarding_ai_benefit_2': 'Groups related thoughts automatically',
-      'onboarding_ai_benefit_3': 'No folders, no manual sorting',
+      'onboarding_beautify_title': 'AI Beautifies Your Words',
+      'onboarding_beautify_benefit_1': 'Rambling thoughts become crystal clear notes',
+      'onboarding_beautify_benefit_2': 'Perfect grammar and structure automatically',
+      'onboarding_beautify_benefit_3': 'Your voice, but polished and professional',
       
-      'onboarding_speed_title': 'From Thought to Organized Note in Seconds',
-      'onboarding_speed_benefit_1': 'Record → Transcribe → Organize',
-      'onboarding_speed_benefit_2': 'All automatic, all instant',
-      'onboarding_speed_benefit_3': 'Focus on ideas, not organization',
+      'onboarding_organize_title': 'AI Organizes Everything',
+      'onboarding_organize_benefit_1': 'AI suggests folders and auto-categorizes your notes',
+      'onboarding_organize_benefit_2': 'Review and approve AI suggestions, or let it handle everything',
+      'onboarding_organize_benefit_3': 'Complete control or complete automation - you choose',
       
       // Onboarding - Theme Selector
       'onboarding_theme_title': 'Choose Your Style',
@@ -117,7 +117,7 @@ class LocalizationService {
       'onboarding_question_5_option_4_sub': 'Inspiration, projects',
       
       'onboarding_question_6_title': 'Choose your\ntranscription quality',
-      'onboarding_question_6_subtitle': 'Optimized for {language}. You can change this later in settings',
+      'onboarding_question_6_subtitle': 'Optimized for {language}. You can always change this later',
       'onboarding_question_6_option_1': 'Fast & Efficient',
       'onboarding_question_6_option_1_sub': 'Good quality, quick processing',
       'onboarding_question_6_option_2': 'Balanced',
@@ -125,12 +125,12 @@ class LocalizationService {
       'onboarding_question_6_option_3': 'Maximum Accuracy',
       'onboarding_question_6_option_3_sub': 'Best quality, slower',
       
-      'onboarding_question_7_title': 'Quick recording\nworkflow?',
-      'onboarding_question_7_subtitle': 'Auto-close notes to record multiple entries faster',
-      'onboarding_question_7_option_1': 'Yes, Auto-Close',
-      'onboarding_question_7_option_1_sub': 'Close note after 2 seconds (faster workflow)',
-      'onboarding_question_7_option_2': 'No, Keep Open',
-      'onboarding_question_7_option_2_sub': 'I\'ll close notes manually (more control)',
+      'onboarding_question_7_title': 'How much should\nAI do for you?',
+      'onboarding_question_7_subtitle': 'You can always change this later',
+      'onboarding_question_7_option_1': 'Autopilot',
+      'onboarding_question_7_option_1_sub': 'AI automatically organizes everything for you',
+      'onboarding_question_7_option_2': 'Hybrid / Assisted',
+      'onboarding_question_7_option_2_sub': 'You guide the AI and stay in control',
       
       // Interstitial Screens
       'interstitial_privacy_title': 'Your Notes Stay Yours',
@@ -144,10 +144,10 @@ class LocalizationService {
       'interstitial_personalize_subtitle': 'Your perfect note-taking setup is just moments away',
       
       // Rating Screen
-      'rating_title': 'Loving AI Voice Notes?',
-      'rating_message': 'Your feedback helps us improve and reach more people who need better note-taking.',
+      'rating_title': 'You\'re All Set!',
+      'rating_message': 'Before you start: if you\'re excited about effortless note-taking, a quick rating helps others discover this too ✨',
       'rating_button': 'Rate Us ⭐',
-      'rating_skip': 'Maybe Later',
+      'rating_skip': 'Continue',
       
       // Loading Screen
       'loading_title': 'Customizing Everything For You',
@@ -384,26 +384,26 @@ class LocalizationService {
     AppLanguage.spanish: {
       // Onboarding - Video Screen
       'onboarding_welcome': 'Bienvenido a\nAI Voice Notes',
-      'onboarding_subtitle': 'Transforma tu voz en notas organizadas',
-      'onboarding_sub_subtitle': 'Captura pensamientos al instante con inteligencia artificial',
+      'onboarding_subtitle': 'Toca. Habla. Listo.\nLa IA hace el resto.',
+      'onboarding_sub_subtitle': 'Solo suelta tus pensamientos. La IA transcribe, embellece y organiza todo por ti.',
       'onboarding_get_started': 'Comenzar',
       'onboarding_continue': 'Continuar',
       
       // Onboarding - Explanation Pages
-      'onboarding_voice_title': 'Habla, No Escribas',
-      'onboarding_voice_benefit_1': 'Captura pensamientos 10 veces más rápido',
-      'onboarding_voice_benefit_2': 'No más batallas con el autocorrector',
-      'onboarding_voice_benefit_3': 'Tu voz natural, perfectamente transcrita',
+      'onboarding_record_title': 'Solo Toca y Habla',
+      'onboarding_record_benefit_1': 'Un toque para grabar. Eso es todo.',
+      'onboarding_record_benefit_2': 'Sin formatear, sin organizar, sin pensar',
+      'onboarding_record_benefit_3': 'Tus pensamientos capturados al instante',
       
-      'onboarding_ai_title': 'Tus Notas se Organizan Solas',
-      'onboarding_ai_benefit_1': 'La IA crea títulos perfectos',
-      'onboarding_ai_benefit_2': 'Agrupa ideas relacionadas automáticamente',
-      'onboarding_ai_benefit_3': 'Sin carpetas, sin organización manual',
+      'onboarding_beautify_title': 'La IA Embellece Tus Palabras',
+      'onboarding_beautify_benefit_1': 'Pensamientos divagantes se vuelven notas claras',
+      'onboarding_beautify_benefit_2': 'Gramática y estructura perfectas automáticamente',
+      'onboarding_beautify_benefit_3': 'Tu voz, pero pulida y profesional',
       
-      'onboarding_speed_title': 'De Pensamiento a Nota Organizada en Segundos',
-      'onboarding_speed_benefit_1': 'Graba → Transcribe → Organiza',
-      'onboarding_speed_benefit_2': 'Todo automático, todo instantáneo',
-      'onboarding_speed_benefit_3': 'Enfócate en ideas, no en organización',
+      'onboarding_organize_title': 'La IA Organiza Todo',
+      'onboarding_organize_benefit_1': 'La IA sugiere carpetas y categoriza tus notas',
+      'onboarding_organize_benefit_2': 'Revisa y aprueba sugerencias, o deja que lo haga todo',
+      'onboarding_organize_benefit_3': 'Control completo o automatización completa - tú eliges',
       
       // Onboarding - Theme Selector
       'onboarding_theme_title': 'Elige Tu Estilo',
@@ -463,7 +463,7 @@ class LocalizationService {
       'onboarding_question_5_option_4_sub': 'Inspiración, proyectos',
       
       'onboarding_question_6_title': 'Elige la calidad de\ntu transcripción',
-      'onboarding_question_6_subtitle': 'Optimizado para {language}. Puedes cambiarlo en ajustes',
+      'onboarding_question_6_subtitle': 'Optimizado para {language}. Siempre puedes cambiarlo después',
       'onboarding_question_6_option_1': 'Rápido y Eficiente',
       'onboarding_question_6_option_1_sub': 'Buena calidad, procesamiento rápido',
       'onboarding_question_6_option_2': 'Equilibrado',
@@ -471,12 +471,12 @@ class LocalizationService {
       'onboarding_question_6_option_3': 'Máxima Precisión',
       'onboarding_question_6_option_3_sub': 'Mejor calidad, más lento',
       
-      'onboarding_question_7_title': '¿Flujo de grabación\nrápida?',
-      'onboarding_question_7_subtitle': 'Cierra notas automáticamente para grabar múltiples entradas más rápido',
-      'onboarding_question_7_option_1': 'Sí, Auto-Cerrar',
-      'onboarding_question_7_option_1_sub': 'Cerrar nota después de 2 segundos (flujo rápido)',
-      'onboarding_question_7_option_2': 'No, Mantener Abierto',
-      'onboarding_question_7_option_2_sub': 'Cerraré las notas manualmente (más control)',
+      'onboarding_question_7_title': '¿Cuánto debe\nhacer la IA por ti?',
+      'onboarding_question_7_subtitle': 'Siempre puedes cambiarlo después',
+      'onboarding_question_7_option_1': 'Piloto Automático',
+      'onboarding_question_7_option_1_sub': 'La IA organiza todo automáticamente',
+      'onboarding_question_7_option_2': 'Híbrido / Asistido',
+      'onboarding_question_7_option_2_sub': 'Tú guías la IA y mantienes el control',
       
       // Interstitial Screens
       'interstitial_privacy_title': 'Tus Notas Son Tuyas',
@@ -490,10 +490,10 @@ class LocalizationService {
       'interstitial_personalize_subtitle': 'Tu configuración perfecta está a momentos de distancia',
       
       // Rating Screen
-      'rating_title': '¿Te gusta AI Voice Notes?',
-      'rating_message': 'Tu opinión nos ayuda a mejorar y llegar a más personas que necesitan tomar mejores notas.',
+      'rating_title': '¡Todo Listo!',
+      'rating_message': 'Antes de empezar: si estás emocionado por tomar notas sin esfuerzo, una calificación rápida ayuda a otros a descubrir esto también ✨',
       'rating_button': 'Califícanos ⭐',
-      'rating_skip': 'Quizás Después',
+      'rating_skip': 'Continuar',
       
       // Loading Screen
       'loading_title': 'Personalizando Todo Para Ti',
@@ -730,26 +730,26 @@ class LocalizationService {
     AppLanguage.french: {
       // Onboarding - Video Screen
       'onboarding_welcome': 'Bienvenue sur\nAI Voice Notes',
-      'onboarding_subtitle': 'Transformez votre voix en notes organisées',
-      'onboarding_sub_subtitle': 'Capturez vos pensées instantanément avec l\'IA',
+      'onboarding_subtitle': 'Tapez. Parlez. Terminé.\nL\'IA fait le reste.',
+      'onboarding_sub_subtitle': 'Déversez vos pensées. L\'IA transcrit, embellit et organise tout pour vous.',
       'onboarding_get_started': 'Commencer',
       'onboarding_continue': 'Continuer',
       
       // Onboarding - Explanation Pages
-      'onboarding_voice_title': 'Parlez, N\'Écrivez Pas',
-      'onboarding_voice_benefit_1': 'Capturez vos pensées 10 fois plus vite',
-      'onboarding_voice_benefit_2': 'Fini la lutte avec l\'autocorrection',
-      'onboarding_voice_benefit_3': 'Votre voix naturelle, parfaitement transcrite',
+      'onboarding_record_title': 'Tapez et Parlez',
+      'onboarding_record_benefit_1': 'Un seul toucher pour enregistrer. C\'est tout.',
+      'onboarding_record_benefit_2': 'Pas de mise en forme, pas d\'organisation, pas de réflexion',
+      'onboarding_record_benefit_3': 'Vos pensées brutes capturées instantanément',
       
-      'onboarding_ai_title': 'Vos Notes S\'Organisent Elles-Mêmes',
-      'onboarding_ai_benefit_1': 'L\'IA crée des titres parfaits',
-      'onboarding_ai_benefit_2': 'Regroupe automatiquement les idées connexes',
-      'onboarding_ai_benefit_3': 'Pas de dossiers, pas de tri manuel',
+      'onboarding_beautify_title': 'L\'IA Embellit Vos Mots',
+      'onboarding_beautify_benefit_1': 'Les pensées confuses deviennent des notes claires',
+      'onboarding_beautify_benefit_2': 'Grammaire et structure parfaites automatiquement',
+      'onboarding_beautify_benefit_3': 'Votre voix, mais polie et professionnelle',
       
-      'onboarding_speed_title': 'De la Pensée à la Note Organisée en Secondes',
-      'onboarding_speed_benefit_1': 'Enregistrer → Transcrire → Organiser',
-      'onboarding_speed_benefit_2': 'Tout automatique, tout instantané',
-      'onboarding_speed_benefit_3': 'Concentrez-vous sur les idées, pas l\'organisation',
+      'onboarding_organize_title': 'L\'IA Organise Tout',
+      'onboarding_organize_benefit_1': 'L\'IA suggère des dossiers et catégorise vos notes',
+      'onboarding_organize_benefit_2': 'Révisez et approuvez les suggestions, ou laissez tout faire',
+      'onboarding_organize_benefit_3': 'Contrôle complet ou automation complète - vous choisissez',
       
       // Onboarding - Theme Selector
       'onboarding_theme_title': 'Choisissez Votre Style',
@@ -809,7 +809,7 @@ class LocalizationService {
       'onboarding_question_5_option_4_sub': 'Inspiration, projets',
       
       'onboarding_question_6_title': 'Choisissez la qualité\nde transcription',
-      'onboarding_question_6_subtitle': 'Optimisé pour {language}. Vous pouvez le modifier dans les paramètres',
+      'onboarding_question_6_subtitle': 'Optimisé pour {language}. Vous pouvez toujours changer cela plus tard',
       'onboarding_question_6_option_1': 'Rapide et Efficace',
       'onboarding_question_6_option_1_sub': 'Bonne qualité, traitement rapide',
       'onboarding_question_6_option_2': 'Équilibré',
@@ -817,12 +817,12 @@ class LocalizationService {
       'onboarding_question_6_option_3': 'Précision Maximale',
       'onboarding_question_6_option_3_sub': 'Meilleure qualité, plus lent',
       
-      'onboarding_question_7_title': 'Workflow d\'enregistrement\nrapide?',
-      'onboarding_question_7_subtitle': 'Fermer automatiquement les notes pour enregistrer plusieurs entrées plus rapidement',
-      'onboarding_question_7_option_1': 'Oui, Fermeture Auto',
-      'onboarding_question_7_option_1_sub': 'Fermer la note après 2 secondes (workflow rapide)',
-      'onboarding_question_7_option_2': 'Non, Garder Ouvert',
-      'onboarding_question_7_option_2_sub': 'Je fermerai les notes manuellement (plus de contrôle)',
+      'onboarding_question_7_title': 'Combien l\'IA doit-elle\nfaire pour vous?',
+      'onboarding_question_7_subtitle': 'Vous pouvez toujours changer cela plus tard',
+      'onboarding_question_7_option_1': 'Pilote Automatique',
+      'onboarding_question_7_option_1_sub': 'L\'IA organise tout automatiquement',
+      'onboarding_question_7_option_2': 'Hybride / Assisté',
+      'onboarding_question_7_option_2_sub': 'Vous guidez l\'IA et gardez le contrôle',
       
       // Interstitial Screens
       'interstitial_privacy_title': 'Vos Notes Restent Vôtres',
@@ -836,10 +836,10 @@ class LocalizationService {
       'interstitial_personalize_subtitle': 'Votre configuration parfaite est à quelques instants',
       
       // Rating Screen
-      'rating_title': 'Vous aimez AI Voice Notes?',
-      'rating_message': 'Vos commentaires nous aident à améliorer et à atteindre plus de personnes qui ont besoin d\'une meilleure prise de notes.',
+      'rating_title': 'Vous êtes Prêt!',
+      'rating_message': 'Avant de commencer: si vous êtes enthousiaste à propos de la prise de notes sans effort, une note rapide aide les autres à découvrir cela aussi ✨',
       'rating_button': 'Notez-nous ⭐',
-      'rating_skip': 'Peut-être Plus Tard',
+      'rating_skip': 'Continuer',
       
       // Loading Screen
       'loading_title': 'Personnalisation de Tout Pour Vous',
@@ -1076,26 +1076,26 @@ class LocalizationService {
     AppLanguage.german: {
       // Onboarding - Video Screen
       'onboarding_welcome': 'Willkommen bei\nAI Voice Notes',
-      'onboarding_subtitle': 'Verwandeln Sie Ihre Stimme in organisierte Notizen',
-      'onboarding_sub_subtitle': 'Erfassen Sie Gedanken sofort mit KI-Unterstützung',
+      'onboarding_subtitle': 'Tippen. Sprechen. Fertig.\nKI erledigt den Rest.',
+      'onboarding_sub_subtitle': 'Lassen Sie Ihre Gedanken einfach raus. KI transkribiert, verschönert und organisiert alles für Sie.',
       'onboarding_get_started': 'Loslegen',
       'onboarding_continue': 'Weiter',
       
       // Onboarding - Explanation Pages
-      'onboarding_voice_title': 'Sprechen, Nicht Tippen',
-      'onboarding_voice_benefit_1': 'Erfassen Sie Gedanken 10x schneller',
-      'onboarding_voice_benefit_2': 'Kein Kampf mehr mit Autokorrektur',
-      'onboarding_voice_benefit_3': 'Ihre natürliche Stimme, perfekt transkribiert',
+      'onboarding_record_title': 'Einfach Tippen & Sprechen',
+      'onboarding_record_benefit_1': 'Ein Tippen zum Aufnehmen. Das ist alles.',
+      'onboarding_record_benefit_2': 'Kein Formatieren, kein Organisieren, kein Nachdenken',
+      'onboarding_record_benefit_3': 'Ihre rohen Gedanken sofort erfasst',
       
-      'onboarding_ai_title': 'Ihre Notizen Organisieren Sich Selbst',
-      'onboarding_ai_benefit_1': 'KI erstellt perfekte Überschriften',
-      'onboarding_ai_benefit_2': 'Gruppiert verwandte Gedanken automatisch',
-      'onboarding_ai_benefit_3': 'Keine Ordner, keine manuelle Sortierung',
+      'onboarding_beautify_title': 'KI Verschönert Ihre Worte',
+      'onboarding_beautify_benefit_1': 'Verworrene Gedanken werden klare Notizen',
+      'onboarding_beautify_benefit_2': 'Perfekte Grammatik und Struktur automatisch',
+      'onboarding_beautify_benefit_3': 'Ihre Stimme, aber poliert und professionell',
       
-      'onboarding_speed_title': 'Vom Gedanken zur Organisierten Notiz in Sekunden',
-      'onboarding_speed_benefit_1': 'Aufnehmen → Transkribieren → Organisieren',
-      'onboarding_speed_benefit_2': 'Alles automatisch, alles sofort',
-      'onboarding_speed_benefit_3': 'Konzentrieren Sie sich auf Ideen, nicht auf Organisation',
+      'onboarding_organize_title': 'KI Organisiert Alles',
+      'onboarding_organize_benefit_1': 'KI schlägt Ordner vor und kategorisiert Ihre Notizen',
+      'onboarding_organize_benefit_2': 'Überprüfen und genehmigen Sie Vorschläge, oder lassen Sie alles erledigen',
+      'onboarding_organize_benefit_3': 'Volle Kontrolle oder volle Automation - Sie entscheiden',
       
       // Onboarding - Theme Selector
       'onboarding_theme_title': 'Wählen Sie Ihren Stil',
@@ -1155,7 +1155,7 @@ class LocalizationService {
       'onboarding_question_5_option_4_sub': 'Inspiration, Projekte',
       
       'onboarding_question_6_title': 'Wählen Sie Ihre\nTranskriptionsqualität',
-      'onboarding_question_6_subtitle': 'Optimiert für {language}. Sie können dies später in den Einstellungen ändern',
+      'onboarding_question_6_subtitle': 'Optimiert für {language}. Sie können dies jederzeit später ändern',
       'onboarding_question_6_option_1': 'Schnell & Effizient',
       'onboarding_question_6_option_1_sub': 'Gute Qualität, schnelle Verarbeitung',
       'onboarding_question_6_option_2': 'Ausgewogen',
@@ -1163,12 +1163,12 @@ class LocalizationService {
       'onboarding_question_6_option_3': 'Maximale Genauigkeit',
       'onboarding_question_6_option_3_sub': 'Beste Qualität, langsamer',
       
-      'onboarding_question_7_title': 'Schneller Aufnahme-\nWorkflow?',
-      'onboarding_question_7_subtitle': 'Notizen automatisch schließen, um mehrere Einträge schneller aufzunehmen',
-      'onboarding_question_7_option_1': 'Ja, Auto-Schließen',
-      'onboarding_question_7_option_1_sub': 'Notiz nach 2 Sekunden schließen (schnellerer Workflow)',
-      'onboarding_question_7_option_2': 'Nein, Offen Halten',
-      'onboarding_question_7_option_2_sub': 'Ich schließe Notizen manuell (mehr Kontrolle)',
+      'onboarding_question_7_title': 'Wie viel soll die\nKI für Sie tun?',
+      'onboarding_question_7_subtitle': 'Sie können dies jederzeit später ändern',
+      'onboarding_question_7_option_1': 'Autopilot',
+      'onboarding_question_7_option_1_sub': 'KI organisiert alles automatisch',
+      'onboarding_question_7_option_2': 'Hybrid / Assistiert',
+      'onboarding_question_7_option_2_sub': 'Sie leiten die KI und behalten die Kontrolle',
       
       // Interstitial Screens
       'interstitial_privacy_title': 'Ihre Notizen Bleiben Ihre',
@@ -1182,10 +1182,10 @@ class LocalizationService {
       'interstitial_personalize_subtitle': 'Ihre perfekte Notizen-Einrichtung ist nur Momente entfernt',
       
       // Rating Screen
-      'rating_title': 'Gefällt Ihnen AI Voice Notes?',
-      'rating_message': 'Ihr Feedback hilft uns zu verbessern und mehr Menschen zu erreichen, die bessere Notizen benötigen.',
+      'rating_title': 'Sie sind Bereit!',
+      'rating_message': 'Bevor Sie beginnen: Wenn Sie von mühelosem Notizen-Machen begeistert sind, hilft eine schnelle Bewertung anderen, dies auch zu entdecken ✨',
       'rating_button': 'Bewerten Sie uns ⭐',
-      'rating_skip': 'Vielleicht Später',
+      'rating_skip': 'Weiter',
       
       // Loading Screen
       'loading_title': 'Alles Für Sie Anpassen',
