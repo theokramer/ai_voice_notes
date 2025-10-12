@@ -3,8 +3,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
+import '../models/app_language.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/folders_provider.dart';
 import '../services/subscription_service.dart';
 import '../services/paywall_flow_controller.dart';
 import '../widgets/animated_background.dart';
@@ -34,13 +36,34 @@ class _SplashScreenState extends State<SplashScreen> {
   /// Initialize app and navigate to appropriate screen
   Future<void> _initialize() async {
     try {
+      // Load settings provider first
+      final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+      await settingsProvider.initialize();
+      
+      // Detect and save device language if not already set
+      if (settingsProvider.settings.preferredLanguage == null) {
+        final deviceLanguage = LanguageHelper.detectDeviceLanguage();
+        await settingsProvider.updatePreferredLanguage(deviceLanguage);
+        debugPrint('🌍 Detected and saved device language: ${deviceLanguage.name}');
+      }
+
+      // Load folders provider (must be before notes provider)
+      final foldersProvider = Provider.of<FoldersProvider>(context, listen: false);
+      await foldersProvider.initialize();
+
       // Load notes provider
       final notesProvider = Provider.of<NotesProvider>(context, listen: false);
       await notesProvider.initialize();
-
-      // Load settings provider
-      final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
-      await settingsProvider.initialize();
+      
+      // Migrate notes with null folderId or orphaned folder IDs to unorganized folder
+      if (foldersProvider.unorganizedFolderId != null) {
+        // Get list of valid folder IDs
+        final validFolderIds = foldersProvider.folders.map((f) => f.id).toList();
+        await notesProvider.migrateUnorganizedNotes(
+          foldersProvider.unorganizedFolderId!,
+          validFolderIds: validFolderIds,
+        );
+      }
 
       // Initialize subscription service
       final subscriptionService = SubscriptionService();
@@ -63,7 +86,7 @@ class _SplashScreenState extends State<SplashScreen> {
             builder: (context) => const OnboardingScreen(),
           ),
         );
-      } else if (subscriptionService.isSubscribed) {
+      } else if (!subscriptionService.isSubscribed) {
         // User completed onboarding and is subscribed → go to home
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(

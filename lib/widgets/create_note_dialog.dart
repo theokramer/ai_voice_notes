@@ -59,10 +59,19 @@ class _CreateNoteDialogState extends State<CreateNoteDialog> {
               child: Container(
                 padding: const EdgeInsets.all(AppTheme.spacing24),
                 decoration: BoxDecoration(
-                  color: AppTheme.glassStrongSurface,
+                  color: const Color(0xEE1A1F2E), // 93% opacity dark blue-grey - consistent with other modals
                   borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-                  border: Border.all(color: AppTheme.glassBorder, width: 1.5),
-                  boxShadow: AppTheme.cardShadow,
+                  border: Border.all(
+                    color: AppTheme.glassBorder.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.5),
+                      blurRadius: 30,
+                      spreadRadius: 5,
+                    ),
+                  ],
                 ),
                 child: Column(
               mainAxisSize: MainAxisSize.min,

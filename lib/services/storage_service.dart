@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/note.dart';
+import '../models/folder.dart';
 
 class StorageService {
   static const String _notesKey = 'notes';
@@ -8,6 +9,8 @@ class StorageService {
   static const String _sortOptionKey = 'sort_option';
   static const String _sortDirectionKey = 'sort_direction';
   static const String _firstLaunchKey = 'is_first_launch';
+  static const String _foldersKey = 'folders';
+  static const String _unorganizedFolderIdKey = 'unorganized_folder_id';
 
   Future<List<Note>> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
@@ -69,6 +72,29 @@ class StorageService {
   Future<void> setFirstLaunchComplete() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_firstLaunchKey, false);
+  }
+
+  // Folder persistence
+  Future<List<Folder>> loadFolders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final foldersJson = prefs.getStringList(_foldersKey) ?? [];
+    return foldersJson.map((json) => Folder.fromJsonString(json)).toList();
+  }
+
+  Future<void> saveFolders(List<Folder> folders) async {
+    final prefs = await SharedPreferences.getInstance();
+    final foldersJson = folders.map((folder) => folder.toJsonString()).toList();
+    await prefs.setStringList(_foldersKey, foldersJson);
+  }
+
+  Future<String?> getUnorganizedFolderId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_unorganizedFolderIdKey);
+  }
+
+  Future<void> saveUnorganizedFolderId(String folderId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_unorganizedFolderIdKey, folderId);
   }
 }
 

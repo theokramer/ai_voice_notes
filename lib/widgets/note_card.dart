@@ -5,6 +5,11 @@ import 'package:provider/provider.dart';
 import '../models/note.dart';
 import '../theme/app_theme.dart';
 import '../providers/settings_provider.dart';
+import '../providers/folders_provider.dart';
+import '../providers/notes_provider.dart';
+import '../services/haptic_service.dart';
+import 'quick_move_dialog.dart';
+import 'custom_snackbar.dart';
 
 class NoteCard extends StatefulWidget {
   final Note note;
@@ -72,9 +77,162 @@ class _NoteCardState extends State<NoteCard>
     _controller.reverse();
   }
 
+  /// Show action menu with Move, Pin/Unpin, Delete options
+  Future<void> _showNoteActions(BuildContext context) async {
+    HapticService.light();
+    
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xEE1A1F2E),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.folder_outlined),
+                title: const Text('Move to folder'),
+                onTap: () => Navigator.of(context).pop('move'),
+              ),
+              ListTile(
+                leading: Icon(widget.note.isPinned ? Icons.push_pin : Icons.push_pin_outlined),
+                title: Text(widget.note.isPinned ? 'Unpin note' : 'Pin note'),
+                onTap: () => Navigator.of(context).pop('pin'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Delete note', style: TextStyle(color: Colors.red)),
+                onTap: () => Navigator.of(context).pop('delete'),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (!context.mounted) return;
+
+    if (action == 'move') {
+      await _showMoveDialog(context);
+    } else if (action == 'pin') {
+      await _togglePin(context);
+    } else if (action == 'delete') {
+      await _deleteNote(context);
+    }
+  }
+
+  Future<void> _showMoveDialog(BuildContext context) async {
+    final foldersProvider = context.read<FoldersProvider>();
+    final notesProvider = context.read<NotesProvider>();
+
+    // Include unorganized folder in the list
+    final allFolders = [
+      if (foldersProvider.unorganizedFolder != null) foldersProvider.unorganizedFolder!,
+      ...foldersProvider.userFolders,
+    ];
+
+    final selectedFolderId = await QuickMoveDialog.show(
+      context: context,
+      folders: allFolders,
+      currentFolderId: widget.note.folderId,
+      noteIcon: widget.note.icon,
+      noteName: widget.note.name,
+      unorganizedFolderId: foldersProvider.unorganizedFolderId,
+    );
+
+    if (selectedFolderId != null && context.mounted) {
+      await notesProvider.moveNoteToFolder(widget.note.id, selectedFolderId);
+      
+      final folder = foldersProvider.getFolderById(selectedFolderId);
+      if (context.mounted) {
+        CustomSnackbar.show(
+          context,
+          message: 'Note moved to ${folder?.name ?? "folder"}',
+          type: SnackbarType.success,
+          duration: const Duration(seconds: 2),
+        );
+      }
+    }
+  }
+
+  Future<void> _togglePin(BuildContext context) async {
+    final notesProvider = context.read<NotesProvider>();
+    HapticService.success();
+    
+    final updatedNote = widget.note.copyWith(isPinned: !widget.note.isPinned);
+    await notesProvider.updateNote(updatedNote);
+    
+    if (context.mounted) {
+      CustomSnackbar.show(
+        context,
+        message: widget.note.isPinned ? 'Note unpinned' : 'Note pinned',
+        type: SnackbarType.success,
+        duration: const Duration(seconds: 2),
+      );
+    }
+  }
+
+  Future<void> _deleteNote(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Note'),
+        content: const Text('Are you sure you want to delete this note? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      final notesProvider = context.read<NotesProvider>();
+      HapticService.success();
+      await notesProvider.deleteNote(widget.note.id);
+      
+      if (context.mounted) {
+        CustomSnackbar.show(
+          context,
+          message: 'Note deleted',
+          type: SnackbarType.success,
+          duration: const Duration(seconds: 2),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final totalEntries = widget.note.totalEntries;
+    // Word count as metadata (replacing old entry count)
+    final wordCount = widget.note.content.trim().isEmpty 
+        ? 0 
+        : widget.note.content.trim().split(RegExp(r'\s+')).length;
 
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
@@ -85,6 +243,7 @@ class _NoteCardState extends State<NoteCard>
             onTapDown: _handleTapDown,
             onTapUp: _handleTapUp,
             onTapCancel: _handleTapCancel,
+            onLongPress: () => _showNoteActions(context),
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, child) {
@@ -189,7 +348,7 @@ class _NoteCardState extends State<NoteCard>
                                       Text(
                                         widget.isGridView
                                             ? _formatDate(widget.note.updatedAt)
-                                            : '$totalEntries ${totalEntries == 1 ? 'entry' : 'entries'} • ${_formatDate(widget.note.updatedAt)}',
+                                            : '$wordCount ${wordCount == 1 ? 'word' : 'words'} • ${_formatDate(widget.note.updatedAt)}',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall
@@ -410,18 +569,18 @@ class _NoteCardState extends State<NoteCard>
   }
 
   String _getFirstSentence() {
-    // Get the latest entry text
-    final latestText = widget.note.latestEntryText;
-    if (latestText == null || latestText.isEmpty) {
+    // Use contentPreview which handles JSON extraction properly
+    final preview = widget.note.contentPreview;
+    if (preview.isEmpty) {
       return 'No content';
     }
     
     // Split into words
-    final words = latestText.split(RegExp(r'\s+'));
+    final words = preview.split(RegExp(r'\s+'));
     
     // If less than 35 words, return everything
     if (words.length <= 35) {
-      return latestText.trim();
+      return preview.trim();
     }
     
     // Get first 35 words

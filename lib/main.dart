@@ -6,7 +6,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:superwallkit_flutter/superwallkit_flutter.dart';
 import 'providers/notes_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/folders_provider.dart';
 import 'services/connectivity_service.dart';
+import 'services/recording_queue_service.dart';
 import 'services/superwall_event_delegate.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
@@ -75,6 +77,12 @@ class MainApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (context) => SettingsProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => FoldersProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => RecordingQueueService(),
         ),
         ChangeNotifierProvider(
           create: (context) => ConnectivityService(),

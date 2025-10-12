@@ -31,6 +31,7 @@ dependencies:
   shimmer: ^3.0.0
   vibration: ^2.0.0
   connectivity_plus: ^6.0.5
+  flutter_quill: ^9.0.0
   
   # Environment variables
   flutter_dotenv: ^5.2.1

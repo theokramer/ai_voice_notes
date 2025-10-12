@@ -7,8 +7,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/folders_provider.dart';
+import '../models/settings.dart';
 import '../services/haptic_service.dart';
 import '../services/recording_service.dart';
+import '../services/recording_queue_service.dart';
 import '../services/openai_service.dart';
 import '../services/localization_service.dart';
 import '../models/note.dart';
@@ -22,8 +25,12 @@ import '../widgets/hero_page_route.dart';
 import '../widgets/ai_chat_overlay.dart';
 import '../widgets/note_organization_sheet.dart';
 import '../widgets/minimalistic_note_card.dart';
+import '../widgets/folder_selector.dart';
+import '../widgets/recording_status_bar.dart';
+import '../widgets/folder_management_dialog.dart';
 import 'note_detail_screen.dart';
 import 'settings_screen.dart';
+import 'organization_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -36,9 +43,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final AudioRecorder _audioRecorder = AudioRecorder();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  String? _recordingPath;
-  String? _transcribedText;
-  bool _isTranscribing = false;
+  // DEPRECATED: Removed in favor of RecordingQueueService
+  // String? _recordingPath;
+  // String? _transcribedText;
+  // bool _isTranscribing = false;
   bool _showSearchOverlay = false;
   late AnimationController _searchAnimationController;
   late Animation<double> _searchAnimation;
@@ -50,7 +58,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _isAIProcessing = false;
   
   // Selection mode state
-  bool _isInSelectionMode = false;
+  // DEPRECATED: Selection mode removed in favor of direct navigation
+  // bool _isInSelectionMode = false;
+  
+  // Folder context state (for context-aware recording)
+  String? _currentFolderContext; // null = All Notes view
   
   // Undo state
   Map<String, dynamic>? _lastAction;
@@ -89,6 +101,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    // Try to stop any active recording before disposing
+    // AudioRecorder.dispose() will handle cleanup even if recording is in progress
+    _audioRecorder.stop().catchError((e) {
+      debugPrint('Note: Recording stop during dispose completed with: $e');
+      return null;
+    });
+    
     _audioRecorder.dispose();
     _searchController.dispose();
     _scrollController.dispose();
@@ -119,6 +138,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _searchAnimationController.reverse();
       HapticService.light();
     }
+  }
+
+  /// Apply folder filtering to notes list
+  List<Note> _getFilteredNotes(List<Note> allNotes) {
+    if (_currentFolderContext != null) {
+      return allNotes.where((n) => n.folderId == _currentFolderContext).toList();
+    }
+    return allNotes; // Show all if no folder context
   }
 
   void _enterChatMode(String query) async {
@@ -185,7 +212,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         noteCitations: response.noteCitations,
       );
 
-      // Handle actions
+      // DEPRECATED: Action handling removed from new AIChatResponse
+      // The new implementation focuses on conversational AI without action triggers
+      /*
       if (response.actionType != null && response.actionData != null) {
         ChatAction? action;
         
@@ -252,6 +281,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           );
         }
       }
+      */
 
       setState(() {
         _chatMessages.add(aiMessage);
@@ -280,6 +310,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final noteId = _undoData as String;
           await provider.deleteNote(noteId);
           break;
+        // DEPRECATED: add_entry no longer exists with new Note model
+        /*
         case 'add_entry':
           final data = _undoData as Map<String, dynamic>;
           final note = provider.allNotes.firstWhere((n) => n.id == data['noteId']);
@@ -293,6 +325,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           }).toList();
           await provider.updateNote(note.copyWith(headlines: headlines));
           break;
+        */
         case 'consolidate':
           final data = _undoData as Map<String, dynamic>;
           // Delete consolidated note
@@ -351,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             name: result['name']!,
             icon: result['icon']!,
-            headlines: [],
+            content: '',
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           );
@@ -396,6 +429,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
         break;
         
+      // DEPRECATED: add_entry action references old headlines model
+      /*
       case 'add_entry':
         final noteId = action.data['noteId'] as String;
         final entryText = action.data['entryText'] as String;
@@ -412,42 +447,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           );
         }
         
-        // Create new entry
-        final entry = TextEntry(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          text: entryText,
-          createdAt: DateTime.now(),
-        );
-        
-        // Add to first headline or create one
-        List<Headline> headlines;
-        if (note.headlines.isEmpty) {
-          headlines = [
-            Headline(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              title: 'Notes',
-              entries: [entry],
-              createdAt: DateTime.now(),
-            ),
-          ];
-        } else {
-          headlines = note.headlines.map((h) {
-            if (h == note.headlines.first) {
-              return h.copyWith(entries: [...h.entries, entry]);
-            }
-            return h;
-          }).toList();
-        }
-        
-        final updatedNote = note.copyWith(headlines: headlines);
+        // NEW: Just append to content instead
+        final updatedContent = note.content.isEmpty 
+            ? entryText 
+            : '${note.content}\n\n$entryText';
+        final updatedNote = note.copyWith(content: updatedContent);
         await provider.updateNote(updatedNote);
         
         // Save undo data
         _lastAction = {'type': 'add_entry'};
         _undoData = {
           'noteId': noteId,
-          'headlineId': headlines.first.id,
-          'entryId': entry.id,
         };
         
         HapticService.success();
@@ -473,20 +483,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           );
         }
         
-        // Navigate to the note with the newly created entry highlighted
+        // Navigate to the note
         if (mounted) {
           await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => NoteDetailScreen(
                 noteId: note.id,
-                highlightedEntryId: entry.id,
-                autoCloseAfterDelay: false,
               ),
             ),
           );
         }
         break;
+        */
         
       case 'consolidate':
         final targetName = action.data['targetName'] as String;
@@ -499,10 +508,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         
         if (notesToConsolidate.isEmpty) return;
         
-        // Collect all headlines from all notes
-        final allHeadlines = <Headline>[];
+        // Collect all content from all notes
+        final allContents = <String>[];
         for (final note in notesToConsolidate) {
-          allHeadlines.addAll(note.headlines);
+          if (note.content.isNotEmpty) {
+            allContents.add('## ${note.name}\n\n${note.content}');
+          }
         }
         
         // Create new consolidated note
@@ -510,7 +521,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           name: targetName,
           icon: notesToConsolidate.first.icon,
-          headlines: allHeadlines,
+          content: allContents.join('\n\n---\n\n'),
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
@@ -554,6 +565,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
         break;
         
+      // DEPRECATED: move_entry references removed moveEntry method
+      /*
       case 'move_entry':
         final sourceNoteId = action.data['sourceNoteId'] as String;
         final targetNoteId = action.data['targetNoteId'] as String;
@@ -570,7 +583,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ));
         });
         break;
-    }
+      */
+      }
     } catch (e) {
       // Handle any errors
       if (mounted) {
@@ -590,22 +604,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     
     final snippets = <String>[];
     final lowerQuery = query.toLowerCase();
+    final content = note.content;
     
-    for (final headline in note.headlines) {
-      for (final entry in headline.entries) {
-        if (entry.text.toLowerCase().contains(lowerQuery)) {
-          // Find the position of the match
-          final index = entry.text.toLowerCase().indexOf(lowerQuery);
-          final start = (index - 50).clamp(0, entry.text.length);
-          final end = (index + query.length + 50).clamp(0, entry.text.length);
-          
-          String snippet = entry.text.substring(start, end);
-          if (start > 0) snippet = '...$snippet';
-          if (end < entry.text.length) snippet = '$snippet...';
-          
-          snippets.add(snippet);
-          if (snippets.length >= 2) return snippets;
-        }
+    if (content.toLowerCase().contains(lowerQuery)) {
+      // Find all matches
+      int searchStart = 0;
+      while (searchStart < content.length && snippets.length < 2) {
+        final index = content.toLowerCase().indexOf(lowerQuery, searchStart);
+        if (index == -1) break;
+        
+        final start = (index - 50).clamp(0, content.length);
+        final end = (index + query.length + 50).clamp(0, content.length);
+        
+        String snippet = content.substring(start, end);
+        if (start > 0) snippet = '...$snippet';
+        if (end < content.length) snippet = '$snippet...';
+        
+        snippets.add(snippet);
+        searchStart = index + 1;
       }
     }
     
@@ -619,10 +635,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // top padding (12) + icon (48) + name row (16) + spacing (4) + date (13) + spacing (8)
     double height = 12.0 + 48.0 + 16.0 + 4.0 + 13.0 + 8.0; // ~101px
     
-    // Get the latest entry text (same logic as NoteCard._getFirstSentence)
-    final latestText = note.latestEntryText;
+    // Get the content text
+    final latestText = note.content;
     
-    if (latestText == null || latestText.isEmpty) {
+    if (latestText.isEmpty) {
       // "No content" text
       height += 12.0 * 1.4; // fontSize 12, height 1.4
       height += 12.0; // bottom padding (reduced)
@@ -687,7 +703,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       return;
     }
 
-    _recordingPath = result.recordingPath;
+    // Recording path no longer stored - handled by RecordingQueueService
   }
 
   Future<void> _stopRecording() async {
@@ -696,7 +712,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     
     final stoppedPath = await RecordingService().stopRecording(_audioRecorder);
 
-    if (stoppedPath == null && _recordingPath == null) {
+    if (stoppedPath == null) {
       if (mounted) {
         final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
         CustomSnackbar.show(
@@ -709,10 +725,45 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       return;
     }
 
-    _startTranscription();
-    _enterSelectionMode();
+    // Add to recording queue service with folder context
+    if (mounted) {
+      final queueService = context.read<RecordingQueueService>();
+      final openAIService = OpenAIService(apiKey: dotenv.env['OPENAI_API_KEY'] ?? '');
+      
+      queueService.addRecording(
+        audioPath: stoppedPath,
+        folderContext: _currentFolderContext,
+        openAIService: openAIService,
+        notesProvider: context.read<NotesProvider>(),
+        foldersProvider: context.read<FoldersProvider>(),
+        settingsProvider: context.read<SettingsProvider>(),
+      );
+      
+      // Show brief hint if enabled
+      final settings = context.read<SettingsProvider>().settings;
+      if (settings.showOrganizationHints && mounted) {
+        final folderName = _currentFolderContext != null
+            ? context.read<FoldersProvider>().getFolderById(_currentFolderContext!)?.name
+            : null;
+        
+        final message = folderName != null
+            ? 'Recording saved to $folderName'
+            : settings.organizationMode == OrganizationMode.autoOrganize
+                ? 'Recording will be organized automatically'
+                : 'Recording saved to Unorganized';
+
+        CustomSnackbar.show(
+          context,
+          message: message,
+          type: SnackbarType.success,
+          themeConfig: context.read<SettingsProvider>().currentThemeConfig,
+        );
+      }
+    }
   }
 
+  // DEPRECATED: Selection mode no longer used with new RecordingQueueService
+  /*
   void _enterSelectionMode() {
     setState(() {
       _isInSelectionMode = true;
@@ -739,7 +790,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Process the recording
     await _processRecording(note);
   }
+  */
 
+  // DEPRECATED: This method is replaced by RecordingQueueService
+  /*
   void _handleCreateNoteInSelectionMode() async {
     final result = await showDialog<Map<String, String>>(
       context: context,
@@ -753,7 +807,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: result['name']!,
         icon: result['icon']!,
-        headlines: [],
+        content: '',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -768,7 +822,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       await _processRecording(newNote);
     }
   }
+  */
 
+  // DEPRECATED: Transcription now handled by RecordingQueueService
+  /*
   Future<void> _startTranscription() async {
     if (_recordingPath == null) return;
 
@@ -872,7 +929,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
     }
   }
+  */
 
+  // DEPRECATED: Processing dialog replaced by RecordingStatusBar
+  /*
   Widget _buildProcessingDialog({
     required bool isTranscribing,
     required ThemeConfig themeConfig,
@@ -931,6 +991,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           curve: Curves.easeOutBack,
         );
   }
+  */
 
   void _showEditNoteDialog(Note note) async {
     HapticService.light();
@@ -1290,115 +1351,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     );
                   }
 
-                  if (provider.notes.isEmpty) {
-                      if (_searchController.text.isNotEmpty) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppTheme.spacing48),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ClipOval(
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                    child: Container(
-                                      width: 80,
-                                      height: 80,
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.glassStrongSurface,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                            color: AppTheme.glassBorder, width: 2),
-                                      ),
-                                      child: const Icon(
-                                        Icons.search_off,
-                                        size: 40,
-                                        color: AppTheme.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: AppTheme.spacing24),
-                                Text(
-                                  'No results found',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(
-                                        color: AppTheme.textSecondary,
-                                      ),
-                                ),
-                                const SizedBox(height: AppTheme.spacing8),
-                                Text(
-                                  'Try different search terms',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppTheme.spacing48),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              ClipOval(
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                  child: Container(
-                                    width: 80,
-                                    height: 80,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.glassStrongSurface,
-                                      shape: BoxShape.circle,
-                                      border:
-                                          Border.all(color: AppTheme.glassBorder, width: 2),
-                                    ),
-                                    child: const Icon(
-                                      Icons.mic,
-                                      size: 40,
-                                      color: AppTheme.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: AppTheme.spacing24),
-                              Text(
-                                'No notes yet',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(
-                                      color: AppTheme.textSecondary,
-                                    ),
-                              ),
-                              const SizedBox(height: AppTheme.spacing8),
-                              Text(
-                                'Press and hold the microphone\nto record your first note',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          )
-                              .animate()
-                              .fadeIn(
-                                duration: AppTheme.animationSlow,
-                                delay: 200.ms,
-                              )
-                              .slideY(
-                                begin: 0.1,
-                                end: 0,
-                                duration: AppTheme.animationSlow,
-                                delay: 200.ms,
-                              ),
-                        ),
-                      );
-                    }
-
+                  final filteredNotes = _getFilteredNotes(provider.notes);
+                  
                   // Show notes list only if not in chat mode
                   if (_isInChatMode) {
                     return Container(
@@ -1421,19 +1375,135 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           collapsedHeight: 56.0 + MediaQuery.of(context).padding.top, // Smaller collapsed height
                         ),
                       ),
+                      // Folder Selector
+                      Consumer<FoldersProvider>(
+                        builder: (context, foldersProvider, child) {
+                          final unorganized = foldersProvider.unorganizedFolder;
+                          if (unorganized == null) {
+                            return const SliverToBoxAdapter(child: SizedBox.shrink());
+                          }
+                          return SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              child: FolderSelector(
+                                selectedFolderId: _currentFolderContext,
+                                folders: foldersProvider.folders,
+                                unorganizedFolder: unorganized,
+                                onFolderSelected: (folderId) {
+                                  setState(() => _currentFolderContext = folderId);
+                                },
+                                onManageFolders: () async {
+                                  await showDialog(
+                                    context: context,
+                                    builder: (context) => FolderManagementDialog(),
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      // Recording Status Bar
+                      Consumer<RecordingQueueService>(
+                        builder: (context, queueService, child) {
+                          if (queueService.queue.isEmpty) {
+                            return const SliverToBoxAdapter(child: SizedBox.shrink());
+                          }
+                          return SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                              child: RecordingStatusBar(),
+                            ),
+                          );
+                        },
+                      ),
                       // Add top padding when search is active
                       if (_showSearchOverlay)
                         const SliverToBoxAdapter(
                           child: SizedBox(height: 30),
                         ),
+                      // Empty state when no notes
+                      if (filteredNotes.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppTheme.spacing48),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Only show icon for search empty state
+                                  if (_searchController.text.isNotEmpty) ...[
+                                    ClipOval(
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                        child: Container(
+                                          width: 80,
+                                          height: 80,
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.glassStrongSurface,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: AppTheme.glassBorder,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.search_off,
+                                            size: 40,
+                                            color: AppTheme.textPrimary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: AppTheme.spacing24),
+                                  ],
+                                  Text(
+                                    _searchController.text.isNotEmpty
+                                        ? 'No results found'
+                                        : 'No notes yet',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium
+                                        ?.copyWith(
+                                          color: AppTheme.textSecondary,
+                                        ),
+                                  ),
+                                  const SizedBox(height: AppTheme.spacing8),
+                                  Text(
+                                    _searchController.text.isNotEmpty
+                                        ? 'Try different search terms'
+                                        : 'Press and hold the microphone\nto record your first note',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: AppTheme.textTertiary,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            )
+                                .animate()
+                                .fadeIn(
+                                  duration: AppTheme.animationSlow,
+                                  delay: 200.ms,
+                                )
+                                .slideY(
+                                  begin: 0.1,
+                                  end: 0,
+                                  duration: AppTheme.animationSlow,
+                                  delay: 200.ms,
+                                ),
+                          ),
+                        ),
                       // Notes list - View type based on provider setting
+                      if (filteredNotes.isNotEmpty)
                         Consumer<NotesProvider>(
                           builder: (context, notesProvider, child) {
                             final viewType = notesProvider.noteViewType;
                             
                             // Minimalistic List View
                             if (viewType == NoteViewType.minimalisticList) {
-                              final groupedNotes = notesProvider.groupNotesByTimePeriod(provider.notes);
+                              final groupedNotes = notesProvider.groupNotesByTimePeriod(filteredNotes);
                               final todayCount = groupedNotes['Today']!.length;
                               final thisWeekCount = groupedNotes['This Week']!.length;
                               final moreCount = groupedNotes['More']!.length;
@@ -1450,23 +1520,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     if (index > 0 && index <= todayCount) {
                                       final note = groupedNotes['Today']![index - 1];
                                       return GestureDetector(
-                                        onLongPress: () => _isInSelectionMode ? null : _showNoteOptions(note),
+                                        onLongPress: () => _showNoteOptions(note),
                                         child: MinimalisticNoteCard(
                                           note: note,
                                           index: index - 1,
                                           onTap: () async {
                                             await HapticService.light();
-                                            if (_isInSelectionMode) {
-                                              _handleNoteSelectionInMode(note);
-                                            } else {
-                                              provider.markNoteAsAccessed(note.id);
-                                              if (_searchController.text.isNotEmpty) {
-                                                _hideSearchOverlay();
-                                              }
-                                              await context.pushHero(
-                                                NoteDetailScreen(noteId: note.id),
-                                              );
+                                            // Selection mode deprecated - always navigate
+                                            provider.markNoteAsAccessed(note.id);
+                                            if (_searchController.text.isNotEmpty) {
+                                              _hideSearchOverlay();
                                             }
+                                            await context.pushHero(
+                                              NoteDetailScreen(noteId: note.id),
+                                            );
                                           },
                                         ),
                                       );
@@ -1480,23 +1547,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     if (index > weekStartIndex && index <= weekStartIndex + thisWeekCount) {
                                       final note = groupedNotes['This Week']![index - weekStartIndex - 1];
                                       return GestureDetector(
-                                        onLongPress: () => _isInSelectionMode ? null : _showNoteOptions(note),
+                                        onLongPress: () => _showNoteOptions(note),
                                         child: MinimalisticNoteCard(
                                           note: note,
                                           index: index - weekStartIndex - 1,
                                           onTap: () async {
                                             await HapticService.light();
-                                            if (_isInSelectionMode) {
-                                              _handleNoteSelectionInMode(note);
-                                            } else {
-                                              provider.markNoteAsAccessed(note.id);
-                                              if (_searchController.text.isNotEmpty) {
-                                                _hideSearchOverlay();
-                                              }
-                                              await context.pushHero(
-                                                NoteDetailScreen(noteId: note.id),
-                                              );
+                                            // Selection mode deprecated - always navigate
+                                            provider.markNoteAsAccessed(note.id);
+                                            if (_searchController.text.isNotEmpty) {
+                                              _hideSearchOverlay();
                                             }
+                                            await context.pushHero(
+                                              NoteDetailScreen(noteId: note.id),
+                                            );
                                           },
                                         ),
                                       );
@@ -1510,23 +1574,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     if (index > moreStartIndex) {
                                       final note = groupedNotes['More']![index - moreStartIndex - 1];
                                       return GestureDetector(
-                                        onLongPress: () => _isInSelectionMode ? null : _showNoteOptions(note),
+                                        onLongPress: () => _showNoteOptions(note),
                                         child: MinimalisticNoteCard(
                                           note: note,
                                           index: index - moreStartIndex - 1,
                                           onTap: () async {
                                             await HapticService.light();
-                                            if (_isInSelectionMode) {
-                                              _handleNoteSelectionInMode(note);
-                                            } else {
-                                              provider.markNoteAsAccessed(note.id);
-                                              if (_searchController.text.isNotEmpty) {
-                                                _hideSearchOverlay();
-                                              }
-                                              await context.pushHero(
-                                                NoteDetailScreen(noteId: note.id),
-                                              );
+                                            // Selection mode deprecated - always navigate
+                                            provider.markNoteAsAccessed(note.id);
+                                            if (_searchController.text.isNotEmpty) {
+                                              _hideSearchOverlay();
                                             }
+                                            await context.pushHero(
+                                              NoteDetailScreen(noteId: note.id),
+                                            );
                                           },
                                         ),
                                       );
@@ -1542,7 +1603,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             // Grid View - using custom layout for varying heights
                             else if (viewType == NoteViewType.grid) {
                               final crossAxisCount = MediaQuery.of(context).size.width > 600 ? 3 : 2;
-                              final notes = provider.notes;
+                              final notes = filteredNotes;
                               
                               // Group notes into columns for masonry effect with balanced heights
                               // Track column heights to balance the layout
@@ -1598,7 +1659,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                               final snippets = _extractSnippets(note, _searchController.text);
                                               
                                               return GestureDetector(
-                                                onLongPress: () => _isInSelectionMode ? null : _showNoteOptions(note),
+                                                onLongPress: () => _showNoteOptions(note),
                                                 child: NoteCard(
                                                   note: note,
                                                   searchQuery: _searchController.text,
@@ -1607,26 +1668,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                                   isGridView: true,
                                                   onTap: () async {
                                                     await HapticService.light();
-                                                    if (_isInSelectionMode) {
-                                                      _handleNoteSelectionInMode(note);
-                                                    } else {
-                                                      provider.markNoteAsAccessed(note.id);
-                                                      
-                                                      final searchQuery = _searchController.text.isNotEmpty
-                                                          ? _searchController.text
-                                                          : null;
-                                                      
-                                                      if (searchQuery != null) {
-                                                        _hideSearchOverlay();
-                                                      }
-                                                      
-                                                      await context.pushHero(
-                                                        NoteDetailScreen(
-                                                          noteId: note.id,
-                                                          searchQuery: searchQuery,
-                                                        ),
-                                                      );
+                                                    // Selection mode deprecated - always navigate
+                                                    provider.markNoteAsAccessed(note.id);
+                                                    
+                                                    final searchQuery = _searchController.text.isNotEmpty
+                                                        ? _searchController.text
+                                                        : null;
+                                                    
+                                                    if (searchQuery != null) {
+                                                      _hideSearchOverlay();
                                                     }
+                                                    
+                                                    await context.pushHero(
+                                                      NoteDetailScreen(
+                                                        noteId: note.id,
+                                                        searchQuery: searchQuery,
+                                                      ),
+                                                    );
                                                   },
                                                 ),
                                               )
@@ -1650,8 +1708,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             // Standard List View
                             else {
                               // List view with pinned section
-                              final pinnedNotes = provider.notes.where((n) => n.isPinned).toList();
-                              final unpinnedNotes = provider.notes.where((n) => !n.isPinned).toList();
+                              final pinnedNotes = filteredNotes.where((n) => n.isPinned).toList();
+                              final unpinnedNotes = filteredNotes.where((n) => !n.isPinned).toList();
                               final hasPinned = pinnedNotes.isNotEmpty;
                               
                               return SliverPadding(
@@ -1791,7 +1849,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               ),
                             ),
                             child: GestureDetector(
-                              onLongPress: () => _isInSelectionMode ? null : _showNoteOptions(note),
+                              onLongPress: () => _showNoteOptions(note),
                               child: NoteCard(
                                 note: note,
                                 searchQuery: _searchController.text,
@@ -1799,34 +1857,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 index: adjustedIndex,
                                 onTap: () async {
                                   await HapticService.light();
-                                  if (_isInSelectionMode) {
-                                    _handleNoteSelectionInMode(note);
-                                  } else {
-                                    provider.markNoteAsAccessed(note.id);
-                                    
-                                    // Capture search query before clearing
-                                    final searchQuery = _searchController.text.isNotEmpty
-                                        ? _searchController.text
-                                        : null;
-                                    
-                                    // Clear search bar when navigating to note
-                                    if (searchQuery != null) {
-                                      _hideSearchOverlay();
-                                    }
-                                    
-                                    await context.pushHero(
-                                      NoteDetailScreen(
-                                        noteId: note.id,
-                                        searchQuery: searchQuery,
-                                      ),
-                                    );
+                                  // Selection mode deprecated - always navigate
+                                  provider.markNoteAsAccessed(note.id);
+                                  
+                                  // Capture search query before clearing
+                                  final searchQuery = _searchController.text.isNotEmpty
+                                      ? _searchController.text
+                                      : null;
+                                  
+                                  // Clear search bar when navigating to note
+                                  if (searchQuery != null) {
+                                    _hideSearchOverlay();
                                   }
+                                  
+                                  await context.pushHero(
+                                    NoteDetailScreen(
+                                      noteId: note.id,
+                                      searchQuery: searchQuery,
+                                    ),
+                                  );
                                 },
                               ),
                             ),
                           );
                         },
-                              childCount: provider.notes.length + 
+                              childCount: filteredNotes.length + 
                                   (hasPinned ? 1 : 0) + 
                                   (hasPinned && unpinnedNotes.isNotEmpty ? 1 : 0),
                               addAutomaticKeepAlives: true,
@@ -1842,15 +1897,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 },
               ),
               
-              // Microphone button - centered
+              // Microphone button - centered (or Organize button when viewing Unorganized)
               Positioned(
             bottom: 24,
             left: 0,
             right: 0,
             child: Center(
-              child: MicrophoneButton(
-                onRecordingStart: _startRecording,
-                onRecordingStop: _stopRecording,
+              child: Consumer<FoldersProvider>(
+                builder: (context, foldersProvider, child) {
+                  final isViewingUnorganized = _currentFolderContext == foldersProvider.unorganizedFolderId;
+                  
+                  if (isViewingUnorganized) {
+                    // Show Organize button when viewing unorganized folder
+                    return FloatingActionButton.extended(
+                      onPressed: () {
+                        HapticService.medium();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const OrganizationScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.auto_fix_high),
+                      label: const Text('Organize'),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                    );
+                  } else {
+                    // Show microphone button for all other views
+                    return MicrophoneButton(
+                      onRecordingStart: _startRecording,
+                      onRecordingStop: _stopRecording,
+                    );
+                  }
+                },
               ),
             ),
           ),
@@ -1895,9 +1973,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                 ),
               
-              // Selection mode overlay (just the banner at top, notes remain clickable)
-              if (_isInSelectionMode)
-                _buildSelectionModeOverlay(),
+              // DEPRECATED: Selection mode overlay removed
+              // if (_isInSelectionMode)
+              //   _buildSelectionModeOverlay(),
             ],
               ),
           ),
@@ -1908,6 +1986,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  // DEPRECATED: Selection mode overlay removed
+  /*
   Widget _buildSelectionModeOverlay() {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
@@ -2088,6 +2168,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       },
     );
   }
+  */
 
   Widget _buildSearchOverlay(ThemeConfig themeConfig) {
     return AnimatedBuilder(
@@ -2209,7 +2290,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildAskAIButton(NotesProvider provider, ThemeConfig themeConfig) {
     final hasQuery = _searchController.text.isNotEmpty;
-    final hasResults = provider.notes.isNotEmpty;
+    final filteredNotes = _getFilteredNotes(provider.notes);
+    final hasResults = filteredNotes.isNotEmpty;
     final noResults = hasQuery && !hasResults;
     
     final buttonText = hasQuery 
@@ -2346,13 +2428,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     
     // Get note context
     final provider = context.read<NotesProvider>();
-    final noteCount = provider.notes.length;
+    final filteredNotes = _getFilteredNotes(provider.notes);
+    final noteCount = filteredNotes.length;
     final hasNotes = noteCount > 0;
     
     // Check if user created notes today
     final today = DateTime.now();
     int notesToday = 0;
-    for (final note in provider.notes) {
+    for (final note in filteredNotes) {
       if (note.updatedAt.year == today.year && 
           note.updatedAt.month == today.month && 
           note.updatedAt.day == today.day) {

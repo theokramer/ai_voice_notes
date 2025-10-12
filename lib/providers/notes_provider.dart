@@ -1,17 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:string_similarity/string_similarity.dart';
 import '../models/note.dart';
 import '../services/storage_service.dart';
 import '../services/openai_service.dart';
-import '../services/localization_service.dart';
+import '../utils/markdown_to_delta_converter.dart';
 
 enum SortOption {
   recentlyUpdated,
   recentlyAccessed,
   alphabetical,
-  entryCount,
   dateCreated,
 }
 
@@ -85,241 +84,6 @@ class NotesProvider extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Creates sample tutorial notes for first-time users
-  List<Note> _createSampleNotes() {
-    final now = DateTime.now();
-    final loc = LocalizationService();
-    
-    return [
-      // Sample Note 1: Welcome & Tutorial
-      Note(
-        id: 'sample_${now.millisecondsSinceEpoch}_1',
-        name: loc.t('sample_note_1_name'),
-        icon: '🎙️',
-        createdAt: now.subtract(const Duration(hours: 2)),
-        updatedAt: now.subtract(const Duration(hours: 2)),
-        headlines: [
-          Headline(
-            id: 'sample_headline_1_1',
-            title: loc.t('sample_note_1_headline_1'),
-            createdAt: now.subtract(const Duration(hours: 2)),
-            entries: [
-              TextEntry(
-                id: 'sample_entry_1_1_1',
-                text: loc.t('sample_note_1_entry_1_1'),
-                createdAt: now.subtract(const Duration(hours: 2)),
-              ),
-              TextEntry(
-                id: 'sample_entry_1_1_2',
-                text: loc.t('sample_note_1_entry_1_2'),
-                createdAt: now.subtract(const Duration(hours: 2, minutes: 30)),
-              ),
-              TextEntry(
-                id: 'sample_entry_1_1_3',
-                text: loc.t('sample_note_1_entry_1_3'),
-                createdAt: now.subtract(const Duration(hours: 2, minutes: 45)),
-              ),
-            ],
-          ),
-          Headline(
-            id: 'sample_headline_1_2',
-            title: loc.t('sample_note_1_headline_2'),
-            createdAt: now.subtract(const Duration(hours: 1, minutes: 45)),
-            entries: [
-              TextEntry(
-                id: 'sample_entry_1_2_1',
-                text: loc.t('sample_note_1_entry_2_1'),
-                createdAt: now.subtract(const Duration(hours: 1, minutes: 45)),
-              ),
-              TextEntry(
-                id: 'sample_entry_1_2_2',
-                text: loc.t('sample_note_1_entry_2_2'),
-                createdAt: now.subtract(const Duration(hours: 1, minutes: 30)),
-              ),
-              TextEntry(
-                id: 'sample_entry_1_2_3',
-                text: loc.t('sample_note_1_entry_2_3'),
-                createdAt: now.subtract(const Duration(hours: 1, minutes: 15)),
-              ),
-              TextEntry(
-                id: 'sample_entry_1_2_4',
-                text: loc.t('sample_note_1_entry_2_4'),
-                createdAt: now.subtract(const Duration(hours: 1, minutes: 5)),
-              ),
-            ],
-          ),
-          Headline(
-            id: 'sample_headline_1_3',
-            title: loc.t('sample_note_1_headline_3'),
-            createdAt: now.subtract(const Duration(hours: 1)),
-            entries: [
-              TextEntry(
-                id: 'sample_entry_1_3_1',
-                text: loc.t('sample_note_1_entry_3_1'),
-                createdAt: now.subtract(const Duration(hours: 1)),
-              ),
-              TextEntry(
-                id: 'sample_entry_1_3_2',
-                text: loc.t('sample_note_1_entry_3_2'),
-                createdAt: now.subtract(const Duration(minutes: 45)),
-              ),
-              TextEntry(
-                id: 'sample_entry_1_3_3',
-                text: loc.t('sample_note_1_entry_3_3'),
-                createdAt: now.subtract(const Duration(minutes: 30)),
-              ),
-            ],
-          ),
-        ],
-        isPinned: true,
-      ),
-      
-      // Sample Note 2: Meeting Notes Example
-      Note(
-        id: 'sample_${now.millisecondsSinceEpoch}_2',
-        name: loc.t('sample_note_2_name'),
-        icon: '📊',
-        createdAt: now.subtract(const Duration(days: 1)),
-        updatedAt: now.subtract(const Duration(days: 1)),
-        headlines: [
-          Headline(
-            id: 'sample_headline_2_1',
-            title: loc.t('sample_note_2_headline_1'),
-            createdAt: now.subtract(const Duration(days: 1)),
-            entries: [
-              TextEntry(
-                id: 'sample_entry_2_1_1',
-                text: loc.t('sample_note_2_entry_1_1'),
-                createdAt: now.subtract(const Duration(days: 1)),
-              ),
-              TextEntry(
-                id: 'sample_entry_2_1_2',
-                text: loc.t('sample_note_2_entry_1_2'),
-                createdAt: now.subtract(const Duration(days: 1, hours: 1)),
-              ),
-              TextEntry(
-                id: 'sample_entry_2_1_3',
-                text: loc.t('sample_note_2_entry_1_3'),
-                createdAt: now.subtract(const Duration(days: 1, hours: 2)),
-              ),
-            ],
-          ),
-          Headline(
-            id: 'sample_headline_2_2',
-            title: loc.t('sample_note_2_headline_2'),
-            createdAt: now.subtract(const Duration(days: 1, hours: 2)),
-            entries: [
-              TextEntry(
-                id: 'sample_entry_2_2_1',
-                text: loc.t('sample_note_2_entry_2_1'),
-                createdAt: now.subtract(const Duration(days: 1, hours: 2)),
-              ),
-              TextEntry(
-                id: 'sample_entry_2_2_2',
-                text: loc.t('sample_note_2_entry_2_2'),
-                createdAt: now.subtract(const Duration(days: 1, hours: 3)),
-              ),
-              TextEntry(
-                id: 'sample_entry_2_2_3',
-                text: loc.t('sample_note_2_entry_2_3'),
-                createdAt: now.subtract(const Duration(days: 1, hours: 3, minutes: 30)),
-              ),
-            ],
-          ),
-          Headline(
-            id: 'sample_headline_2_3',
-            title: loc.t('sample_note_2_headline_3'),
-            createdAt: now.subtract(const Duration(days: 1, hours: 4)),
-            entries: [
-              TextEntry(
-                id: 'sample_entry_2_3_1',
-                text: loc.t('sample_note_2_entry_3_1'),
-                createdAt: now.subtract(const Duration(days: 1, hours: 4)),
-              ),
-              TextEntry(
-                id: 'sample_entry_2_3_2',
-                text: loc.t('sample_note_2_entry_3_2'),
-                createdAt: now.subtract(const Duration(days: 1, hours: 4, minutes: 30)),
-              ),
-            ],
-          ),
-        ],
-      ),
-      
-      // Sample Note 3: Ideas & Thoughts
-      Note(
-        id: 'sample_${now.millisecondsSinceEpoch}_3',
-        name: loc.t('sample_note_3_name'),
-        icon: '💡',
-        createdAt: now.subtract(const Duration(days: 2)),
-        updatedAt: now.subtract(const Duration(days: 2)),
-        headlines: [
-          Headline(
-            id: 'sample_headline_3_1',
-            title: loc.t('sample_note_3_headline_1'),
-            createdAt: now.subtract(const Duration(days: 2)),
-            entries: [
-              TextEntry(
-                id: 'sample_entry_3_1_1',
-                text: loc.t('sample_note_3_entry_1_1'),
-                createdAt: now.subtract(const Duration(days: 2)),
-              ),
-              TextEntry(
-                id: 'sample_entry_3_1_2',
-                text: loc.t('sample_note_3_entry_1_2'),
-                createdAt: now.subtract(const Duration(days: 2, hours: 1)),
-              ),
-              TextEntry(
-                id: 'sample_entry_3_1_3',
-                text: loc.t('sample_note_3_entry_1_3'),
-                createdAt: now.subtract(const Duration(days: 2, hours: 1, minutes: 30)),
-              ),
-            ],
-          ),
-          Headline(
-            id: 'sample_headline_3_2',
-            title: loc.t('sample_note_3_headline_2'),
-            createdAt: now.subtract(const Duration(days: 2, hours: 2)),
-            entries: [
-              TextEntry(
-                id: 'sample_entry_3_2_1',
-                text: loc.t('sample_note_3_entry_2_1'),
-                createdAt: now.subtract(const Duration(days: 2, hours: 2)),
-              ),
-              TextEntry(
-                id: 'sample_entry_3_2_2',
-                text: loc.t('sample_note_3_entry_2_2'),
-                createdAt: now.subtract(const Duration(days: 2, hours: 2, minutes: 30)),
-              ),
-            ],
-          ),
-          Headline(
-            id: 'sample_headline_3_3',
-            title: loc.t('sample_note_3_headline_3'),
-            createdAt: now.subtract(const Duration(days: 2, hours: 3)),
-            entries: [
-              TextEntry(
-                id: 'sample_entry_3_3_1',
-                text: loc.t('sample_note_3_entry_3_1'),
-                createdAt: now.subtract(const Duration(days: 2, hours: 3)),
-              ),
-              TextEntry(
-                id: 'sample_entry_3_3_2',
-                text: loc.t('sample_note_3_entry_3_2'),
-                createdAt: now.subtract(const Duration(days: 2, hours: 4)),
-              ),
-              TextEntry(
-                id: 'sample_entry_3_3_3',
-                text: loc.t('sample_note_3_entry_3_3'),
-                createdAt: now.subtract(const Duration(days: 2, hours: 4, minutes: 30)),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ];
-  }
-
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
@@ -332,13 +96,34 @@ class NotesProvider extends ChangeNotifier {
     
     _notes = await _storageService.loadNotes();
     
-    // Add sample notes on first launch if no notes exist
-    final isFirstLaunch = await _storageService.isFirstLaunch();
-    if (isFirstLaunch && _notes.isEmpty) {
-      _notes = _createSampleNotes();
+    // Migrate markdown notes to Quill Delta format
+    bool needsMigration = false;
+    for (var i = 0; i < _notes.length; i++) {
+      final note = _notes[i];
+      
+      // Check if content looks like markdown (not JSON)
+      // JSON starts with '[' or '{', markdown typically has text or '#'
+      if (note.content.isNotEmpty && 
+          !note.content.trim().startsWith('[') && 
+          !note.content.trim().startsWith('{')) {
+        try {
+          // Try to parse as JSON first to be sure
+          jsonDecode(note.content);
+        } catch (e) {
+          // Not valid JSON, so it's markdown - convert it
+          debugPrint('Migrating note ${note.id} from markdown to Quill format');
+          final delta = MarkdownToDeltaConverter.convert(note.content);
+          _notes[i] = note.copyWith(
+            content: jsonEncode(delta.toJson()),
+          );
+          needsMigration = true;
+        }
+      }
+    }
+    
+    if (needsMigration) {
+      debugPrint('Saving migrated notes...');
       await _storageService.saveNotes(_notes);
-      await _storageService.setFirstLaunchComplete();
-      debugPrint('✨ Added sample tutorial notes for first-time user');
     }
     
     // Load saved view type preference
@@ -379,6 +164,48 @@ class NotesProvider extends ChangeNotifier {
     notifyListeners();
   }
   
+  /// Migrate notes with null folderId or orphaned folder IDs to the unorganized folder
+  /// This should be called after FoldersProvider is initialized
+  /// Also migrates notes with folder IDs that no longer exist (orphaned)
+  Future<void> migrateUnorganizedNotes(String unorganizedFolderId, {List<String>? validFolderIds}) async {
+    bool needsMigration = false;
+    int nullMigrated = 0;
+    int orphanedMigrated = 0;
+    
+    for (var i = 0; i < _notes.length; i++) {
+      final note = _notes[i];
+      
+      // Migrate notes with null folderId
+      if (note.folderId == null) {
+        debugPrint('Migrating note ${note.id} (null folderId) to unorganized folder');
+        _notes[i] = note.copyWith(folderId: unorganizedFolderId);
+        needsMigration = true;
+        nullMigrated++;
+      }
+      // Migrate notes with orphaned folder IDs (folder no longer exists)
+      else if (validFolderIds != null && 
+               note.folderId != unorganizedFolderId && 
+               !validFolderIds.contains(note.folderId)) {
+        debugPrint('Migrating note ${note.id} (orphaned folderId: ${note.folderId}) to unorganized folder');
+        _notes[i] = note.copyWith(folderId: unorganizedFolderId);
+        needsMigration = true;
+        orphanedMigrated++;
+      }
+    }
+    
+    if (needsMigration) {
+      if (nullMigrated > 0) {
+        debugPrint('✅ Migrated $nullMigrated notes with null folderId to unorganized folder');
+      }
+      if (orphanedMigrated > 0) {
+        debugPrint('✅ Migrated $orphanedMigrated notes with orphaned folderId to unorganized folder');
+      }
+      await _storageService.saveNotes(_notes);
+      _invalidateCache(); // Clear cache to refresh views
+      notifyListeners();
+    }
+  }
+  
   void _invalidateCache() {
     _cachedFilteredNotes = null;
     _lastSearchQuery = null;
@@ -386,9 +213,15 @@ class NotesProvider extends ChangeNotifier {
     _lastSortDirection = null;
   }
 
-  Future<void> addNote(Note note) async {
+  // NEW: Add note with folder context support
+  Future<void> addNote(Note note, {String? folderContext}) async {
+    // If folderContext provided, use it
+    final noteToAdd = folderContext != null 
+        ? note.copyWith(folderId: folderContext)
+        : note;
+    
     // Optimistic update - update UI immediately
-    _notes.insert(0, note);
+    _notes.insert(0, noteToAdd);
     _invalidateCache();
     notifyListeners();
     
@@ -396,6 +229,14 @@ class NotesProvider extends ChangeNotifier {
     _storageService.saveNotes(_notes).catchError((e) {
       debugPrint('Error saving notes: $e');
     });
+  }
+
+  Note? getNoteById(String noteId) {
+    try {
+      return _notes.firstWhere((n) => n.id == noteId);
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<void> updateNote(Note note, {bool notify = true}) async {
@@ -545,46 +386,49 @@ class NotesProvider extends ChangeNotifier {
     // Start with the original list
     List<Note> filtered;
     
-    // Apply search filter with optimizations
+    // Apply search filter - simplified for content field
     if (_searchQuery.isNotEmpty && _searchQuery.trim().isNotEmpty) {
       final query = _searchQuery.toLowerCase().trim();
       filtered = [];
       
-      // Optimized search with early exit
+      // Check if this is a tag-only search (starts with #)
+      final isTagSearch = query.startsWith('#');
+      final searchTerm = isTagSearch ? query.substring(1) : query;
+      
+      // If tag-only search, only match tags
+      if (isTagSearch && searchTerm.isNotEmpty) {
       for (final note in _notes) {
-        // Quick check: name match (most common)
-        if (note.name.toLowerCase().contains(query)) {
+          for (final tag in note.tags) {
+            if (tag.toLowerCase().contains(searchTerm)) {
           filtered.add(note);
-          continue; // Early exit - no need to check further
-        }
-        
-        // Check tags (less common, smaller list)
-        bool found = false;
-        for (final tag in note.tags) {
-          if (tag.toLowerCase().contains(query)) {
-            filtered.add(note);
-            found = true;
-            break; // Early exit from tag loop
-          }
-        }
-        if (found) continue;
-        
-        // Check content (most expensive, check last)
-        for (final headline in note.headlines) {
-          if (headline.title.toLowerCase().contains(query)) {
-            filtered.add(note);
-            found = true;
-            break; // Early exit from headline loop
-          }
-          
-          for (final entry in headline.entries) {
-            if (entry.text.toLowerCase().contains(query)) {
-              filtered.add(note);
-              found = true;
-              break; // Early exit from entry loop
+              break;
             }
           }
-          if (found) break;
+        }
+      } else {
+        // Normal search: name, tags, and content
+        for (final note in _notes) {
+          // Quick check: name match (most common)
+          if (note.name.toLowerCase().contains(query)) {
+            filtered.add(note);
+            continue;
+          }
+          
+          // Check tags (high priority)
+          bool found = false;
+          for (final tag in note.tags) {
+            if (tag.toLowerCase().contains(query)) {
+              filtered.add(note);
+              found = true;
+              break;
+            }
+          }
+          if (found) continue;
+          
+          // Check content
+          if (note.content.toLowerCase().contains(query)) {
+                filtered.add(note);
+          }
         }
       }
     } else {
@@ -633,18 +477,6 @@ class NotesProvider extends ChangeNotifier {
           }
           final comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
           return _sortDirection == SortDirection.descending ? -comparison : comparison;
-        });
-        break;
-      case SortOption.entryCount:
-        filtered.sort((a, b) {
-          // Pinned notes always come first
-          if (a.isPinned != b.isPinned) {
-            return a.isPinned ? -1 : 1;
-          }
-          final aCount = a.headlines.fold<int>(0, (sum, h) => sum + h.entries.length);
-          final bCount = b.headlines.fold<int>(0, (sum, h) => sum + h.entries.length);
-          final comparison = bCount.compareTo(aCount);
-          return _sortDirection == SortDirection.descending ? comparison : -comparison;
         });
         break;
       case SortOption.dateCreated:
@@ -697,57 +529,6 @@ class NotesProvider extends ChangeNotifier {
     return grouped;
   }
 
-  Future<void> deleteEntry(String noteId, String headlineId, String entryId) async {
-    final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return;
-
-    final note = _notes[noteIndex];
-    final updatedHeadlines = note.headlines.map((headline) {
-      if (headline.id == headlineId) {
-        final updatedEntries = headline.entries.where((e) => e.id != entryId).toList();
-        return headline.copyWith(entries: updatedEntries);
-      }
-      return headline;
-    }).where((headline) => headline.entries.isNotEmpty).toList();
-
-    final updatedNote = note.copyWith(
-      headlines: updatedHeadlines,
-      updatedAt: DateTime.now(),
-    );
-
-    await updateNote(updatedNote);
-  }
-
-  Future<void> updateEntry(String noteId, String headlineId, String entryId, String newText) async {
-    final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return;
-
-    final note = _notes[noteIndex];
-    final updatedHeadlines = note.headlines.map((headline) {
-      if (headline.id == headlineId) {
-        final updatedEntries = headline.entries.map((entry) {
-          if (entry.id == entryId) {
-            return TextEntry(
-              id: entry.id,
-              text: newText,
-              createdAt: entry.createdAt,
-            );
-          }
-          return entry;
-        }).toList();
-        return headline.copyWith(entries: updatedEntries);
-      }
-      return headline;
-    }).toList();
-
-    final updatedNote = note.copyWith(
-      headlines: updatedHeadlines,
-      updatedAt: DateTime.now(),
-    );
-
-    await updateNote(updatedNote);
-  }
-
   Future<void> toggleNotePin(String noteId) async {
     final noteIndex = _notes.indexWhere((n) => n.id == noteId);
     if (noteIndex == -1) return;
@@ -761,387 +542,129 @@ class NotesProvider extends ChangeNotifier {
     await updateNote(updatedNote);
   }
 
-  Future<void> toggleHeadlinePin(String noteId, String headlineId) async {
-    final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return;
-
-    final note = _notes[noteIndex];
-    final updatedHeadlines = note.headlines.map((headline) {
-      if (headline.id == headlineId) {
-        return headline.copyWith(isPinned: !headline.isPinned);
-      }
-      return headline;
-    }).toList();
-
-    // Sort headlines: pinned first, then unpinned
-    updatedHeadlines.sort((a, b) {
-      if (a.isPinned == b.isPinned) return 0;
-      return a.isPinned ? -1 : 1;
-    });
-
-    final updatedNote = note.copyWith(
-      headlines: updatedHeadlines,
-      updatedAt: DateTime.now(),
-    );
-
-    await updateNote(updatedNote);
-  }
-
-  Future<void> updateHeadlineTitle(String noteId, String headlineId, String newTitle) async {
-    final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return;
-
-    final note = _notes[noteIndex];
-    final updatedHeadlines = note.headlines.map((headline) {
-      if (headline.id == headlineId) {
-        return headline.copyWith(title: newTitle);
-      }
-      return headline;
-    }).toList();
-
-    final updatedNote = note.copyWith(
-      headlines: updatedHeadlines,
-      updatedAt: DateTime.now(),
-    );
-
-    await updateNote(updatedNote);
-  }
-
-  Future<void> deleteHeadline(String noteId, String headlineId) async {
-    final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return;
-
-    final note = _notes[noteIndex];
-    final updatedHeadlines = note.headlines.where((h) => h.id != headlineId).toList();
-
-    final updatedNote = note.copyWith(
-      headlines: updatedHeadlines,
-      updatedAt: DateTime.now(),
-    );
-
-    await updateNote(updatedNote);
-  }
-
-  Future<void> duplicateEntry(String noteId, String headlineId, String entryId) async {
-    final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return;
-
-    final note = _notes[noteIndex];
-    final updatedHeadlines = note.headlines.map((headline) {
-      if (headline.id == headlineId) {
-        final entryIndex = headline.entries.indexWhere((e) => e.id == entryId);
-        if (entryIndex != -1) {
-          final originalEntry = headline.entries[entryIndex];
-          final duplicatedEntry = TextEntry(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            text: originalEntry.text,
-            createdAt: DateTime.now(),
-          );
-          final updatedEntries = List<TextEntry>.from(headline.entries);
-          updatedEntries.insert(entryIndex + 1, duplicatedEntry);
-          return headline.copyWith(entries: updatedEntries);
-        }
-      }
-      return headline;
-    }).toList();
-
-    final updatedNote = note.copyWith(
-      headlines: updatedHeadlines,
-      updatedAt: DateTime.now(),
-    );
-
-    await updateNote(updatedNote);
-  }
-
-  Future<void> moveEntry(String noteId, String fromHeadlineId, String toHeadlineId, String entryId) async {
-    final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return;
-
-    final note = _notes[noteIndex];
-    TextEntry? entryToMove;
-    
-    final updatedHeadlines = note.headlines.map((headline) {
-      if (headline.id == fromHeadlineId) {
-        final entry = headline.entries.firstWhere((e) => e.id == entryId);
-        entryToMove = entry;
-        final updatedEntries = headline.entries.where((e) => e.id != entryId).toList();
-        return headline.copyWith(entries: updatedEntries);
-      }
-      return headline;
-    }).where((headline) => headline.entries.isNotEmpty || headline.id == toHeadlineId).toList();
-
-    if (entryToMove != null) {
-      final finalHeadlines = updatedHeadlines.map((headline) {
-        if (headline.id == toHeadlineId) {
-          return headline.copyWith(entries: [...headline.entries, entryToMove!]);
-        }
-        return headline;
-      }).toList();
-
-      final updatedNote = note.copyWith(
-        headlines: finalHeadlines,
-        updatedAt: DateTime.now(),
-      );
-
-      await updateNote(updatedNote);
-    }
-  }
-
-  /// Move entry between different notes
-  Future<void> moveEntryBetweenNotes(
-    String sourceNoteId,
-    String sourceHeadlineId,
-    String entryId,
-    String destNoteId,
-    String destHeadlineId,
-  ) async {
-    final sourceNoteIndex = _notes.indexWhere((n) => n.id == sourceNoteId);
-    final destNoteIndex = _notes.indexWhere((n) => n.id == destNoteId);
-    
-    if (sourceNoteIndex == -1 || destNoteIndex == -1) return;
-
-    final sourceNote = _notes[sourceNoteIndex];
-    final destNote = _notes[destNoteIndex];
-    
-    // Find the entry to move
-    TextEntry? entryToMove;
-    for (final headline in sourceNote.headlines) {
-      if (headline.id == sourceHeadlineId) {
-        try {
-          entryToMove = headline.entries.firstWhere((e) => e.id == entryId);
-        } catch (e) {
-          return; // Entry not found
-        }
-        break;
-      }
-    }
-    
-    if (entryToMove == null) return;
-    
-    // Remove entry from source note
-    final updatedSourceHeadlines = sourceNote.headlines.map((headline) {
-      if (headline.id == sourceHeadlineId) {
-        final updatedEntries = headline.entries.where((e) => e.id != entryId).toList();
-        return headline.copyWith(entries: updatedEntries);
-      }
-      return headline;
-    }).where((headline) => headline.entries.isNotEmpty).toList();
-    
-    final updatedSourceNote = sourceNote.copyWith(
-      headlines: updatedSourceHeadlines,
-      updatedAt: DateTime.now(),
-    );
-    
-    // Add entry to destination note
-    final updatedDestHeadlines = destNote.headlines.map((headline) {
-      if (headline.id == destHeadlineId) {
-        return headline.copyWith(entries: [...headline.entries, entryToMove!]);
-      }
-      return headline;
-    }).toList();
-    
-    final updatedDestNote = destNote.copyWith(
-      headlines: updatedDestHeadlines,
-      updatedAt: DateTime.now(),
-    );
-    
-    // Update both notes
-    await updateNote(updatedSourceNote, notify: false);
-    await updateNote(updatedDestNote, notify: true);
-  }
-
+  // DEPRECATED: Use RecordingQueueService instead
+  // Kept for backward compatibility
   Future<String> transcribeAudio(String audioPath) async {
     if (_openAIService == null) throw Exception('API key not set');
-    return await _openAIService!.transcribeAudio(audioPath);
+    final result = await _openAIService!.transcribeAudio(audioPath);
+    return result.text;
   }
 
-  /// Find the best matching headline using fuzzy string matching
-  /// Returns the index of the best match, or -1 if no good match is found
-  int _findBestHeadlineMatch(String targetHeadline, List<Headline> headlines) {
-    if (headlines.isEmpty) return -1;
-    
-    // Minimum similarity threshold (85%)
-    const threshold = 0.85;
-    
-    int bestIndex = -1;
-    double bestSimilarity = 0.0;
-    
-    for (int i = 0; i < headlines.length; i++) {
-      final similarity = targetHeadline.similarityTo(headlines[i].title);
-      if (similarity > bestSimilarity && similarity >= threshold) {
-        bestSimilarity = similarity;
-        bestIndex = i;
+  // NEW: Folder-related methods
+  
+  /// Get all notes in a specific folder
+  /// Also includes notes with null folderId when querying for the unorganized folder
+  /// Pinned notes are always shown at the top
+  List<Note> getNotesInFolder(String? folderId) {
+    final filtered = _notes.where((note) {
+      // Include notes with null folderId when querying for unorganized folder
+      if (note.folderId == null) {
+        return folderId == null;
       }
-    }
+      return note.folderId == folderId;
+    }).toList();
     
-    if (bestIndex != -1) {
-      debugPrint('🔍 Fuzzy match found: "$targetHeadline" → "${headlines[bestIndex].title}" (${(bestSimilarity * 100).toStringAsFixed(1)}% similar)');
-    }
+    // Sort to show pinned notes first, then by updated date
+    filtered.sort((a, b) {
+      // Pinned notes always come first
+      if (a.isPinned != b.isPinned) {
+        return a.isPinned ? -1 : 1;
+      }
+      // Then sort by most recently updated
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
     
-    return bestIndex;
+    return filtered;
   }
 
-  Future<String?> addTranscriptionToNote(
-    String transcribedText,
-    String noteId,
-  ) async {
-    if (_openAIService == null) throw Exception('API key not set');
-
+  /// Move a note to a different folder
+  Future<void> moveNoteToFolder(String noteId, String? folderId) async {
     final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return null;
+    if (noteIndex == -1) return;
 
     final note = _notes[noteIndex];
-
-    // Set AI processing state
-    _aiProcessingStates[noteId] = true;
-    notifyListeners();
-
-    try {
-      // Find or create headline
-      final headlineMatch = await _openAIService!.findOrCreateHeadline(
-        transcribedText,
-        note,
-      );
-
-    // Create text entry
-    final textEntry = TextEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      text: transcribedText,
-      createdAt: DateTime.now(),
-    );
-
-    List<Headline> updatedHeadlines = List.from(note.headlines);
-
-    if (headlineMatch.action == HeadlineAction.useExisting) {
-      // First, try exact match (case-insensitive)
-      var headlineIndex = updatedHeadlines.indexWhere(
-        (h) => h.title.toLowerCase() == headlineMatch.headline.toLowerCase(),
-      );
-
-      // If exact match fails, try fuzzy matching
-      if (headlineIndex == -1) {
-        debugPrint('⚠️ Exact match failed for "${headlineMatch.headline}", trying fuzzy match...');
-        headlineIndex = _findBestHeadlineMatch(
-          headlineMatch.headline,
-          updatedHeadlines,
-        );
-      }
-
-      if (headlineIndex != -1) {
-        // Found a match (exact or fuzzy) - add entry to existing headline
-        final headline = updatedHeadlines[headlineIndex];
-        updatedHeadlines[headlineIndex] = headline.copyWith(
-          entries: [...headline.entries, textEntry],
-        );
-        debugPrint('✅ Added entry to existing headline: "${headline.title}"');
-      } else {
-        // No match found even with fuzzy matching - create new headline
-        debugPrint('⚠️ No match found, creating new headline: "${headlineMatch.headline}"');
-        updatedHeadlines.add(
-          Headline(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            title: headlineMatch.headline,
-            entries: [textEntry],
-            createdAt: DateTime.now(),
-          ),
-        );
-      }
-    } else {
-      // Create new headline
-      debugPrint('✅ Creating new headline: "${headlineMatch.headline}"');
-      updatedHeadlines.add(
-        Headline(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: headlineMatch.headline,
-          entries: [textEntry],
-          createdAt: DateTime.now(),
-        ),
-      );
-    }
-
-    // Update note (this will notify listeners once)
     final updatedNote = note.copyWith(
-      headlines: updatedHeadlines,
+      folderId: folderId,
       updatedAt: DateTime.now(),
     );
 
-      await updateNote(updatedNote, notify: true);
-      
-      // Generate tags asynchronously (don't block the UI, don't notify immediately)
-      _generateAndUpdateTags(updatedNote.id);
-      
-      // Return the created entry ID
-      return textEntry.id;
-    } finally {
-      // Clear AI processing state
-      _aiProcessingStates[noteId] = false;
+    await updateNote(updatedNote);
+  }
+
+  /// Move all notes from a deleted folder to the unorganized folder
+  Future<void> moveNotesToUnorganized(String deletedFolderId, String unorganizedFolderId) async {
+    bool needsUpdate = false;
+    
+    for (var i = 0; i < _notes.length; i++) {
+      final note = _notes[i];
+      if (note.folderId == deletedFolderId) {
+        _notes[i] = note.copyWith(folderId: unorganizedFolderId);
+        needsUpdate = true;
+      }
+    }
+    
+    if (needsUpdate) {
+      debugPrint('✅ Moved notes from deleted folder to unorganized');
+      await _storageService.saveNotes(_notes);
+      _invalidateCache();
       notifyListeners();
     }
   }
 
-  Future<void> _generateAndUpdateTags(String noteId) async {
-    try {
-      if (_openAIService == null) return;
-      
-      final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-      if (noteIndex == -1) return;
-
-      final note = _notes[noteIndex];
-      final tags = await _openAIService!.generateTags(note);
-
-      if (tags.isNotEmpty) {
-        final updatedNote = note.copyWith(tags: tags);
-        // Notify silently since user may have navigated away
-        await updateNote(updatedNote, notify: false);
-        // Only notify if we're still on the same screen
-        notifyListeners();
+  /// Get all notes with a specific tag
+  /// Pinned notes are always shown at the top
+  List<Note> getNotesWithTag(String tag) {
+    final filtered = _notes.where((note) => note.tags.contains(tag)).toList();
+    
+    // Sort to show pinned notes first, then by updated date
+    filtered.sort((a, b) {
+      if (a.isPinned != b.isPinned) {
+        return a.isPinned ? -1 : 1;
       }
-    } catch (e) {
-      // Silently fail tag generation - it's not critical
-      if (kDebugMode) {
-        debugPrint('Tag generation failed: $e');
-      }
-    }
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
+    
+    return filtered;
   }
 
-  /// Find all search matches within a specific note
-  List<SearchMatch> findSearchMatches(String noteId, String searchQuery) {
-    final matches = <SearchMatch>[];
+  /// Get all notes with any of the specified tags
+  /// Pinned notes are always shown at the top
+  List<Note> getNotesWithTags(List<String> tags) {
+    final filtered = _notes.where((note) {
+      return note.tags.any((tag) => tags.contains(tag));
+    }).toList();
     
-    if (searchQuery.trim().isEmpty) return matches;
-    
-    final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return matches;
-    
-    final note = _notes[noteIndex];
-    final query = searchQuery.toLowerCase().trim();
-    
-    // Search through all headlines and entries
-    for (final headline in note.headlines) {
-      for (final entry in headline.entries) {
-        final text = entry.text.toLowerCase();
-        int startIndex = 0;
-        
-        // Find all occurrences in this entry
-        while (true) {
-          final index = text.indexOf(query, startIndex);
-          if (index == -1) break;
-          
-          matches.add(SearchMatch(
-            headlineId: headline.id,
-            headlineTitle: headline.title,
-            entryId: entry.id,
-            entryText: entry.text,
-            matchStartIndex: index,
-            matchEndIndex: index + query.length,
-          ));
-          
-          startIndex = index + 1; // Move past this match to find next one
-        }
+    // Sort to show pinned notes first, then by updated date
+    filtered.sort((a, b) {
+      if (a.isPinned != b.isPinned) {
+        return a.isPinned ? -1 : 1;
       }
-    }
+      return b.updatedAt.compareTo(a.updatedAt);
+    });
     
-    return matches;
+    return filtered;
+  }
+
+  /// Get all unique tags across all notes
+  List<String> getAllTags() {
+    final Set<String> allTags = {};
+    for (final note in _notes) {
+      allTags.addAll(note.tags);
+    }
+    return allTags.toList()..sort();
+  }
+
+  /// Update note tags
+  Future<void> updateNoteTags(String noteId, List<String> tags) async {
+    final noteIndex = _notes.indexWhere((n) => n.id == noteId);
+    if (noteIndex == -1) return;
+
+    final note = _notes[noteIndex];
+    final updatedNote = note.copyWith(
+      tags: tags,
+      updatedAt: DateTime.now(),
+    );
+
+    await updateNote(updatedNote);
   }
 }
-

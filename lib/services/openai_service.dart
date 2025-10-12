@@ -1,15 +1,34 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_quill/quill_delta.dart';
 import '../models/note.dart';
+import '../models/folder.dart';
 import '../models/app_language.dart';
+import '../models/organization_suggestion.dart';
+
+/// Result from audio transcription including detected language
+class TranscriptionResult {
+  final String text;
+  final String? detectedLanguage; // ISO 639-1 language code (e.g., 'en', 'de', 'es')
+
+  TranscriptionResult({
+    required this.text,
+    this.detectedLanguage,
+  });
+}
 
 class OpenAIService {
   final String apiKey;
 
   OpenAIService({required this.apiKey});
 
-  Future<String> transcribeAudio(String audioPath, {AppLanguage? language}) async {
+  /// Transcribe audio file to text using Whisper API
+  /// 
+  /// If [language] is provided, it hints Whisper for better accuracy.
+  /// If omitted, Whisper automatically detects the language.
+  /// Returns both the transcribed text and detected language code.
+  Future<TranscriptionResult> transcribeAudio(String audioPath, {AppLanguage? language}) async {
     try {
       final uri = Uri.parse('https://api.openai.com/v1/audio/transcriptions');
       final request = http.MultipartRequest('POST', uri);
@@ -17,9 +36,16 @@ class OpenAIService {
       request.headers['Authorization'] = 'Bearer $apiKey';
       request.fields['model'] = 'whisper-1';
       
+      // Use verbose_json to get language detection info
+      request.fields['response_format'] = 'verbose_json';
+      
       // Add language parameter if provided for better transcription accuracy
+      // If not provided, Whisper will automatically detect the language
       if (language != null) {
         request.fields['language'] = language.code;
+        debugPrint('🎤 Transcribing with language hint: ${language.code}');
+      } else {
+        debugPrint('🎤 Transcribing with automatic language detection');
       }
       
       request.files.add(await http.MultipartFile.fromPath('file', audioPath));
@@ -29,7 +55,15 @@ class OpenAIService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(responseBody);
-        return data['text'] ?? '';
+        final text = data['text'] ?? '';
+        final detectedLang = data['language'] as String?; // Whisper returns detected language
+        
+        debugPrint('✅ Transcription complete: ${text.length} chars, detected language: $detectedLang');
+        
+        return TranscriptionResult(
+          text: text,
+          detectedLanguage: detectedLang,
+        );
       } else {
         throw Exception('Transcription failed: $responseBody');
       }
@@ -38,136 +72,59 @@ class OpenAIService {
     }
   }
 
-  Future<HeadlineMatch> findOrCreateHeadline(
-    String transcribedText,
-    Note note,
-  ) async {
+  /// Beautify raw transcription into structured note (GPT-4o for quality)
+  /// Outputs clean plain text without any markdown formatting
+  Future<String> beautifyTranscription(String rawText) async {
     try {
-      // Detect language from note name and recent entries for multi-language support
-      final recentEntries = note.headlines
-          .expand((h) => h.entries)
-          .take(3)
-          .map((e) => e.text)
-          .join(' ');
-      final contextText = '${note.name} $recentEntries';
-      
-      // Format existing headlines as numbered list for exact copying
-      final existingHeadlinesList = note.headlines
-          .asMap()
-          .entries
-          .map((entry) => '${entry.key + 1}. "${entry.value.title}"')
-          .join('\n');
-      
-      // Count entries per headline for usage context
-      final headlineUsage = note.headlines
-          .map((h) => '  - "${h.title}" (${h.entries.length} entries)')
-          .join('\n');
+      final prompt = '''You are a note formatter. Your ONLY job is to format text nicely while keeping the EXACT same language.
 
-      // Balanced prompt with note context and semantic matching
-      final prompt = existingHeadlinesList.isEmpty
-          ? '''Note: "${note.name}"
-Text: "$transcribedText"
+INPUT TEXT:
+"$rawText"
 
-CONTEXT-AWARE HEADLINE CREATION:
-Your headline should be ONE LEVEL MORE SPECIFIC than the note title.
+🚨 CRITICAL RULE - LANGUAGE PRESERVATION:
+DETECT the language of the input text above and respond in THE EXACT SAME LANGUAGE.
+- German input → German output
+- English input → English output  
+- Spanish input → Spanish output
+- French input → French output
 
-Examples:
-- Note "Daily Notes" (broad) → Create broad headlines: "Tools", "Ideas", "Work"
-- Note "App Development" (specific) → Create specific headlines: "Development Tools", "Feature Ideas", "Bug Fixes"
-- Note "Personal" (broad) → Create broad headlines: "Goals", "Thoughts", "Planning"
-- Note "Marketing Strategy" (specific) → Create specific headlines: "Content Ideas", "Campaign Plans", "Analytics"
+DO NOT TRANSLATE. DO NOT SWITCH LANGUAGES. SAME LANGUAGE IN = SAME LANGUAGE OUT.
 
-Think: What category fits this text that's slightly more specific than "${note.name}"?
+🚨 CRITICAL RULE - PLAIN TEXT ONLY:
+Output PLAIN TEXT with NO markdown syntax or formatting characters.
+- NO headings with ## or #
+- NO bold with ** or __
+- NO italics with * or _
+- NO bullet points with - or *
+- NO numbered lists with 1. 2. 3.
+- NO blockquotes with >
+- NO code blocks with ``` or `
 
-JSON: {"action":"create_new","headline":"..."}'''
-          : '''Note: "${note.name}"
-New text to categorize: "$transcribedText"
+Formatting instructions:
+- Use line breaks to separate paragraphs and sections
+- Use proper capitalization and punctuation
+- Add blank lines between different topics/sections
+- Fix any obvious transcription errors
+- Preserve all information from the original text
+- Keep it concise, clear, and easy to read
+- Structure with natural text flow
 
-EXISTING HEADLINES IN THIS NOTE:
-$existingHeadlinesList
+Examples of CORRECT behavior:
+✓ Input (German): "Heute war ein guter Tag. Ich habe viel geschafft."
+  Output (German): "Mein Tag\n\nHeute war ein guter Tag. Ich habe viel geschafft."
 
-Current usage:
-$headlineUsage
+✓ Input (English): "Today was a good day. I accomplished a lot."
+  Output (English): "My Day\n\nToday was a good day. I accomplished a lot."
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TASK: Decide if this text belongs under an existing headline or needs a new one.
+✓ Input (English): "I need to buy milk eggs and bread"
+  Output (English): "Shopping List\n\nmilk\neggs\nbread"
 
-CRITICAL INSTRUCTION:
-When you choose "use_existing", you MUST copy the headline EXACTLY character-for-character from the numbered list above. NO modifications, translations, or paraphrasing allowed.
+Examples of WRONG behavior:
+✗ Output: "## My Day" ← NO! Don't use ##
+✗ Output: "- milk" ← NO! Don't use -
+✗ Output: "**important**" ← NO! Don't use **
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DECISION CRITERIA:
-✓ Is this text about the SAME TOPIC as an existing headline? → use_existing (copy exact headline)
-✗ Is this a completely DIFFERENT subject/context? → create_new (broad, general headline)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CORRECT MATCHES (use_existing with EXACT headline copy):
-
-✓ Headline "App Development" + text "working on login feature"
-  → {"action":"use_existing","headline":"App Development"}
-
-✓ Headline "App Development" + text "fixed database bug"
-  → {"action":"use_existing","headline":"App Development"}
-
-✓ Headline "App Development" + text "planning new API endpoints"
-  → {"action":"use_existing","headline":"App Development"}
-
-✓ Headline "Music" + text "listened to new jazz album"
-  → {"action":"use_existing","headline":"Music"}
-
-✓ Headline "Music" + text "practicing guitar scales"
-  → {"action":"use_existing","headline":"Music"}
-
-✓ Headline "Work" + text "team standup discussion"
-  → {"action":"use_existing","headline":"Work"}
-
-✓ Headline "Shopping" + text "need to buy groceries tomorrow"
-  → {"action":"use_existing","headline":"Shopping"}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CORRECT NON-MATCHES (create_new with broad headline):
-
-✗ Headline "App Development" + text "buy groceries and milk"
-  → {"action":"create_new","headline":"Shopping"}
-
-✗ Headline "Music" + text "team meeting notes for project"
-  → {"action":"create_new","headline":"Work"}
-
-✗ Headline "Work Tasks" + text "planning summer vacation"
-  → {"action":"create_new","headline":"Travel"}
-
-✗ Headline "Shopping" + text "workout routine for abs"
-  → {"action":"create_new","headline":"Fitness"}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CONTEXT-AWARE HEADLINE CREATION:
-Headline specificity should match the note title's specificity level.
-
-For BROAD note titles (e.g., "Daily Notes", "Personal", "Work"):
-✓ Create BROAD headlines: "Tools", "Ideas", "Tasks", "Notes"
-❌ Don't be too specific: "Analytics Tools", "Feature Ideas"
-
-For SPECIFIC note titles (e.g., "App Development", "Marketing Strategy"):
-✓ Create MORE SPECIFIC headlines: "Development Tools", "Feature Ideas", "Bug Fixes"
-❌ Don't be too generic: "Tools", "Ideas" (not specific enough)
-
-Examples by note context:
-- Note "Daily Notes" + text about SensorTower → Headline: "Tools"
-- Note "App Development" + text about SensorTower → Headline: "Development Tools" or "Analytics"
-- Note "Personal" + text about ideas → Headline: "Ideas"
-- Note "Product Strategy" + text about ideas → Headline: "Feature Ideas" or "Strategy Ideas"
-
-Rule: Headlines should be ONE LEVEL MORE SPECIFIC than the note title.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CRITICAL RULES:
-❌ DON'T create headline variations
-❌ DON'T match unrelated topics
-❌ DON'T rephrase when using existing (copy EXACTLY)
-❌ DON'T be specific - stay BROAD and GENERAL
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Return JSON only: {"action":"use_existing"/"create_new","headline":"EXACT_TEXT_OR_NEW_HEADLINE"}''';
+Return ONLY the formatted plain text in the SAME language as input. No markdown. No explanations. No translations.''';
 
       final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
       final response = await http.post(
@@ -177,28 +134,483 @@ Return JSON only: {"action":"use_existing"/"create_new","headline":"EXACT_TEXT_O
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'model': 'gpt-4o',
+          'model': 'gpt-4o', // Use GPT-4o for better quality
           'messages': [
-            {
-              'role': 'system',
-              'content': '''You are a smart note organizer. Your job: decide if new text fits an existing headline or needs a new one.
+            {'role': 'system', 'content': 'You are a plain text formatter that NEVER uses markdown syntax or formatting characters. You only output clean, readable plain text while preserving the original language.'},
+            {'role': 'user', 'content': prompt},
+          ],
+          'temperature': 0.1, // Very low to ensure strict language preservation
+          'max_tokens': 1000,
+        }),
+      );
 
-LANGUAGE: Preserve the language of existing headlines (don't translate them).
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final content = data['choices'][0]['message']['content'] as String;
+        return content.trim();
+      } else {
+        debugPrint('Beautification failed: ${response.body}');
+        // Fallback: return raw text if beautification fails
+        return rawText;
+      }
+    } catch (e) {
+      debugPrint('Error beautifying transcription: $e');
+      // Fallback: return raw text
+      return rawText;
+    }
+  }
 
-CRITICAL RULES:
-1. When using "use_existing": copy the headline EXACTLY from the numbered list. Character-for-character.
-2. When creating new headlines: Match the specificity to the note's context.
-   - CONTEXT-AWARE SPECIFICITY: Headlines should be ONE LEVEL MORE SPECIFIC than the note title.
-   - Note "Daily Notes" (broad) → Use broad headlines: "Tools", "Ideas"
-   - Note "App Development" (specific) → Use specific headlines: "Development Tools", "Feature Ideas"
+  /// Auto-organize a note with context awareness (GPT-4o-mini for speed)
+  Future<AutoOrganizationResult> autoOrganizeNote({
+    required Note note,
+    required List<Folder> folders,
+    required List<Note> recentNotes, // Last 5 notes for context
+  }) async {
+    try {
+      // Build context from recent notes
+      final recentContext = recentNotes.take(5).map((n) {
+        return 'Note "${n.name}" in folder: ${n.folderId ?? "Unorganized"}';
+      }).join('\n');
 
-BALANCE:
-- Group related content (same topic) → use_existing
-- Separate unrelated content (different topics) → create_new
+      // Build list of available folders
+      final foldersList = folders.where((f) => !f.isSystem).map((f) {
+        return '${f.id}|${f.name}|${f.icon}';
+      }).join('\n');
 
-Note context: "${note.name}"
-Recent content: "${contextText.length > 100 ? contextText.substring(0, 100) : contextText}..."'''
-            },
+      final prompt = '''Organize this note into the most appropriate folder.
+
+NOTE TO ORGANIZE:
+Name: "${note.name}"
+Content preview: "${note.content.length > 200 ? note.content.substring(0, 200) : note.content}..."
+
+RECENT CONTEXT (last notes recorded):
+$recentContext
+
+AVAILABLE FOLDERS (format: id|name|icon):
+$foldersList
+
+RULES:
+1. If recent notes suggest a pattern (e.g., multiple notes about same topic), use same folder
+2. STRONGLY prefer using existing folders, even if not perfect match (confidence > 0.7)
+3. If no good match AND content is distinct new topic, suggest creating new folder
+4. Only suggest new folder if confidence > 0.9 AND folder name is GENERIC
+5. Ask: "Could 10+ other future notes fit in this folder?" If no, don't create it
+6. If uncertain (confidence < 0.7), return "Unorganized"
+7. AVOID specific folder names like "Voting Experiences" - prefer generic like "Personal Thoughts"
+
+Return JSON:
+{
+  "action": "use_existing" | "create_new" | "unorganized",
+  "folderId": "id from list" | null,
+  "folderName": "existing name" | "new folder name",
+  "suggestedIcon": "emoji for new folder" | null,
+  "confidence": 0.0-1.0,
+  "reasoning": "brief explanation"
+}''';
+
+      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o-mini', // Use mini for speed
+          'messages': [
+            {'role': 'user', 'content': prompt},
+          ],
+          'temperature': 0.2, // Low temperature for consistency
+          'max_tokens': 150,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        var content = data['choices'][0]['message']['content'] as String;
+        
+        // Remove markdown code blocks if present
+        content = content.trim();
+        if (content.startsWith('```json')) {
+          content = content.substring(7);
+        } else if (content.startsWith('```')) {
+          content = content.substring(3);
+        }
+        if (content.endsWith('```')) {
+          content = content.substring(0, content.length - 3);
+        }
+        content = content.trim();
+        
+        try {
+          final result = jsonDecode(content);
+          final action = result['action'] as String;
+          
+          if (action == 'create_new') {
+            return AutoOrganizationResult(
+              createNewFolder: true,
+              folderName: result['folderName'],
+              suggestedFolderIcon: result['suggestedIcon'] ?? '📁',
+              confidence: (result['confidence'] ?? 0.8).toDouble(),
+              reasoning: result['reasoning'] ?? '',
+            );
+          } else if (action == 'use_existing') {
+            return AutoOrganizationResult(
+              folderId: result['folderId'],
+              folderName: result['folderName'],
+              confidence: (result['confidence'] ?? 0.9).toDouble(),
+              reasoning: result['reasoning'] ?? '',
+            );
+          } else {
+            // Unorganized
+            return AutoOrganizationResult(
+              confidence: (result['confidence'] ?? 0.5).toDouble(),
+              reasoning: result['reasoning'] ?? 'Uncertain classification',
+            );
+          }
+        } catch (e) {
+          debugPrint('Failed to parse auto-organize response: $e');
+          return AutoOrganizationResult(
+            confidence: 0.0,
+            reasoning: 'Parse error',
+          );
+        }
+      } else {
+        throw Exception('Auto-organize request failed: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error in auto-organize: $e');
+      return AutoOrganizationResult(
+        confidence: 0.0,
+        reasoning: 'Error: $e',
+      );
+    }
+  }
+
+  /// Generate per-note organization suggestions (GPT-4o for quality)
+  /// Returns one suggestion for EVERY note
+  Future<List<NoteOrganizationSuggestion>> generatePerNoteOrganizationSuggestions({
+    required List<Note> unorganizedNotes,
+    required List<Folder> folders,
+  }) async {
+    try {
+      if (unorganizedNotes.isEmpty) return [];
+
+      // Build note summaries
+      final notesSummary = unorganizedNotes.take(30).map((n) {
+        final preview = n.content.length > 150 
+            ? n.content.substring(0, 150) 
+            : n.content;
+        return '${n.id}|"${n.name}"|$preview...';
+      }).join('\n');
+
+      // Build folder list
+      final foldersList = folders.where((f) => !f.isSystem).map((f) {
+        return '${f.id}|${f.name}|${f.icon}';
+      }).join('\n');
+
+      final prompt = '''Analyze EVERY note and provide EXACTLY ONE suggestion for EACH note.
+
+UNORGANIZED NOTES (format: id|name|preview):
+$notesSummary
+
+EXISTING FOLDERS (format: id|name|icon):
+$foldersList
+
+CRITICAL: You MUST return exactly ${unorganizedNotes.length} suggestions, ONE for EACH note listed above.
+
+For each note, decide:
+1. MOVE to existing folder (use targetFolderId and targetFolderName) - PREFER THIS
+2. CREATE new folder (use newFolderName and newFolderIcon) - ONLY if confidence > 0.9
+3. If UNCERTAIN (confidence < 0.6), still provide best guess but mark confidence low
+
+FOLDER CREATION RULES (EXTREMELY IMPORTANT):
+- STRONGLY prefer using existing folders, even if not perfect match
+- Only suggest NEW folder if confidence > 0.9 AND folder name is GENERIC AND broad
+- Ask yourself: "Could 10+ OTHER FUTURE notes reasonably fit in this folder?"
+- PREFER generic, broad categories like "Personal Thoughts", "Work", "Ideas", "Learning"
+- AVOID overly specific folders like "Voting Experiences", "Grocery Trip May 2024", "Meeting Notes Tuesday"
+
+WRONG EXAMPLES (too specific):
+❌ "Reflections" → Too narrow, use "Personal Thoughts"
+❌ "Voting Experiences" → Too specific, use "Journaling" or "Personal Thoughts"  
+❌ "Grocery Shopping" → Too specific, use "Daily Tasks" or existing folder
+❌ "Project X Notes" → Too specific, use "Work Notes"
+
+CORRECT EXAMPLES:
+✓ "Personal Thoughts" (covers reflections, journal, diary, musings)
+✓ "Work" (covers all work-related content)
+✓ "Ideas" (covers brainstorming, concepts, thoughts)
+✓ "Learning" (covers study notes, new knowledge, courses)
+
+BATCH CONSOLIDATION (CRITICAL):
+You are processing these ${unorganizedNotes.length} notes SEQUENTIALLY, not in parallel.
+- When you suggest creating a new folder for note 1, CHECK if notes 2, 3, etc. could fit there too
+- If note 2 could fit in the new folder you just suggested for note 1, PUT IT THERE
+- DO NOT create "Reflections" for note 1 and "Journal" for note 2 - use ONE name like "Personal Thoughts"
+- Before finalizing, REVIEW ALL your suggestions: if you created multiple new folders with similar meanings (like "Journal", "Reflections", "Diary", "Personal Notes"), CONSOLIDATE them into ONE folder with the most generic name
+
+WRONG (creating similar folders):
+❌ Note 1: create "Reflections" folder
+❌ Note 2: create "Journal" folder
+❌ Note 3: create "Diary" folder
+
+CORRECT (consolidating to one generic folder):
+✓ Note 1: create "Personal Thoughts" folder
+✓ Note 2: use "Personal Thoughts" folder (same as note 1)
+✓ Note 3: use "Personal Thoughts" folder (same as note 1)
+
+Return JSON array with EXACTLY ${unorganizedNotes.length} objects:
+[
+  {
+    "noteId": "note id from list above",
+    "type": "move" | "create_folder",
+    "targetFolderId": "existing folder id" | null,
+    "targetFolderName": "existing folder name" | null,
+    "newFolderName": "name for new folder" | null,
+    "newFolderIcon": "emoji for new folder" | null,
+    "reasoning": "brief explanation (1 sentence)",
+    "confidence": 0.0-1.0
+  }
+]
+
+Guidelines:
+- High confidence (>0.8): Clear match to existing folder or obvious new generic category
+- Medium confidence (0.6-0.8): Reasonable match but not perfect
+- Low confidence (<0.6): Uncertain, needs user review
+- ONLY suggest new folders when NO existing folder is remotely suitable AND name is generic
+- Group similar topics in this batch together by suggesting SAME new folder name (exact match)''';
+
+      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o', // Use GPT-4o for better analysis
+          'messages': [
+            {'role': 'user', 'content': prompt},
+          ],
+          'temperature': 0.3,
+          'max_tokens': 3000,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        var content = data['choices'][0]['message']['content'] as String;
+        
+        // Remove markdown code blocks if present
+        content = content.trim();
+        if (content.startsWith('```json')) {
+          content = content.substring(7);
+        } else if (content.startsWith('```')) {
+          content = content.substring(3);
+        }
+        if (content.endsWith('```')) {
+          content = content.substring(0, content.length - 3);
+        }
+        content = content.trim();
+        
+        debugPrint('Cleaned AI response for parsing (${content.length} chars)');
+        
+        try {
+          final suggestions = jsonDecode(content) as List;
+          debugPrint('Parsed ${suggestions.length} suggestions for ${unorganizedNotes.length} notes');
+          
+          return suggestions.map((s) {
+            final typeStr = s['type'] as String;
+            OrganizationSuggestionType type;
+            switch (typeStr) {
+              case 'create_folder':
+                type = OrganizationSuggestionType.createFolder;
+                break;
+              default:
+                type = OrganizationSuggestionType.move;
+            }
+
+            return NoteOrganizationSuggestion(
+              noteId: s['noteId'],
+              type: type,
+              targetFolderId: s['targetFolderId'],
+              targetFolderName: s['targetFolderName'],
+              newFolderName: s['newFolderName'],
+              newFolderIcon: s['newFolderIcon'] ?? '📁',
+              reasoning: s['reasoning'] ?? '',
+              confidence: (s['confidence'] ?? 0.5).toDouble(),
+            );
+          }).toList();
+        } catch (e) {
+          debugPrint('Failed to parse per-note suggestions: $e');
+          return [];
+        }
+      } else {
+        throw Exception('Per-note suggestions request failed: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error generating per-note suggestions: $e');
+      return [];
+    }
+  }
+  
+  /// Generate batch organization suggestions (GPT-4o for quality)
+  /// DEPRECATED: Use generatePerNoteOrganizationSuggestions instead
+  Future<List<OrganizationSuggestion>> generateBatchOrganizationSuggestions({
+    required List<Note> unorganizedNotes,
+    required List<Folder> folders,
+  }) async {
+    try {
+      if (unorganizedNotes.isEmpty) return [];
+
+      // Build note summaries
+      final notesSummary = unorganizedNotes.take(20).map((n) {
+        final preview = n.content.length > 100 
+            ? n.content.substring(0, 100) 
+            : n.content;
+        return '${n.id}|"${n.name}"|$preview...';
+      }).join('\n');
+
+      // Build folder list
+      final foldersList = folders.where((f) => !f.isSystem).map((f) {
+        return '${f.id}|${f.name}|${f.icon}';
+      }).join('\n');
+
+      final prompt = '''Analyze these unorganized notes and suggest how to organize them.
+
+UNORGANIZED NOTES (format: id|name|preview):
+$notesSummary
+
+EXISTING FOLDERS (format: id|name|icon):
+$foldersList
+
+TASK: Provide organization suggestions with confidence scores.
+
+Suggestion types:
+1. MOVE: Move note to existing folder
+2. CREATE_FOLDER: Create new folder for group of related notes
+3. MERGE: Merge similar/duplicate notes
+4. SPLIT: Split large note with multiple topics
+
+Return JSON array:
+[
+  {
+    "type": "move" | "create_folder" | "merge" | "split",
+    "noteIds": ["id1", "id2", ...],
+    "targetFolderId": "existing folder id" | null,
+    "newFolderName": "name" | null,
+    "newFolderIcon": "emoji" | null,
+    "reasoning": "why this suggestion makes sense",
+    "confidence": 0.0-1.0
+  }
+]
+
+Focus on:
+- High confidence suggestions (>0.8) for obvious organization
+- Group related notes together
+- Suggest new folders for distinct themes with multiple notes
+- Only suggest merges/splits if very confident (>0.9)''';
+
+      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o', // Use GPT-4o for better analysis
+          'messages': [
+            {'role': 'user', 'content': prompt},
+          ],
+          'temperature': 0.3,
+          'max_tokens': 2000,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        var content = data['choices'][0]['message']['content'] as String;
+        
+        // Remove markdown code blocks if present
+        content = content.trim();
+        if (content.startsWith('```json')) {
+          content = content.substring(7); // Remove ```json
+        } else if (content.startsWith('```')) {
+          content = content.substring(3); // Remove ```
+        }
+        if (content.endsWith('```')) {
+          content = content.substring(0, content.length - 3); // Remove trailing ```
+        }
+        content = content.trim();
+        
+        debugPrint('Cleaned AI response for parsing: ${content.substring(0, content.length > 100 ? 100 : content.length)}...');
+        
+        try {
+          final suggestions = jsonDecode(content) as List;
+          return suggestions.map((s) {
+            final typeStr = s['type'] as String;
+            OrganizationSuggestionType type;
+            switch (typeStr) {
+              case 'create_folder':
+                type = OrganizationSuggestionType.createFolder;
+                break;
+              case 'merge':
+                type = OrganizationSuggestionType.merge;
+                break;
+              case 'split':
+                type = OrganizationSuggestionType.split;
+                break;
+              default:
+                type = OrganizationSuggestionType.move;
+            }
+
+            return OrganizationSuggestion(
+              id: 'suggestion_${DateTime.now().millisecondsSinceEpoch}_${suggestions.indexOf(s)}',
+              type: type,
+              noteIds: List<String>.from(s['noteIds']),
+              targetFolderId: s['targetFolderId'],
+              newFolderName: s['newFolderName'],
+              newFolderIcon: s['newFolderIcon'],
+              reasoning: s['reasoning'] ?? '',
+              confidence: (s['confidence'] ?? 0.0).toDouble(),
+            );
+          }).toList();
+        } catch (e) {
+          debugPrint('Failed to parse batch suggestions: $e');
+          return [];
+        }
+      } else {
+        throw Exception('Batch suggestions request failed: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error generating batch suggestions: $e');
+      return [];
+    }
+  }
+
+  /// Generate tags for a note
+  Future<List<String>> generateTags(Note note) async {
+    try {
+      if (note.content.isEmpty) return [];
+
+      // Limit text length to avoid token issues
+      final textToAnalyze = note.content.length > 1000 
+          ? note.content.substring(0, 1000) 
+          : note.content;
+
+      final prompt = 'Generate 3-5 keyword tags (1-2 words) for: "$textToAnalyze"\nJSON array: ["tag1","tag2",...]';
+
+      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o-mini',
+          'messages': [
             {'role': 'user', 'content': prompt},
           ],
           'temperature': 0.1,
@@ -208,73 +620,109 @@ Recent content: "${contextText.length > 100 ? contextText.substring(0, 100) : co
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        debugPrint('🔍 Full API Response: ${response.body}');
+        var content = data['choices'][0]['message']['content'] as String;
         
-        final content = data['choices'][0]['message']['content'];
-        debugPrint('🔍 AI Response Content: "$content"');
-        
-        // Check if content is empty or null
-        if (content == null || content.toString().trim().isEmpty) {
-          debugPrint('❌ AI returned empty response! Falling back to default.');
-          return HeadlineMatch(
-            action: HeadlineAction.createNew,
-            headline: 'Notes',
-          );
+        // Remove markdown code blocks if present
+        content = content.trim();
+        if (content.startsWith('```json')) {
+          content = content.substring(7);
+        } else if (content.startsWith('```')) {
+          content = content.substring(3);
         }
+        if (content.endsWith('```')) {
+          content = content.substring(0, content.length - 3);
+        }
+        content = content.trim();
         
-        // Try to parse the JSON response
         try {
-          final result = jsonDecode(content);
-          final action = result['action'] == 'use_existing'
-              ? HeadlineAction.useExisting
-              : HeadlineAction.createNew;
-          final headline = result['headline'] as String;
-          
-          // Debug logging: check if AI returned exact match
-          if (action == HeadlineAction.useExisting) {
-            final existingTitles = note.headlines.map((h) => h.title).toList();
-            final exactMatch = existingTitles.any(
-              (title) => title.toLowerCase() == headline.toLowerCase()
-            );
-            if (!exactMatch) {
-              debugPrint('⚠️ HEADLINE MISMATCH WARNING:');
-              debugPrint('   AI returned: "$headline"');
-              debugPrint('   Available: ${existingTitles.join(", ")}');
-              debugPrint('   This will create a duplicate headline!');
-            } else {
-              debugPrint('✓ Headline match successful: "$headline"');
-            }
-          } else {
-            debugPrint('✓ Creating new headline: "$headline"');
-          }
-          
-          return HeadlineMatch(
-            action: action,
-            headline: headline,
-          );
+          final tags = List<String>.from(jsonDecode(content));
+          return tags.take(5).toList();
         } catch (e) {
-          debugPrint('❌ Failed to parse AI response: $content');
-          debugPrint('   Error: $e');
-          debugPrint('   Response was: ${content.runtimeType}');
-          // If parsing fails, create a new generic headline
-          return HeadlineMatch(
-            action: HeadlineAction.createNew,
-            headline: 'Notes',
-          );
+          return [];
         }
       } else {
-        throw Exception('GPT request failed: ${response.body}');
+        return [];
       }
     } catch (e) {
-      debugPrint('❌ Headline matching error: $e');
-      // Fallback: create a default headline
-      return HeadlineMatch(
-        action: HeadlineAction.createNew,
-        headline: 'Notes',
-      );
+      return [];
     }
   }
 
+  /// Generate a short, descriptive title from note content (GPT-4o-mini for speed)
+  Future<String> generateNoteTitle(String content) async {
+    try {
+      // Get plain text from content (might be Quill JSON)
+      String plainText = content;
+      try {
+        final json = jsonDecode(content);
+        // If it's Quill format, extract plain text using Delta
+        final delta = Delta.fromJson(json as List);
+        // Extract text from delta operations
+        final buffer = StringBuffer();
+        for (final op in delta.toList()) {
+          if (op.data is String) {
+            buffer.write(op.data);
+          }
+        }
+        plainText = buffer.toString();
+      } catch (e) {
+        // If not JSON, use as-is
+      }
+      
+      // Limit to first 500 characters for title generation
+      final textSample = plainText.length > 500 
+          ? plainText.substring(0, 500) 
+          : plainText;
+      
+      if (textSample.trim().isEmpty) {
+        return 'Voice Note ${DateTime.now().toString().substring(11, 16)}';
+      }
+      
+      final prompt = '''Generate a short, descriptive title (3-6 words) for this note.
+
+Note content:
+"$textSample"
+
+Rules:
+- Maximum 6 words
+- Descriptive and specific
+- No quotes or punctuation
+- Title case (capitalize first letter of each word)
+
+Return ONLY the title, nothing else.''';
+
+      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o-mini', // Fast model for titles
+          'messages': [
+            {'role': 'user', 'content': prompt},
+          ],
+          'temperature': 0.7,
+          'max_tokens': 20,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final title = data['choices'][0]['message']['content'] as String;
+        return title.trim().replaceAll('"', '').replaceAll("'", '');
+      } else {
+        debugPrint('Title generation failed: ${response.body}');
+        return 'Voice Note ${DateTime.now().toString().substring(11, 16)}';
+      }
+    } catch (e) {
+      debugPrint('Error generating title: $e');
+      return 'Voice Note ${DateTime.now().toString().substring(11, 16)}';
+    }
+  }
+
+  /// Chat completion for AI assistant (existing feature)
   Future<AIChatResponse> chatCompletion({
     required String message,
     required List<Map<String, String>> history,
@@ -283,8 +731,10 @@ Recent content: "${contextText.length > 100 ? contextText.substring(0, 100) : co
     try {
       // Format notes context with IDs for actions
       final notesContext = notes.map((note) {
-        final entries = note.headlines.expand((h) => h.entries).map((e) => e.text).take(5).join(' | ');
-        return '[ID:${note.id}] "${note.name}": $entries';
+        final preview = note.content.length > 200 
+            ? note.content.substring(0, 200) 
+            : note.content;
+        return '[ID:${note.id}] "${note.name}": $preview';
       }).take(30).join('\n');
 
       // Build conversation history
@@ -310,17 +760,6 @@ $notesContext
 - If notes are sparse, offer to help organize or add information
 - Proactively suggest organizing scattered information
 
-**ACTIONS YOU CAN SUGGEST:**
-End your response with [ACTION:type:data] when appropriate:
-- create_note:New Note Name
-- add_entry:noteId:text to add
-- move_entry:sourceNoteId:targetNoteId:entryId
-
-NOTE: Use the exact [ID:xxx] values from the notes list above when specifying noteIds in actions.
-
-**WHEN TO SUGGEST ACTIONS:**
-- User shares new info → suggest add_entry or create_note
-
 Focus on being a smart assistant that leverages their notes to provide better, personalized answers.'''
         },
         ...history,
@@ -345,26 +784,11 @@ Focus on being a smart assistant that leverages their notes to provide better, p
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final content = data['choices'][0]['message']['content'] as String;
-
-        // Parse action if present
-        final actionRegex = RegExp(r'\[ACTION:(\w+):(.+?)\]');
-        final actionMatch = actionRegex.firstMatch(content);
-
-        String responseText = content;
-        String? actionType;
-        String? actionData;
-
-        if (actionMatch != null) {
-          actionType = actionMatch.group(1);
-          actionData = actionMatch.group(2);
-          // Remove action tag from response text
-          responseText = content.replaceAll(actionRegex, '').trim();
-        }
         
         // Parse note citations
         final noteCitationRegex = RegExp(r'\[NOTE:([^\]]+)\]');
         final citations = <NoteCitation>[];
-        final citationMatches = noteCitationRegex.allMatches(responseText);
+        final citationMatches = noteCitationRegex.allMatches(content);
         
         for (final match in citationMatches) {
           final noteId = match.group(1);
@@ -381,7 +805,7 @@ Focus on being a smart assistant that leverages their notes to provide better, p
         }
         
         // Remove citation tags from response text
-        responseText = responseText.replaceAllMapped(noteCitationRegex, (match) {
+        final responseText = content.replaceAllMapped(noteCitationRegex, (match) {
           final noteId = match.group(1);
           final note = notes.firstWhere(
             (n) => n.id == noteId,
@@ -392,8 +816,6 @@ Focus on being a smart assistant that leverages their notes to provide better, p
 
         return AIChatResponse(
           text: responseText,
-          actionType: actionType,
-          actionData: actionData,
           noteCitations: citations,
         );
       } else {
@@ -403,88 +825,14 @@ Focus on being a smart assistant that leverages their notes to provide better, p
       throw Exception('Error in chat completion: $e');
     }
   }
-
-  Future<List<String>> generateTags(Note note) async {
-    try {
-      if (note.headlines.isEmpty) return [];
-
-      // Collect all text content from the note
-      final allText = note.headlines
-          .expand((h) => h.entries)
-          .map((e) => e.text)
-          .join(' ');
-
-      if (allText.trim().isEmpty) return [];
-
-      // Limit text length to avoid token issues and speed up processing
-      final textToAnalyze = allText.length > 1000 
-          ? allText.substring(0, 1000) 
-          : allText;
-
-      // Optimized, shorter prompt
-      final prompt = 'Generate 3-5 keyword tags (1-2 words) for: "$textToAnalyze"\nJSON array: ["tag1","tag2",...]';
-
-      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
-      final response = await http.post(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': 'gpt-4o-mini',
-          'messages': [
-            {'role': 'user', 'content': prompt},
-          ],
-          'temperature': 0.1, // Lower for faster, more consistent results
-          'max_tokens': 100, // Limit tokens for faster response
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'];
-        
-        try {
-          // Try to parse the JSON array response
-          final tags = List<String>.from(jsonDecode(content));
-          return tags.take(5).toList(); // Limit to 5 tags
-        } catch (e) {
-          // If parsing fails, return empty list
-          return [];
-        }
-      } else {
-        return [];
-      }
-    } catch (e) {
-      // Fallback: return empty list on any error
-      return [];
-    }
-  }
-}
-
-enum HeadlineAction { useExisting, createNew }
-
-class HeadlineMatch {
-  final HeadlineAction action;
-  final String headline;
-
-  HeadlineMatch({
-    required this.action,
-    required this.headline,
-  });
 }
 
 class AIChatResponse {
   final String text;
-  final String? actionType;
-  final String? actionData;
   final List<NoteCitation> noteCitations;
 
   AIChatResponse({
     required this.text,
-    this.actionType,
-    this.actionData,
     this.noteCitations = const [],
   });
 }
@@ -498,4 +846,3 @@ class NoteCitation {
     required this.noteName,
   });
 }
-

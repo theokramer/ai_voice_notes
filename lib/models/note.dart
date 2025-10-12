@@ -1,95 +1,138 @@
 import 'dart:convert';
 
-class SearchMatch {
-  final String headlineId;
-  final String headlineTitle;
-  final String entryId;
-  final String entryText;
-  final int matchStartIndex;
-  final int matchEndIndex;
-
-  SearchMatch({
-    required this.headlineId,
-    required this.headlineTitle,
-    required this.entryId,
-    required this.entryText,
-    required this.matchStartIndex,
-    required this.matchEndIndex,
-  });
-}
-
+// Simplified Note model - single content field instead of headlines/entries
 class Note {
   final String id;
   final String name;
   final String icon;
-  final List<Headline> headlines;
+  final String content; // Single plain text field - replaces headlines/entries
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? lastAccessedAt;
   final List<String> tags;
   final bool isPinned;
+  final String? folderId; // null = Unorganized folder
+  final bool aiOrganized; // true if AI placed it in a folder
+  final bool aiBeautified; // true if AI structured the content
+  final String? detectedLanguage; // Language code detected by Whisper (e.g., 'en', 'de', 'es')
 
   Note({
     required this.id,
     required this.name,
     required this.icon,
-    required this.headlines,
+    required this.content,
     required this.createdAt,
     required this.updatedAt,
     this.lastAccessedAt,
     this.tags = const [],
     this.isPinned = false,
+    this.folderId,
+    this.aiOrganized = false,
+    this.aiBeautified = false,
+    this.detectedLanguage,
   });
 
-  // Cached computation: total number of entries across all headlines
-  int get totalEntries {
-    return headlines.fold<int>(
-      0,
-      (sum, headline) => sum + headline.entries.length,
-    );
-  }
-
-  // Cached computation: get the most recent entry text
-  String? get latestEntryText {
-    if (headlines.isEmpty) return null;
+  // Helper to get a preview of the content (first 150 characters)
+  String get contentPreview {
+    if (content.isEmpty) return '';
     
-    TextEntry? latestEntry;
-    DateTime? latestTime;
-
-    for (final headline in headlines) {
-      if (headline.entries.isEmpty) continue;
-      
-      final entry = headline.entries.last;
-      if (latestTime == null || entry.createdAt.isAfter(latestTime)) {
-        latestEntry = entry;
-        latestTime = entry.createdAt;
+    // Try to extract plain text if it's Quill JSON Delta
+    String plainText = content;
+    try {
+      final json = jsonDecode(content);
+      if (json is List) {
+        // It's Quill Delta format
+        final buffer = StringBuffer();
+        for (final op in json) {
+          if (op is Map && op.containsKey('insert')) {
+            final data = op['insert'];
+            if (data is String) {
+              buffer.write(data);
+            }
+          }
+        }
+        plainText = buffer.toString();
+      } else if (json is Map && json.containsKey('ops')) {
+        // Delta wrapped in an object with 'ops' key
+        final ops = json['ops'];
+        if (ops is List) {
+          final buffer = StringBuffer();
+          for (final op in ops) {
+            if (op is Map && op.containsKey('insert')) {
+              final data = op['insert'];
+              if (data is String) {
+                buffer.write(data);
+              }
+            }
+          }
+          plainText = buffer.toString();
+        }
+      }
+    } catch (e) {
+      // Not JSON, use as-is (plain text or markdown)
+      // But ensure it's actually text and not malformed JSON
+      if (content.trim().startsWith('[') || content.trim().startsWith('{')) {
+        // Looks like JSON but failed to parse
+        // Try to extract any visible text between quotes
+        final textPattern = RegExp(r'"insert"\s*:\s*"([^"]*)"');
+        final matches = textPattern.allMatches(content);
+        if (matches.isNotEmpty) {
+          final buffer = StringBuffer();
+          for (final match in matches) {
+            if (match.group(1) != null) {
+              buffer.write(match.group(1));
+            }
+          }
+          plainText = buffer.toString();
+        } else {
+          // If that fails, return a safe fallback
+          return 'Unable to display content';
+        }
       }
     }
-
-    return latestEntry?.text;
+    
+    // Clean markdown syntax and truncate
+    final cleaned = plainText
+        .replaceAll(RegExp(r'#+\s*'), '') // Remove markdown headers
+        .replaceAll(RegExp(r'\\n'), ' ') // Replace escaped newlines
+        .replaceAll('\n', ' ') // Replace newlines with spaces
+        .replaceAll(RegExp(r'\s+'), ' ') // Normalize whitespace
+        .trim();
+    
+    return cleaned.length > 150 
+        ? '${cleaned.substring(0, 150)}...' 
+        : cleaned;
   }
 
   Note copyWith({
     String? id,
     String? name,
     String? icon,
-    List<Headline>? headlines,
+    String? content,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? lastAccessedAt,
     List<String>? tags,
     bool? isPinned,
+    String? folderId,
+    bool? aiOrganized,
+    bool? aiBeautified,
+    String? detectedLanguage,
   }) {
     return Note(
       id: id ?? this.id,
       name: name ?? this.name,
       icon: icon ?? this.icon,
-      headlines: headlines ?? this.headlines,
+      content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastAccessedAt: lastAccessedAt ?? this.lastAccessedAt,
       tags: tags ?? this.tags,
       isPinned: isPinned ?? this.isPinned,
+      folderId: folderId ?? this.folderId,
+      aiOrganized: aiOrganized ?? this.aiOrganized,
+      aiBeautified: aiBeautified ?? this.aiBeautified,
+      detectedLanguage: detectedLanguage ?? this.detectedLanguage,
     );
   }
 
@@ -98,23 +141,36 @@ class Note {
       'id': id,
       'name': name,
       'icon': icon,
-      'headlines': headlines.map((h) => h.toJson()).toList(),
+      'content': content,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'lastAccessedAt': lastAccessedAt?.toIso8601String(),
       'tags': tags,
       'isPinned': isPinned,
+      'folderId': folderId,
+      'aiOrganized': aiOrganized,
+      'aiBeautified': aiBeautified,
+      'detectedLanguage': detectedLanguage,
     };
   }
 
   factory Note.fromJson(Map<String, dynamic> json) {
+    // Migration: Convert old headline/entry format to new content format
+    String content;
+    if (json.containsKey('content')) {
+      content = json['content'] as String;
+    } else if (json.containsKey('headlines')) {
+      // Migrate from old format
+      content = _convertHeadlinesToContent(json['headlines']);
+    } else {
+      content = '';
+    }
+
     return Note(
       id: json['id'],
       name: json['name'],
       icon: json['icon'],
-      headlines: (json['headlines'] as List)
-          .map((h) => Headline.fromJson(h))
-          .toList(),
+      content: content,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       lastAccessedAt: json['lastAccessedAt'] != null
@@ -122,7 +178,41 @@ class Note {
           : null,
       tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
       isPinned: json['isPinned'] ?? false,
+      folderId: json['folderId'],
+      aiOrganized: json['aiOrganized'] ?? false,
+      aiBeautified: json['aiBeautified'] ?? false,
+      detectedLanguage: json['detectedLanguage'],
     );
+  }
+
+  // Helper to migrate old headlines/entries format to new content format
+  static String _convertHeadlinesToContent(dynamic headlines) {
+    if (headlines is! List) return '';
+    
+    final buffer = StringBuffer();
+    for (final headline in headlines) {
+      if (headline is! Map) continue;
+      
+      final title = headline['title'] as String?;
+      if (title != null && title.isNotEmpty) {
+        buffer.writeln('## $title');
+        buffer.writeln();
+      }
+      
+      final entries = headline['entries'];
+      if (entries is List) {
+        for (final entry in entries) {
+          if (entry is! Map) continue;
+          final text = entry['text'] as String?;
+          if (text != null && text.isNotEmpty) {
+            buffer.writeln(text);
+            buffer.writeln();
+          }
+        }
+      }
+    }
+    
+    return buffer.toString().trim();
   }
 
   String toJsonString() => jsonEncode(toJson());
@@ -131,6 +221,8 @@ class Note {
       Note.fromJson(jsonDecode(jsonString));
 }
 
+// Legacy classes kept for backward compatibility during migration
+// These are not used in new code but help with data migration
 class Headline {
   final String id;
   final String title;
@@ -145,22 +237,6 @@ class Headline {
     required this.createdAt,
     this.isPinned = false,
   });
-
-  Headline copyWith({
-    String? id,
-    String? title,
-    List<TextEntry>? entries,
-    DateTime? createdAt,
-    bool? isPinned,
-  }) {
-    return Headline(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      entries: entries ?? this.entries,
-      createdAt: createdAt ?? this.createdAt,
-      isPinned: isPinned ?? this.isPinned,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {

@@ -186,9 +186,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         await settingsProvider.updateAutoCloseAfterEntry(_onboardingData.autoCloseAfterEntry!);
       }
       
-      if (_onboardingData.selectedLanguage != null) {
-        await settingsProvider.updatePreferredLanguage(_onboardingData.selectedLanguage!);
-      }
+      // Note: Language is already saved when changed via LanguageSelector
+      // No need to save again here as it's already persisted to SharedPreferences
       
       if (!mounted) return;
 
