@@ -1,6 +1,10 @@
-# 🎙️ AI Voice Notes
+# 🎙️ Nota AI - Voice Notes
 
 A beautiful, modern AI-powered voice notes app that intelligently organizes your thoughts. Built with Flutter.
+
+**App Name:** Nota AI  
+**Full Name:** Nota AI - Voice Notes  
+**Version:** 1.0.0
 
 ## ✨ Features
 
@@ -117,7 +121,14 @@ lib/
 - Audio recordings are temporary and deleted after transcription
 - No data is sent to any server except OpenAI for transcription/organization
 
-**Important**: Never commit your `.env` file to version control. It's already listed in `.gitignore`.
+**⚠️ Important Security Notes:**
+- Never commit your `.env` file to version control (already in `.gitignore`)
+- API keys bundled in the app can be extracted - see [SECURITY.md](SECURITY.md) for details
+- For production apps, consider implementing a backend proxy (see security documentation)
+- Use different API keys for development and production
+- Monitor API usage and set up billing alerts
+
+**📚 Read the full [Security Guidelines](SECURITY.md)** for production deployment best practices.
 
 ## 💰 Cost Estimation
 
@@ -131,9 +142,12 @@ Example: 100 voice notes (average 30 seconds each) = ~$0.50/month
 
 ### iOS
 
-1. Update `ios/Runner/Info.plist`:
-   - Set `CFBundleDisplayName` to "AI Voice Notes"
-   - Update bundle identifier
+1. App configuration (already set):
+   - ✅ `CFBundleDisplayName`: "Nota AI - Voice Notes"
+   - ✅ `CFBundleName`: "Nota AI"
+   - ✅ Microphone permission with description
+   - ✅ Orientation locked to portrait
+   - Update bundle identifier to your own
 
 2. Build for release:
    ```bash
@@ -141,6 +155,8 @@ Example: 100 voice notes (average 30 seconds each) = ~$0.50/month
    ```
 
 3. Submit through Xcode
+
+**Note:** See [SECURITY.md](SECURITY.md) for important production security considerations.
 
 ### Android
 

@@ -165,7 +165,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       ],
                     ).createShader(bounds),
                     child: const Text(
-                      'AI Voice Notes',
+                      'Nota AI',
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,

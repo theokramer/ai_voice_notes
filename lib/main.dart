@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -18,27 +19,35 @@ void main() async {
 
   // Configure Superwall
   final superwallApiKey = dotenv.env['SUPERWALL_API_KEY'] ?? '';
-  debugPrint('🔑 Superwall API Key loaded: ${superwallApiKey.isEmpty ? "EMPTY" : "Present (${superwallApiKey.length} chars)"}');
+  if (kDebugMode) {
+    debugPrint('🔑 Superwall API Key loaded: ${superwallApiKey.isEmpty ? "EMPTY" : "Present (${superwallApiKey.length} chars)"}');
+  }
 
   if (superwallApiKey.isNotEmpty) {
-    debugPrint('⚙️ Configuring Superwall...');
+    if (kDebugMode) {
+      debugPrint('⚙️ Configuring Superwall...');
+    }
     
     Superwall.configure(superwallApiKey);
     
     // Set up event delegate for payment cancellation detection
     Superwall.shared.setDelegate(SuperwallEventDelegate.instance);
     
-    debugPrint('✅ Superwall configured with SuperwallEventDelegate');
-    debugPrint('📋 Payment cancellation detection active');
-    debugPrint('   Events being monitored:');
-    debugPrint('   - transactionAborted (payment cancelled)');
-    debugPrint('   - transactionFail (payment failed)');
-    debugPrint('   - paywallDecline (paywall declined)');
-    debugPrint('   When user cancels Apple Payment Sheet → Second paywall appears');
+    if (kDebugMode) {
+      debugPrint('✅ Superwall configured with SuperwallEventDelegate');
+      debugPrint('📋 Payment cancellation detection active');
+      debugPrint('   Events being monitored:');
+      debugPrint('   - transactionAborted (payment cancelled)');
+      debugPrint('   - transactionFail (payment failed)');
+      debugPrint('   - paywallDecline (paywall declined)');
+      debugPrint('   When user cancels Apple Payment Sheet → Second paywall appears');
+    }
     
     await Future.delayed(const Duration(milliseconds: 500));
   } else {
-    debugPrint('❌ Warning: SUPERWALL_API_KEY not found in environment variables');
+    if (kDebugMode) {
+      debugPrint('❌ Warning: SUPERWALL_API_KEY not found in environment variables');
+    }
   }
 
   // Set system UI overlay style
@@ -74,7 +83,7 @@ class MainApp extends StatelessWidget {
       child: Consumer<SettingsProvider>(
         builder: (context, settingsProvider, child) {
           return MaterialApp(
-            title: 'AI Voice Notes',
+            title: 'Nota AI',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.buildTheme(settingsProvider.settings.themePreset),
             home: const SplashScreen(),

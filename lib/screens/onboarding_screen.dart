@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
@@ -1234,7 +1235,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         await inAppReview.requestReview();
       }
     } catch (e) {
-      debugPrint('Error showing native rating prompt: $e');
+      if (kDebugMode) {
+        debugPrint('Error showing native rating prompt: $e');
+      }
     }
   }
 

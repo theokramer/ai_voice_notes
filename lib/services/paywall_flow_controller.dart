@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -35,59 +36,77 @@ class PaywallFlowController {
   /// Public method for SuperwallEventDelegate to call
   /// This shows the second paywall after payment cancellation
   Future<void> showSecondPaywallPublic(BuildContext context) async {
-    debugPrint('🔓 showSecondPaywallPublic() called from SuperwallEventDelegate');
+    if (kDebugMode) {
+      debugPrint('🔓 showSecondPaywallPublic() called from SuperwallEventDelegate');
+    }
     await _showSecondPaywall(context);
   }
 
   /// Show the first paywall (dismissible)
   Future<void> _showFirstPaywall(BuildContext context) async {
-    debugPrint('═══════════════════════════════════════');
-    debugPrint('_showFirstPaywall() METHOD CALLED');
-    debugPrint('═══════════════════════════════════════');
+    if (kDebugMode) {
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('_showFirstPaywall() METHOD CALLED');
+      debugPrint('═══════════════════════════════════════');
+    }
     
     // Register with delegate for event tracking
     SuperwallEventDelegate.instance.setFirstPaywallActive();
-    debugPrint('🎯 Registered first paywall with SuperwallEventDelegate');
-    
-    // PRE-LOAD second paywall in background for instant display if needed
-    debugPrint('🔄 Pre-loading second paywall in background...');
+    if (kDebugMode) {
+      debugPrint('🎯 Registered first paywall with SuperwallEventDelegate');
+      
+      // PRE-LOAD second paywall in background for instant display if needed
+      debugPrint('🔄 Pre-loading second paywall in background...');
+    }
     _preloadSecondPaywall();
     
     if (!context.mounted) {
-      debugPrint('⚠️ Context not mounted, exiting _showFirstPaywall()');
+      if (kDebugMode) {
+        debugPrint('⚠️ Context not mounted, exiting _showFirstPaywall()');
+      }
       return;
     }
 
     try {
-      debugPrint('Showing first paywall: $_firstPaywallPlacement');
+      if (kDebugMode) {
+        debugPrint('Showing first paywall: $_firstPaywallPlacement');
+      }
       
       final handler = PaywallPresentationHandler();
       
       handler.onPresentHandler = (info) {
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        debugPrint('🎬 PRESENT HANDLER CALLED - FIRST PAYWALL');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        debugPrint('✅ First paywall successfully presented');
-        debugPrint('Paywall info: $info');
-        debugPrint('📌 Waiting for user to purchase or cancel...');
-        debugPrint('   If user cancels payment → Second paywall appears');
+        if (kDebugMode) {
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('🎬 PRESENT HANDLER CALLED - FIRST PAYWALL');
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('✅ First paywall successfully presented');
+          debugPrint('Paywall info: $info');
+          debugPrint('📌 Waiting for user to purchase or cancel...');
+          debugPrint('   If user cancels payment → Second paywall appears');
+        }
       };
       
       handler.onDismissHandler = (info, result) async {
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        debugPrint('🚪 DISMISS HANDLER CALLED - FIRST PAYWALL');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        debugPrint('Result: $result');
-        debugPrint('Result type: ${result.runtimeType}');
-        debugPrint('Paywall info: $info');
+        if (kDebugMode) {
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('🚪 DISMISS HANDLER CALLED - FIRST PAYWALL');
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('Result: $result');
+          debugPrint('Result type: ${result.runtimeType}');
+          debugPrint('Paywall info: $info');
+        }
         
         // Check if delegate set flag to show second paywall
         final shouldShowSecond = SuperwallEventDelegate.instance.shouldShowSecondPaywall();
-        debugPrint('Should show second paywall (from delegate)? $shouldShowSecond');
+        if (kDebugMode) {
+          debugPrint('Should show second paywall (from delegate)? $shouldShowSecond');
+        }
         
         switch (result) {
           case PurchasedPaywallResult():
-            debugPrint('✅ Purchase successful!');
+            if (kDebugMode) {
+              debugPrint('✅ Purchase successful!');
+            }
             // Mark delegate inactive
             SuperwallEventDelegate.instance.setInactive();
             await HapticService.success();
@@ -97,7 +116,9 @@ class PaywallFlowController {
             break;
             
           case RestoredPaywallResult():
-            debugPrint('🔄 Restore successful!');
+            if (kDebugMode) {
+              debugPrint('🔄 Restore successful!');
+            }
             // Mark delegate inactive
             SuperwallEventDelegate.instance.setInactive();
             await HapticService.success();
@@ -107,59 +128,75 @@ class PaywallFlowController {
             break;
             
           case DeclinedPaywallResult():
-            debugPrint('🚪 Paywall declined');
+            if (kDebugMode) {
+              debugPrint('🚪 Paywall declined');
+            }
             // Mark delegate inactive
             SuperwallEventDelegate.instance.setInactive();
             
             // Check if we should show second paywall (payment was cancelled)
             if (shouldShowSecond) {
-              debugPrint('🎬 Payment was cancelled - showing second paywall IMMEDIATELY!');
+              if (kDebugMode) {
+                debugPrint('🎬 Payment was cancelled - showing second paywall IMMEDIATELY!');
+              }
               await HapticService.light();
               
               // Show second paywall immediately without delay
               if (context.mounted) {
                 await _showSecondPaywall(context);
               } else {
-                debugPrint('⚠️ Context not mounted');
+                if (kDebugMode) {
+                  debugPrint('⚠️ Context not mounted');
+                }
               }
             } else {
-              debugPrint('ℹ️ User just closed paywall without attempting payment');
+              if (kDebugMode) {
+                debugPrint('ℹ️ User just closed paywall without attempting payment');
+              }
             }
             break;
             
           default:
-            debugPrint('ℹ️ Other result type: $result');
+            if (kDebugMode) {
+              debugPrint('ℹ️ Other result type: $result');
+            }
             SuperwallEventDelegate.instance.setInactive();
         }
       };
       
       handler.onErrorHandler = (error) async {
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        debugPrint('❌ ERROR HANDLER CALLED');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        debugPrint('Error showing first paywall: $error');
+        if (kDebugMode) {
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('❌ ERROR HANDLER CALLED');
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('Error showing first paywall: $error');
+        }
         if (context.mounted) {
           await _showErrorDialog(context, isFirstPaywall: true);
         }
       };
       
       handler.onSkipHandler = (reason) async {
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        debugPrint('⏭️ SKIP HANDLER CALLED');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        debugPrint('First paywall skipped: $reason (user might be subscribed)');
+        if (kDebugMode) {
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('⏭️ SKIP HANDLER CALLED');
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('First paywall skipped: $reason (user might be subscribed)');
+        }
         await HapticService.success();
         if (context.mounted) {
           await _onPurchaseComplete(context);
         }
       };
       
-      debugPrint('🔧 Setting up handler callbacks...');
-      debugPrint('✓ onPresentHandler set');
-      debugPrint('✓ onDismissHandler set');
-      debugPrint('✓ onErrorHandler set');
-      debugPrint('✓ onSkipHandler set');
-      debugPrint('🚀 About to call registerPlacement...');
+      if (kDebugMode) {
+        debugPrint('🔧 Setting up handler callbacks...');
+        debugPrint('✓ onPresentHandler set');
+        debugPrint('✓ onDismissHandler set');
+        debugPrint('✓ onErrorHandler set');
+        debugPrint('✓ onSkipHandler set');
+        debugPrint('🚀 About to call registerPlacement...');
+      }
       
       // Register the placement with handler
       await Superwall.shared.registerPlacement(
@@ -167,10 +204,14 @@ class PaywallFlowController {
         handler: handler,
       );
       
-      debugPrint('✅ registerPlacement call completed');
-      debugPrint('⏳ Waiting for user interaction with paywall...');
+      if (kDebugMode) {
+        debugPrint('✅ registerPlacement call completed');
+        debugPrint('⏳ Waiting for user interaction with paywall...');
+      }
     } catch (e) {
-      debugPrint('Exception showing first paywall: $e');
+      if (kDebugMode) {
+        debugPrint('Exception showing first paywall: $e');
+      }
       if (!context.mounted) return;
       await _showErrorDialog(context, isFirstPaywall: true);
     }
@@ -180,41 +221,55 @@ class PaywallFlowController {
   void _preloadSecondPaywall() {
     // Note: Superwall automatically caches paywall assets after first load
     // This method is a placeholder - actual pre-loading happens in handleSuperwallEvent
-    debugPrint('📦 Second paywall will be loaded on-demand (Superwall caching active)');
+    if (kDebugMode) {
+      debugPrint('📦 Second paywall will be loaded on-demand (Superwall caching active)');
+    }
   }
 
   /// Show the second paywall (non-dismissible hard paywall)
   Future<void> _showSecondPaywall(BuildContext context) async {
-    debugPrint('═══════════════════════════════════════');
-    debugPrint('_showSecondPaywall() METHOD CALLED');
-    debugPrint('═══════════════════════════════════════');
+    if (kDebugMode) {
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('_showSecondPaywall() METHOD CALLED');
+      debugPrint('═══════════════════════════════════════');
+    }
     
     if (!context.mounted) {
-      debugPrint('⚠️ Context not mounted, exiting _showSecondPaywall()');
+      if (kDebugMode) {
+        debugPrint('⚠️ Context not mounted, exiting _showSecondPaywall()');
+      }
       return;
     }
 
     try {
-      debugPrint('Showing second paywall: $_secondPaywallPlacement');
+      if (kDebugMode) {
+        debugPrint('Showing second paywall: $_secondPaywallPlacement');
+      }
       
       final handler = PaywallPresentationHandler();
       
       handler.onPresentHandler = (info) {
-        debugPrint('✅ Second paywall successfully presented on screen');
-        debugPrint('Paywall info: $info');
+        if (kDebugMode) {
+          debugPrint('✅ Second paywall successfully presented on screen');
+          debugPrint('Paywall info: $info');
+        }
       };
       
       handler.onDismissHandler = (info, result) async {
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        debugPrint('📱 SECOND PAYWALL DISMISSED');
-        debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        debugPrint('Dismiss result: $result');
-        debugPrint('Result type: ${result.runtimeType}');
+        if (kDebugMode) {
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('📱 SECOND PAYWALL DISMISSED');
+          debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          debugPrint('Dismiss result: $result');
+          debugPrint('Result type: ${result.runtimeType}');
+        }
         
         switch (result) {
           case PurchasedPaywallResult():
           case RestoredPaywallResult():
-            debugPrint('✅ User purchased/restored from second paywall');
+            if (kDebugMode) {
+              debugPrint('✅ User purchased/restored from second paywall');
+            }
             await HapticService.success();
             if (context.mounted) {
               await _onPurchaseComplete(context);
@@ -222,31 +277,43 @@ class PaywallFlowController {
             break;
           case DeclinedPaywallResult():
             // Second paywall is non-dismissible - always re-show it
-            debugPrint('🚨 DeclinedPaywallResult - Second Paywall (NON-DISMISSIBLE)');
-            debugPrint('♻️ Re-showing second paywall after delay...');
+            if (kDebugMode) {
+              debugPrint('🚨 DeclinedPaywallResult - Second Paywall (NON-DISMISSIBLE)');
+              debugPrint('♻️ Re-showing second paywall after delay...');
+            }
             await HapticService.light();
             
             await Future.delayed(const Duration(milliseconds: 500));
             if (context.mounted) {
-              debugPrint('🔄 Context is mounted, re-calling _showSecondPaywall()');
+              if (kDebugMode) {
+                debugPrint('🔄 Context is mounted, re-calling _showSecondPaywall()');
+              }
               await _showSecondPaywall(context);
-              debugPrint('✅ _showSecondPaywall() re-call completed');
+              if (kDebugMode) {
+                debugPrint('✅ _showSecondPaywall() re-call completed');
+              }
             } else {
-              debugPrint('⚠️ WARNING: Context not mounted, cannot re-show second paywall');
+              if (kDebugMode) {
+                debugPrint('⚠️ WARNING: Context not mounted, cannot re-show second paywall');
+              }
             }
             break;
         }
       };
       
       handler.onErrorHandler = (error) async {
-        debugPrint('Error showing second paywall: $error');
+        if (kDebugMode) {
+          debugPrint('Error showing second paywall: $error');
+        }
         if (context.mounted) {
           await _showErrorDialog(context, isFirstPaywall: false);
         }
       };
       
       handler.onSkipHandler = (reason) async {
-        debugPrint('Second paywall skipped: $reason (user must be subscribed)');
+        if (kDebugMode) {
+          debugPrint('Second paywall skipped: $reason (user must be subscribed)');
+        }
         await HapticService.success();
         if (context.mounted) {
           await _onPurchaseComplete(context);
@@ -259,7 +326,9 @@ class PaywallFlowController {
         handler: handler,
       );
     } catch (e) {
-      debugPrint('Exception showing second paywall: $e');
+      if (kDebugMode) {
+        debugPrint('Exception showing second paywall: $e');
+      }
       if (!context.mounted) return;
       await _showErrorDialog(context, isFirstPaywall: false);
     }
