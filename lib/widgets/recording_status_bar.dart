@@ -259,9 +259,14 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
       case RecordingStatus.complete:
         icon = Icons.check_circle;
         iconColor = Colors.green;
-        statusText = item.folderName != null
-            ? '📁 ${item.folderName}'
-            : 'Saved';
+        // Show voice command info if detected, otherwise show folder
+        if (item.voiceCommandDetected != null) {
+          statusText = '🎤 ${item.voiceCommandDetected}';
+        } else if (item.folderName != null) {
+          statusText = '📁 ${item.folderName}';
+        } else {
+          statusText = 'Saved';
+        }
         trailing = PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, size: 20),
           itemBuilder: (context) => [

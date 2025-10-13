@@ -9,7 +9,6 @@ import '../providers/settings_provider.dart';
 import '../providers/folders_provider.dart';
 import '../services/subscription_service.dart';
 import '../services/paywall_flow_controller.dart';
-import '../services/localization_service.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/loading_indicator.dart';
 import 'onboarding_screen.dart';
@@ -87,7 +86,7 @@ class _SplashScreenState extends State<SplashScreen> {
             builder: (context) => const OnboardingScreen(),
           ),
         );
-      } else if (subscriptionService.isSubscribed) {
+      } else if (!subscriptionService.isSubscribed) {
         // User completed onboarding and is subscribed → go to home
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -122,8 +121,6 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
-        final localization = LocalizationService();
-        
         return Scaffold(
           body: AnimatedBackground(
             style: settingsProvider.settings.backgroundStyle,
@@ -190,9 +187,9 @@ class _SplashScreenState extends State<SplashScreen> {
                         settingsProvider.currentThemeConfig.accentColor.withOpacity(0.8),
                       ],
                     ).createShader(bounds),
-                    child: Text(
-                      localization.t('app_name'),
-                      style: const TextStyle(
+                    child: const Text(
+                      'Nota AI',
+                      style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -215,9 +212,9 @@ class _SplashScreenState extends State<SplashScreen> {
                   const SizedBox(height: 16),
                   
                   // Tagline
-                  Text(
-                    localization.t('splash_tagline'),
-                    style: const TextStyle(
+                  const Text(
+                    'Your thoughts, perfectly captured',
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
                       color: AppTheme.textSecondary,

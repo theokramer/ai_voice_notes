@@ -514,7 +514,10 @@ Guidelines:
   }
 
   /// Generate a short, descriptive title from note content (GPT-4o-mini for speed)
-  Future<String> generateNoteTitle(String content) async {
+  /// 
+  /// [folderName] optional parameter to avoid redundant titles
+  /// (e.g., if folder is "Todo", don't generate title "Todo: Buy Milk")
+  Future<String> generateNoteTitle(String content, {String? folderName}) async {
     try {
       // Get plain text from content (might be Quill JSON)
       String plainText = content;
@@ -543,16 +546,21 @@ Guidelines:
         return 'Voice Note ${DateTime.now().toString().substring(11, 16)}';
       }
       
+      // Build context hint if folder name is provided
+      final folderContext = folderName != null && folderName != 'Unorganized'
+          ? '\nFolder context: This note will be saved in the "$folderName" folder.'
+          : '';
+      
       final prompt = '''Generate a short, descriptive title (3-6 words) for this note.
 
 Note content:
-"$textSample"
+"$textSample"$folderContext
 
 Rules:
 - Maximum 6 words
 - Descriptive and specific
 - No quotes or punctuation
-- Title case (capitalize first letter of each word)
+- Title case (capitalize first letter of each word)${folderName != null && folderName != 'Unorganized' ? '\n- DO NOT include "$folderName" in the title (it\'s redundant with the folder name)' : ''}
 
 Return ONLY the title, nothing else.''';
 

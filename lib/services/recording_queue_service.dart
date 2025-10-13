@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_quill/quill_delta.dart';
 import '../models/note.dart';
 import '../models/settings.dart';
 import '../providers/notes_provider.dart';
 import '../providers/folders_provider.dart';
 import '../providers/settings_provider.dart';
 import 'openai_service.dart';
+import 'voice_command_service.dart';
 
 enum RecordingStatus {
   transcribing,
@@ -24,6 +27,7 @@ class RecordingQueueItem {
   String? assignedFolderId;
   String? folderName;
   bool beautified; // Was AI beautification applied
+  String? voiceCommandDetected; // Description of detected voice command
   final DateTime timestamp;
   String? errorMessage;
 
@@ -37,6 +41,7 @@ class RecordingQueueItem {
     this.assignedFolderId,
     this.folderName,
     this.beautified = false,
+    this.voiceCommandDetected,
     required this.timestamp,
     this.errorMessage,
   });
@@ -48,6 +53,7 @@ class RecordingQueueItem {
     String? assignedFolderId,
     String? folderName,
     bool? beautified,
+    String? voiceCommandDetected,
     String? errorMessage,
   }) {
     return RecordingQueueItem(
@@ -60,6 +66,7 @@ class RecordingQueueItem {
       assignedFolderId: assignedFolderId ?? this.assignedFolderId,
       folderName: folderName ?? this.folderName,
       beautified: beautified ?? this.beautified,
+      voiceCommandDetected: voiceCommandDetected ?? this.voiceCommandDetected,
       timestamp: timestamp,
       errorMessage: errorMessage ?? this.errorMessage,
     );
@@ -206,46 +213,185 @@ class RecordingQueueService extends ChangeNotifier {
       
       debugPrint('✅ Transcription validated: ${transcription.length} chars, $wordCount words');
       
-      // 2. BEAUTIFY (if enabled)
-      String content = transcription;
+      // 2. DETECT VOICE COMMAND (before beautification)
+      final voiceCommand = VoiceCommandService.detectCommand(
+        transcription,
+        foldersProvider.folders,
+      );
+      
+      String? voiceCommandDescription;
+      String contentForProcessing = transcription;
+      bool isAppendCommand = false;
+      String? voiceCommandFolderId;
+      
+      if (voiceCommand != null) {
+        voiceCommandDescription = VoiceCommandService.getCommandDescription(voiceCommand);
+        debugPrint('🎯 Voice command detected: $voiceCommand');
+        
+        // Extract content without the command keyword
+        contentForProcessing = VoiceCommandService.extractContentAfterCommand(
+          transcription,
+          voiceCommand,
+        );
+        
+        debugPrint('📝 Content after command extraction: "${contentForProcessing.substring(0, contentForProcessing.length > 100 ? 100 : contentForProcessing.length)}..."');
+        
+        // Handle command types
+        if (voiceCommand.type == VoiceCommandType.folder) {
+          // Override folder assignment with voice command folder
+          voiceCommandFolderId = voiceCommand.folderId;
+          debugPrint('📁 Voice command folder override: ${voiceCommand.folderName} (${voiceCommand.folderId})');
+        } else if (voiceCommand.type == VoiceCommandType.createFolder) {
+          // Create new folder with the specified name
+          if (voiceCommand.newFolderName != null) {
+            debugPrint('📁 Voice command: creating new folder "${voiceCommand.newFolderName}"');
+            // Check if folder already exists (case-insensitive)
+            final existingFolder = foldersProvider.getFolderByName(voiceCommand.newFolderName!);
+            if (existingFolder != null) {
+              // Folder already exists, use it
+              voiceCommandFolderId = existingFolder.id;
+              debugPrint('📁 Folder "${voiceCommand.newFolderName}" already exists, using it (${existingFolder.id})');
+            } else {
+              // Create new folder
+              final newFolder = await foldersProvider.createFolder(
+                name: voiceCommand.newFolderName!,
+                icon: _getSmartEmojiForFolder(voiceCommand.newFolderName!),
+              );
+              voiceCommandFolderId = newFolder.id;
+              debugPrint('✨ Created new folder: ${newFolder.name} (${newFolder.id})');
+            }
+          }
+        } else if (voiceCommand.type == VoiceCommandType.append) {
+          // Mark for append operation (handled later)
+          isAppendCommand = true;
+          debugPrint('➕ Will append to last created note');
+        }
+      }
+      
+      // Validate content after command extraction
+      if (contentForProcessing.trim().isEmpty && voiceCommand != null) {
+        debugPrint('⚠️ Content is empty after command extraction, using command keyword as content');
+        contentForProcessing = voiceCommand.originalKeyword;
+      }
+      
+      // 3. BEAUTIFY (if enabled)
+      String content = contentForProcessing;
       bool beautified = false;
       if (settings.transcriptionMode == TranscriptionMode.aiBeautify) {
         try {
-          debugPrint('🎨 Starting beautification for ${transcription.length} chars...');
-          content = await openAIService.beautifyTranscription(transcription);
+          debugPrint('🎨 Starting beautification for ${contentForProcessing.length} chars...');
+          content = await openAIService.beautifyTranscription(contentForProcessing);
           
           // Validate beautified content
           if (content.trim().isEmpty) {
-            debugPrint('⚠️ AI beautification returned EMPTY content, using original transcription');
-            debugPrint('   Original had ${transcription.length} chars: "${transcription.substring(0, transcription.length > 100 ? 100 : transcription.length)}..."');
-            content = transcription;
+            debugPrint('⚠️ AI beautification returned EMPTY content, using original content');
+            debugPrint('   Original had ${contentForProcessing.length} chars: "${contentForProcessing.substring(0, contentForProcessing.length > 100 ? 100 : contentForProcessing.length)}..."');
+            content = contentForProcessing;
             beautified = false;
-          } else if (content.trim().length < transcription.trim().length ~/ 2) {
+          } else if (content.trim().length < contentForProcessing.trim().length ~/ 2) {
             // If beautified is less than half the original length, something might be wrong
-            debugPrint('⚠️ AI beautification returned suspiciously short content (${content.length} vs ${transcription.length}), using original');
-            content = transcription;
+            debugPrint('⚠️ AI beautification returned suspiciously short content (${content.length} vs ${contentForProcessing.length}), using original');
+            content = contentForProcessing;
             beautified = false;
           } else {
-            debugPrint('✅ Beautification successful: ${transcription.length} → ${content.length} chars');
+            debugPrint('✅ Beautification successful: ${contentForProcessing.length} → ${content.length} chars');
             beautified = true;
           }
         } catch (e) {
           debugPrint('⚠️ AI beautification FAILED with error: $e');
-          debugPrint('   Using original transcription (${transcription.length} chars)');
-          content = transcription;
+          debugPrint('   Using original content (${contentForProcessing.length} chars)');
+          content = contentForProcessing;
           beautified = false;
         }
       } else {
         debugPrint('ℹ️ Beautification skipped (mode: ${settings.transcriptionMode})');
       }
       
-      // 3. ORGANIZE
+      // 4. HANDLE APPEND COMMAND (if detected)
+      if (isAppendCommand) {
+        debugPrint('➕ Processing append command...');
+        
+        // Get the last created note
+        final allNotes = notesProvider.allNotes;
+        if (allNotes.isEmpty) {
+          debugPrint('⚠️ No existing notes to append to, creating new note instead');
+          isAppendCommand = false; // Fall through to normal note creation
+        } else {
+          // Sort by creation date and get most recent
+          final sortedNotes = List<Note>.from(allNotes)
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          final lastNote = sortedNotes.first;
+          
+          debugPrint('📄 Appending to note: "${lastNote.name}" (${lastNote.id})');
+          
+          // Parse existing content (might be Quill Delta JSON or plain text)
+          String updatedContent;
+          try {
+            // Try to parse as Quill Delta
+            final json = jsonDecode(lastNote.content);
+            final delta = Delta.fromJson(json as List);
+            
+            // Append new content as new paragraph
+            delta.insert('\n\n');
+            delta.insert(content);
+            
+            updatedContent = jsonEncode(delta.toJson());
+            debugPrint('✅ Appended to Quill Delta format');
+          } catch (e) {
+            // Not Quill format, treat as plain text
+            updatedContent = '${lastNote.content}\n\n$content';
+            debugPrint('✅ Appended to plain text format');
+          }
+          
+          // Update the note
+          final updatedNote = lastNote.copyWith(
+            content: updatedContent,
+            updatedAt: DateTime.now(),
+          );
+          
+          await notesProvider.updateNote(updatedNote);
+          debugPrint('✅ Note updated with appended content');
+          
+          // Mark as complete
+          updateRecording(
+            id,
+            status: RecordingStatus.complete,
+            transcription: transcription,
+            noteId: lastNote.id,
+            assignedFolderId: lastNote.folderId,
+            folderName: lastNote.folderId != null 
+                ? foldersProvider.getFolderById(lastNote.folderId!)?.name 
+                : null,
+            beautified: beautified,
+            voiceCommandDetected: voiceCommandDescription,
+          );
+          
+          debugPrint('🎉 Append operation complete');
+          return; // Exit early, don't create new note
+        }
+      }
+      
+      // 5. ORGANIZE (skip if voice command specified folder)
       updateRecording(id, status: RecordingStatus.organizing);
-      String? folderId = item.folderContext; // Use context if provided
+      String? folderId;
       String? folderName;
       
-      // If no folder context, use organization mode
-      if (folderId == null && settings.organizationMode == OrganizationMode.autoOrganize) {
+      // Priority 1: Voice command folder override
+      if (voiceCommandFolderId != null) {
+        folderId = voiceCommandFolderId;
+        final folder = foldersProvider.getFolderById(folderId);
+        folderName = folder?.name ?? 'Unknown';
+        debugPrint('📁 Using voice command folder: $folderName');
+      }
+      // Priority 2: Folder context (user was viewing a specific folder)
+      else if (item.folderContext != null) {
+        folderId = item.folderContext;
+        final folder = foldersProvider.getFolderById(folderId!);
+        folderName = folder?.name ?? 'Unknown';
+        debugPrint('📁 Using folder context: $folderName');
+      }
+      // Priority 3: Auto-organization
+      else if (settings.organizationMode == OrganizationMode.autoOrganize) {
         // Create a temporary note for organization analysis
         final tempNote = Note(
           id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
@@ -294,18 +440,14 @@ class RecordingQueueService extends ChangeNotifier {
           folderId = foldersProvider.unorganizedFolder?.id;
           folderName = 'Unorganized';
         }
-      } else if (folderId != null) {
-        // Get folder name for display
-        final folder = foldersProvider.getFolderById(folderId);
-        folderName = folder?.name ?? 'Unknown';
-      } else {
-        // Default to unorganized
+      }
+      // Priority 4: Default to unorganized
+      else {
         folderId = foldersProvider.unorganizedFolder?.id;
         folderName = 'Unorganized';
       }
       
-      // 4. CREATE NOTE
-      // Store as plain text (no Quill conversion needed)
+      // 6. GENERATE TITLE (pass folder name to avoid redundant titles)
       
       // Final content validation before creating note
       if (content.trim().isEmpty) {
@@ -318,7 +460,10 @@ class RecordingQueueService extends ChangeNotifier {
       String noteTitle;
       try {
         debugPrint('📝 Generating title for content (${content.length} chars)...');
-        noteTitle = await openAIService.generateNoteTitle(content);
+        noteTitle = await openAIService.generateNoteTitle(
+          content,
+          folderName: folderName, // Pass folder name to avoid redundant titles
+        );
         
         // Validate title
         if (noteTitle.trim().isEmpty) {
@@ -354,7 +499,7 @@ class RecordingQueueService extends ChangeNotifier {
       await notesProvider.addNote(note);
       debugPrint('✅ Note created successfully: ${note.id}');
       
-      // 5. MARK COMPLETE
+      // 7. MARK COMPLETE
       updateRecording(
         id,
         status: RecordingStatus.complete,
@@ -363,6 +508,7 @@ class RecordingQueueService extends ChangeNotifier {
         assignedFolderId: folderId,
         folderName: folderName,
         beautified: beautified,
+        voiceCommandDetected: voiceCommandDescription,
       );
       
       debugPrint('🎉 Recording processing complete for $id');
@@ -409,6 +555,7 @@ class RecordingQueueService extends ChangeNotifier {
     String? assignedFolderId,
     String? folderName,
     bool? beautified,
+    String? voiceCommandDetected,
     String? errorMessage,
   }) {
     final index = _queue.indexWhere((item) => item.id == id);
@@ -421,6 +568,7 @@ class RecordingQueueService extends ChangeNotifier {
       assignedFolderId: assignedFolderId,
       folderName: folderName,
       beautified: beautified,
+      voiceCommandDetected: voiceCommandDetected,
       errorMessage: errorMessage,
     );
 
@@ -463,6 +611,103 @@ class RecordingQueueService extends ChangeNotifier {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Get smart emoji for folder based on name keywords
+  static String _getSmartEmojiForFolder(String folderName) {
+    final lowerName = folderName.toLowerCase();
+    
+    // Common folder name patterns and their emojis
+    final emojiMap = {
+      // Work & productivity
+      'work': '💼',
+      'arbeit': '💼',
+      'trabajo': '💼',
+      'travail': '💼',
+      'office': '🏢',
+      'project': '📊',
+      'meeting': '📋',
+      
+      // Personal & life
+      'personal': '👤',
+      'private': '🔒',
+      'privat': '🔒',
+      'privado': '🔒',
+      'privé': '🔒',
+      'journal': '📖',
+      'diary': '📔',
+      'tagebuch': '📔',
+      
+      // Tasks & todos
+      'todo': '✅',
+      'task': '✅',
+      'aufgabe': '✅',
+      'tarea': '✅',
+      'reminder': '⏰',
+      'erinnerung': '⏰',
+      
+      // Shopping & food
+      'shopping': '🛒',
+      'einkauf': '🛒',
+      'compras': '🛒',
+      'grocery': '🛒',
+      'food': '🍽️',
+      'recipe': '👨‍🍳',
+      
+      // Ideas & creativity
+      'idea': '💡',
+      'idee': '💡',
+      'brainstorm': '🧠',
+      'creative': '🎨',
+      'kreativ': '🎨',
+      
+      // Learning & education
+      'learn': '📚',
+      'lernen': '📚',
+      'study': '📚',
+      'studium': '📚',
+      'school': '🎓',
+      'schule': '🎓',
+      'university': '🎓',
+      'course': '📖',
+      
+      // Health & fitness
+      'health': '🏥',
+      'gesundheit': '🏥',
+      'fitness': '💪',
+      'sport': '⚽',
+      'exercise': '🏃',
+      
+      // Finance
+      'money': '💰',
+      'finance': '💵',
+      'finanzen': '💵',
+      'budget': '💳',
+      
+      // Travel
+      'travel': '✈️',
+      'reise': '✈️',
+      'viaje': '✈️',
+      'voyage': '✈️',
+      'vacation': '🏖️',
+      'urlaub': '🏖️',
+      
+      // Home
+      'home': '🏠',
+      'haus': '🏠',
+      'casa': '🏠',
+      'maison': '🏠',
+    };
+    
+    // Check for keyword matches
+    for (final entry in emojiMap.entries) {
+      if (lowerName.contains(entry.key)) {
+        return entry.value;
+      }
+    }
+    
+    // Default folder emoji
+    return '📁';
   }
 
   @override
