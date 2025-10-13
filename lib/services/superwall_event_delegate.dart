@@ -22,7 +22,7 @@ class SuperwallEventDelegate extends SuperwallDelegate {
 
   /// Call this when first paywall is done (purchased/restored)
   void setInactive() {
-    _isFirstPaywallActive = false;
+    _isFirstPaywallActive = false; 
     _shouldShowSecondPaywall = false;
     debugPrint('✓ SuperwallDelegate: First paywall marked as INACTIVE');
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/note.dart';
 import '../../models/folder.dart';
 import '../../models/organization_suggestion.dart';
+import '../../services/localization_service.dart';
 
 /// Reusable card for displaying a single note organization suggestion
 class OrganizationSuggestionCard extends StatelessWidget {
@@ -107,7 +108,7 @@ class OrganizationSuggestionCard extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: onApply,
                     icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Anwenden'),
+                    label: Text(LocalizationService().t('apply')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.green.shade400,
                       side: BorderSide(color: Colors.green.shade700),

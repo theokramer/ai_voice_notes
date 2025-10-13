@@ -36,6 +36,10 @@ class LocalizationService {
   /// All translations organized by language and key
   static final Map<AppLanguage, Map<String, String>> _translations = {
     AppLanguage.english: {
+      // App Branding
+      'app_name': 'Nota AI',
+      'splash_tagline': 'Your thoughts, perfectly captured',
+      
       // Onboarding - Video Screen
       'onboarding_welcome': 'Welcome to\nAI Voice Notes',
       'onboarding_subtitle': 'Tap. Speak. Done.\nAI handles the rest.',
@@ -175,6 +179,16 @@ class LocalizationService {
       'settings_background': 'Background Animation',
       'settings_note_view': 'Note View Style',
       'settings_auto_close': 'Auto-Close Notes',
+      'settings_auto_close_title': 'Auto-Close After Entry',
+      'settings_auto_close_subtitle': 'Automatically close note after 2 seconds',
+      'settings_unorganized_notes': 'Unorganized Notes: {count}',
+      'settings_tap_to_organize': 'Tap to organize now',
+      'settings_all_organized': 'All notes organized!',
+      'settings_export_subtitle': 'Backup your notes as JSON, Markdown, or CSV',
+      'settings_delete_all_title': 'Delete All Notes',
+      'settings_delete_all_subtitle': 'Permanently delete all your notes',
+      'settings_delete_all_confirm_title': 'Delete All Notes?',
+      'settings_delete_all_confirm_message': 'This action cannot be undone. All your notes will be permanently deleted.',
       
       // Common
       'cancel': 'Cancel',
@@ -206,12 +220,10 @@ class LocalizationService {
       'search_notes_or_ask_ai': 'Search notes or ask AI...',
       'note_updated': 'Note updated',
       'note_deleted': 'Note deleted',
-      'pin_note': 'Pin Note',
-      'unpin_note': 'Unpin Note',
       'note_pinned': 'Note pinned',
       'note_unpinned': 'Note unpinned',
-      'delete_note': 'Delete Note',
       'edit_note': 'Edit Note',
+      'home_delete_note_confirm': 'This will permanently delete "{name}" and all its entries.',
       'this_week': 'This Week',
       'today': 'Today',
       'more': 'More',
@@ -239,7 +251,21 @@ class LocalizationService {
       'record_entry': 'Record Entry',
       'entry_deleted': 'Entry deleted',
       'not_found': 'Not Found',
+      'note_not_found': 'Note not found',
       'pinned_sections': 'Pinned Sections',
+      'unclear_notes': 'Unclear Notes',
+      'no_folders_found': 'No folders found',
+      'unclear_notes_warning': '{count} notes have no clear assignment.\n\nPlease review these notes manually before applying all suggestions.',
+      'ok': 'OK',
+      'apply_all': 'Apply All',
+      'reorganize': 'Reorganize',
+      'update': 'Update',
+      'delete_note': 'Delete note',
+      'delete_note_confirm_title': 'Delete Note',
+      'delete_note_confirm_message': 'Are you sure you want to delete this note? This action cannot be undone.',
+      'pin_note': 'Pin note',
+      'unpin_note': 'Unpin note',
+      'default': 'Default',
       
       // Create Note Dialog
       'note_name': 'Note name',
@@ -263,6 +289,7 @@ class LocalizationService {
       
       // Note Organization
       'organize_notes': 'Organize Notes',
+      'organize': 'Organize',
       'view_type': 'View Type',
       'sort_by': 'Sort By',
       'date_updated': 'Date Updated',
@@ -272,6 +299,20 @@ class LocalizationService {
       'entry_count': 'Entry Count',
       'ascending': 'Ascending',
       'descending': 'Descending',
+      'move_to_folder': 'Move to Folder',
+      'view_note': 'View Note',
+      'dismiss_all': 'Dismiss All',
+      'manage_folders': 'Manage Folders',
+      'create_folder': 'Create Folder',
+      'change_color': 'Change Color',
+      'current': 'Current',
+      'create_new_folder': 'Create New Folder',
+      'failed_to_load': 'Failed to load suggestions',
+      'note_organized_success': 'Note successfully organized!',
+      'error': 'Error',
+      'error_creating_folder': 'Error creating folder',
+      'accept': 'Accept',
+      'apply': 'Apply',
       
       // Theme Names
       'theme_modern': 'Modern Dark',
@@ -396,6 +437,10 @@ class LocalizationService {
     },
     
     AppLanguage.spanish: {
+      // App Branding
+      'app_name': 'Nota AI',
+      'splash_tagline': 'Tus pensamientos, perfectamente capturados',
+      
       // Onboarding - Video Screen
       'onboarding_welcome': 'Bienvenido a\nAI Voice Notes',
       'onboarding_subtitle': 'Toca. Habla. Listo.\nLa IA hace el resto.',
@@ -535,6 +580,16 @@ class LocalizationService {
       'settings_background': 'Animación de Fondo',
       'settings_note_view': 'Estilo de Vista de Notas',
       'settings_auto_close': 'Auto-Cerrar Notas',
+      'settings_auto_close_title': 'Auto-Cerrar Después de Entrada',
+      'settings_auto_close_subtitle': 'Cerrar nota automáticamente después de 2 segundos',
+      'settings_unorganized_notes': 'Notas Sin Organizar: {count}',
+      'settings_tap_to_organize': 'Toca para organizar ahora',
+      'settings_all_organized': '¡Todas las notas organizadas!',
+      'settings_export_subtitle': 'Respalda tus notas como JSON, Markdown o CSV',
+      'settings_delete_all_title': 'Eliminar Todas las Notas',
+      'settings_delete_all_subtitle': 'Eliminar permanentemente todas tus notas',
+      'settings_delete_all_confirm_title': '¿Eliminar Todas las Notas?',
+      'settings_delete_all_confirm_message': 'Esta acción no se puede deshacer. Todas tus notas serán eliminadas permanentemente.',
       
       // Common
       'cancel': 'Cancelar',
@@ -566,12 +621,10 @@ class LocalizationService {
       'search_notes_or_ask_ai': 'Buscar notas o preguntar a IA...',
       'note_updated': 'Nota actualizada',
       'note_deleted': 'Nota eliminada',
-      'pin_note': 'Fijar Nota',
-      'unpin_note': 'Desfijar Nota',
       'note_pinned': 'Nota fijada',
       'note_unpinned': 'Nota desfijada',
-      'delete_note': 'Eliminar Nota',
       'edit_note': 'Editar Nota',
+      'home_delete_note_confirm': 'Esto eliminará permanentemente "{name}" y todas sus entradas.',
       'this_week': 'Esta Semana',
       'today': 'Hoy',
       'more': 'Más',
@@ -599,7 +652,21 @@ class LocalizationService {
       'record_entry': 'Grabar Entrada',
       'entry_deleted': 'Entrada eliminada',
       'not_found': 'No Encontrado',
+      'note_not_found': 'Nota no encontrada',
       'pinned_sections': 'Secciones Fijadas',
+      'unclear_notes': 'Notas No Claras',
+      'no_folders_found': 'No se encontraron carpetas',
+      'unclear_notes_warning': '{count} notas no tienen una asignación clara.\n\nPor favor revisa estas notas manualmente antes de aplicar todas las sugerencias.',
+      'ok': 'OK',
+      'apply_all': 'Aplicar Todo',
+      'reorganize': 'Reorganizar',
+      'update': 'Actualizar',
+      'delete_note': 'Eliminar nota',
+      'delete_note_confirm_title': 'Eliminar Nota',
+      'delete_note_confirm_message': '¿Estás seguro de que quieres eliminar esta nota? Esta acción no se puede deshacer.',
+      'pin_note': 'Fijar nota',
+      'unpin_note': 'Desfijar nota',
+      'default': 'Predeterminado',
       
       // Create Note Dialog
       'note_name': 'Nombre de nota',
@@ -623,6 +690,7 @@ class LocalizationService {
       
       // Note Organization
       'organize_notes': 'Organizar Notas',
+      'organize': 'Organizar',
       'view_type': 'Tipo de Vista',
       'sort_by': 'Ordenar Por',
       'date_updated': 'Fecha de Actualización',
@@ -632,6 +700,20 @@ class LocalizationService {
       'entry_count': 'Cantidad de Entradas',
       'ascending': 'Ascendente',
       'descending': 'Descendente',
+      'move_to_folder': 'Mover a Carpeta',
+      'view_note': 'Ver Nota',
+      'dismiss_all': 'Descartar Todo',
+      'manage_folders': 'Gestionar Carpetas',
+      'create_folder': 'Crear Carpeta',
+      'change_color': 'Cambiar Color',
+      'current': 'Actual',
+      'create_new_folder': 'Crear Nueva Carpeta',
+      'failed_to_load': 'Error al cargar sugerencias',
+      'note_organized_success': '¡Nota organizada exitosamente!',
+      'error': 'Error',
+      'error_creating_folder': 'Error al crear carpeta',
+      'accept': 'Aceptar',
+      'apply': 'Aplicar',
       
       // Theme Names
       'theme_modern': 'Moderno Oscuro',
@@ -756,6 +838,10 @@ class LocalizationService {
     },
     
     AppLanguage.french: {
+      // App Branding
+      'app_name': 'Nota AI',
+      'splash_tagline': 'Tes pensées, parfaitement capturées',
+      
       // Onboarding - Video Screen
       'onboarding_welcome': 'Bienvenue sur\nAI Voice Notes',
       'onboarding_subtitle': 'Tapez. Parlez. Terminé.\nL\'IA fait le reste.',
@@ -895,6 +981,16 @@ class LocalizationService {
       'settings_background': 'Animation d\'Arrière-plan',
       'settings_note_view': 'Style de Vue des Notes',
       'settings_auto_close': 'Fermeture Automatique des Notes',
+      'settings_auto_close_title': 'Fermeture Automatique Après Entrée',
+      'settings_auto_close_subtitle': 'Fermer automatiquement la note après 2 secondes',
+      'settings_unorganized_notes': 'Notes Non Organisées: {count}',
+      'settings_tap_to_organize': 'Appuie pour organiser maintenant',
+      'settings_all_organized': 'Toutes les notes sont organisées!',
+      'settings_export_subtitle': 'Sauvegarde tes notes en JSON, Markdown ou CSV',
+      'settings_delete_all_title': 'Supprimer Toutes les Notes',
+      'settings_delete_all_subtitle': 'Supprimer définitivement toutes tes notes',
+      'settings_delete_all_confirm_title': 'Supprimer Toutes les Notes?',
+      'settings_delete_all_confirm_message': 'Cette action ne peut pas être annulée. Toutes tes notes seront supprimées définitivement.',
       
       // Common
       'cancel': 'Annuler',
@@ -926,12 +1022,10 @@ class LocalizationService {
       'search_notes_or_ask_ai': 'Rechercher des notes ou demander à l\'IA...',
       'note_updated': 'Note mise à jour',
       'note_deleted': 'Note supprimée',
-      'pin_note': 'Épingler la Note',
-      'unpin_note': 'Désépingler la Note',
       'note_pinned': 'Note épinglée',
       'note_unpinned': 'Note désépinglée',
-      'delete_note': 'Supprimer la Note',
       'edit_note': 'Modifier la Note',
+      'home_delete_note_confirm': 'Cela supprimera définitivement "{name}" et toutes ses entrées.',
       'this_week': 'Cette Semaine',
       'today': 'Aujourd\'hui',
       'more': 'Plus',
@@ -959,7 +1053,21 @@ class LocalizationService {
       'record_entry': 'Enregistrer une Entrée',
       'entry_deleted': 'Entrée supprimée',
       'not_found': 'Non Trouvé',
+      'note_not_found': 'Note non trouvée',
       'pinned_sections': 'Sections Épinglées',
+      'unclear_notes': 'Notes Peu Claires',
+      'no_folders_found': 'Aucun dossier trouvé',
+      'unclear_notes_warning': '{count} notes n\'ont pas d\'affectation claire.\n\nVeuillez vérifier ces notes manuellement avant d\'appliquer toutes les suggestions.',
+      'ok': 'OK',
+      'apply_all': 'Tout Appliquer',
+      'reorganize': 'Réorganiser',
+      'update': 'Mettre à Jour',
+      'delete_note': 'Supprimer la note',
+      'delete_note_confirm_title': 'Supprimer la Note',
+      'delete_note_confirm_message': 'Êtes-vous sûr de vouloir supprimer cette note? Cette action est irréversible.',
+      'pin_note': 'Épingler la note',
+      'unpin_note': 'Désépingler la note',
+      'default': 'Par défaut',
       
       // Create Note Dialog
       'note_name': 'Nom de la note',
@@ -983,6 +1091,7 @@ class LocalizationService {
       
       // Note Organization
       'organize_notes': 'Organiser les Notes',
+      'organize': 'Organiser',
       'view_type': 'Type de Vue',
       'sort_by': 'Trier Par',
       'date_updated': 'Date de Mise à Jour',
@@ -992,6 +1101,20 @@ class LocalizationService {
       'entry_count': 'Nombre d\'Entrées',
       'ascending': 'Croissant',
       'descending': 'Décroissant',
+      'move_to_folder': 'Déplacer vers Dossier',
+      'view_note': 'Voir Note',
+      'dismiss_all': 'Tout Rejeter',
+      'manage_folders': 'Gérer les Dossiers',
+      'create_folder': 'Créer Dossier',
+      'change_color': 'Changer Couleur',
+      'current': 'Actuel',
+      'create_new_folder': 'Créer Nouveau Dossier',
+      'failed_to_load': 'Échec du chargement des suggestions',
+      'note_organized_success': 'Note organisée avec succès!',
+      'error': 'Erreur',
+      'error_creating_folder': 'Erreur lors de la création du dossier',
+      'accept': 'Accepter',
+      'apply': 'Appliquer',
       
       // Theme Names
       'theme_modern': 'Moderne Sombre',
@@ -1116,41 +1239,45 @@ class LocalizationService {
     },
     
     AppLanguage.german: {
+      // App Branding
+      'app_name': 'Nota AI',
+      'splash_tagline': 'Deine Gedanken, perfekt festgehalten',
+      
       // Onboarding - Video Screen
       'onboarding_welcome': 'Willkommen bei\nAI Voice Notes',
       'onboarding_subtitle': 'Tippen. Sprechen. Fertig.\nKI erledigt den Rest.',
-      'onboarding_sub_subtitle': 'Lassen Sie Ihre Gedanken einfach raus. KI transkribiert, verschönert und organisiert alles für Sie.',
-      'onboarding_get_started': 'Loslegen',
+      'onboarding_sub_subtitle': 'Lass deine Gedanken einfach raus. KI transkribiert, verschönert und organisiert alles für dich.',
+      'onboarding_get_started': 'Los geht\'s',
       'onboarding_continue': 'Weiter',
       
       // Onboarding - Explanation Pages
       'onboarding_record_title': 'Einfach Tippen & Sprechen',
-      'onboarding_record_benefit_1': 'Ein Tippen zum Aufnehmen. Das ist alles.',
+      'onboarding_record_benefit_1': 'Ein Tippen zum Aufnehmen. Das war\'s.',
       'onboarding_record_benefit_2': 'Kein Formatieren, kein Organisieren, kein Nachdenken',
-      'onboarding_record_benefit_3': 'Ihre rohen Gedanken sofort erfasst',
+      'onboarding_record_benefit_3': 'Deine Gedanken sofort erfasst',
       
-      'onboarding_beautify_title': 'KI Verschönert Ihre Worte',
+      'onboarding_beautify_title': 'KI Verschönert Deine Worte',
       'onboarding_beautify_benefit_1': 'Verworrene Gedanken werden klare Notizen',
       'onboarding_beautify_benefit_2': 'Perfekte Grammatik und Struktur automatisch',
-      'onboarding_beautify_benefit_3': 'Ihre Stimme, aber poliert und professionell',
+      'onboarding_beautify_benefit_3': 'Deine Stimme, aber poliert und professionell',
       
       'onboarding_organize_title': 'KI Organisiert Alles',
-      'onboarding_organize_benefit_1': 'KI schlägt Ordner vor und kategorisiert Ihre Notizen',
-      'onboarding_organize_benefit_2': 'Überprüfen und genehmigen Sie Vorschläge, oder lassen Sie alles erledigen',
-      'onboarding_organize_benefit_3': 'Volle Kontrolle oder volle Automation - Sie entscheiden',
+      'onboarding_organize_benefit_1': 'KI schlägt Ordner vor und kategorisiert deine Notizen',
+      'onboarding_organize_benefit_2': 'Prüfe und genehmige Vorschläge, oder lass alles automatisch laufen',
+      'onboarding_organize_benefit_3': 'Volle Kontrolle oder volle Automation - du entscheidest',
       
       // Onboarding - Theme Selector
-      'onboarding_theme_title': 'Wählen Sie Ihren Stil',
-      'onboarding_theme_subtitle': 'Wählen Sie ein Design, das zu Ihnen passt',
+      'onboarding_theme_title': 'Wähle deinen Stil',
+      'onboarding_theme_subtitle': 'Such dir ein Design aus, das zu dir passt',
       
       // Onboarding - Questions
-      'onboarding_question_1_title': 'Wo haben Sie\nvon uns gehört?',
+      'onboarding_question_1_title': 'Wo hast du\nvon uns gehört?',
       'onboarding_question_1_option_1': 'Soziale Medien',
       'onboarding_question_1_option_1_sub': 'Instagram, Twitter, TikTok',
       'onboarding_question_1_option_2': 'Freund oder Kollege',
       'onboarding_question_1_option_2_sub': 'Persönliche Empfehlung',
       'onboarding_question_1_option_3': 'App Store',
-      'onboarding_question_1_option_3_sub': 'Durchsuchen oder Suche',
+      'onboarding_question_1_option_3_sub': 'Beim Stöbern oder Suchen',
       'onboarding_question_1_option_4': 'YouTube',
       'onboarding_question_1_option_4_sub': 'Review oder Tutorial',
       'onboarding_question_1_option_5': 'Reddit oder Forum',
@@ -1160,7 +1287,7 @@ class LocalizationService {
       'onboarding_question_1_option_7': 'Andere',
       'onboarding_question_1_option_7_sub': 'Andere Quellen',
       
-      'onboarding_question_2_title': 'Was ist Ihr\nNotizen-Stil?',
+      'onboarding_question_2_title': 'Was ist dein\nNotizen-Stil?',
       'onboarding_question_2_option_1': 'Schnelle Gedanken',
       'onboarding_question_2_option_1_sub': 'Kurze Notizen unterwegs',
       'onboarding_question_2_option_2': 'Detaillierte Notizen',
@@ -1168,25 +1295,25 @@ class LocalizationService {
       'onboarding_question_2_option_3': 'Gemischt',
       'onboarding_question_2_option_3_sub': 'Je nach Situation',
       
-      'onboarding_question_3_title': 'Wann erfassen Sie\nIhre Ideen?',
+      'onboarding_question_3_title': 'Wann hältst du\ndeine Ideen fest?',
       'onboarding_question_3_option_1': 'Den Ganzen Tag Über',
       'onboarding_question_3_option_1_sub': 'Wenn sie kommen',
       'onboarding_question_3_option_2': 'Morgens',
-      'onboarding_question_3_option_2_sub': 'Ich starte organisiert in den Tag',
+      'onboarding_question_3_option_2_sub': 'Starte organisiert in den Tag',
       'onboarding_question_3_option_3': 'Abends',
-      'onboarding_question_3_option_3_sub': 'Ich reflektiere meinen Tag',
+      'onboarding_question_3_option_3_sub': 'Reflektiere den Tag',
       'onboarding_question_3_option_4': 'Spontan',
       'onboarding_question_3_option_4_sub': 'Zufällige Inspirationsschübe',
       
-      'onboarding_question_4_title': 'Wie oft machen Sie\nNotizen?',
+      'onboarding_question_4_title': 'Wie oft machst du\nNotizen?',
       'onboarding_question_4_option_1': 'Täglich',
-      'onboarding_question_4_option_1_sub': 'Ich bin engagiert',
-      'onboarding_question_4_option_2': 'Ein Paar Mal die Woche',
-      'onboarding_question_4_option_2_sub': 'Regelmäßiger Nutzer',
+      'onboarding_question_4_option_1_sub': 'Ich bin dabei',
+      'onboarding_question_4_option_2': 'Ein paar Mal die Woche',
+      'onboarding_question_4_option_2_sub': 'Regelmäßig',
       'onboarding_question_4_option_3': 'Wenn Inspiration zuschlägt',
       'onboarding_question_4_option_3_sub': 'Nach Bedarf',
       
-      'onboarding_question_5_title': 'Wofür werden Sie\nAI Voice Notes nutzen?',
+      'onboarding_question_5_title': 'Wofür wirst du\nAI Voice Notes nutzen?',
       'onboarding_question_5_option_1': 'Arbeit & Produktivität',
       'onboarding_question_5_option_1_sub': 'Meetings, Aufgaben, Ideen',
       'onboarding_question_5_option_2': 'Lernen & Studieren',
@@ -1196,8 +1323,8 @@ class LocalizationService {
       'onboarding_question_5_option_4': 'Kreative Ideen',
       'onboarding_question_5_option_4_sub': 'Inspiration, Projekte',
       
-      'onboarding_question_6_title': 'Wählen Sie Ihre\nTranskriptionsqualität',
-      'onboarding_question_6_subtitle': 'Optimiert für {language}. Sie können dies jederzeit später ändern',
+      'onboarding_question_6_title': 'Wähle deine\nTranskriptionsqualität',
+      'onboarding_question_6_subtitle': 'Optimiert für {language}. Du kannst das jederzeit später ändern',
       'onboarding_question_6_option_1': 'Schnell & Effizient',
       'onboarding_question_6_option_1_sub': 'Gute Qualität, schnelle Verarbeitung',
       'onboarding_question_6_option_2': 'Ausgewogen',
@@ -1205,42 +1332,42 @@ class LocalizationService {
       'onboarding_question_6_option_3': 'Maximale Genauigkeit',
       'onboarding_question_6_option_3_sub': 'Beste Qualität, langsamer',
       
-      'onboarding_question_7_title': 'Wie viel soll die\nKI für Sie tun?',
-      'onboarding_question_7_subtitle': 'Sie können dies jederzeit später ändern',
+      'onboarding_question_7_title': 'Wie viel soll die\nKI für dich tun?',
+      'onboarding_question_7_subtitle': 'Du kannst das jederzeit später ändern',
       'onboarding_question_7_option_1': 'Autopilot',
       'onboarding_question_7_option_1_sub': 'KI organisiert alles automatisch',
       'onboarding_question_7_option_2': 'Hybrid / Assistiert',
-      'onboarding_question_7_option_2_sub': 'Sie leiten die KI und behalten die Kontrolle',
+      'onboarding_question_7_option_2_sub': 'Du leitest die KI und behältst die Kontrolle',
       
       // Interstitial Screens
-      'interstitial_privacy_title': 'Ihre Notizen Bleiben Ihre',
-      'interstitial_privacy_message': 'Alle Notizen werden sicher auf Ihrem Gerät gespeichert. Ihre Privatsphäre ist unsere Priorität.',
+      'interstitial_privacy_title': 'Deine Notizen Bleiben Deine',
+      'interstitial_privacy_message': 'Alle Notizen werden sicher auf deinem Gerät gespeichert. Deine Privatsphäre ist unsere Priorität.',
       'interstitial_privacy_feature_1': 'Ende-zu-Ende-Verschlüsselt',
       'interstitial_privacy_feature_2': 'Nur Lokal Gespeichert',
       'interstitial_privacy_feature_3': 'Nie Verfolgt oder Verkauft',
       
       'interstitial_personalize_title': 'Fast Fertig!',
-      'interstitial_personalize_message': 'Nur noch ein paar Fragen, um Ihre Erfahrung zu personalisieren.',
-      'interstitial_personalize_subtitle': 'Ihre perfekte Notizen-Einrichtung ist nur Momente entfernt',
+      'interstitial_personalize_message': 'Nur noch ein paar Fragen, um deine Erfahrung zu personalisieren.',
+      'interstitial_personalize_subtitle': 'Dein perfektes Notizen-Setup ist nur Momente entfernt',
       
       // Rating Screen
-      'rating_title': 'Sie sind Bereit!',
-      'rating_message': 'Bevor Sie beginnen: Wenn Sie von mühelosem Notizen-Machen begeistert sind, hilft eine schnelle Bewertung anderen, dies auch zu entdecken ✨',
-      'rating_button': 'Bewerten Sie uns ⭐',
+      'rating_title': 'Du bist bereit!',
+      'rating_message': 'Bevor du loslegst: Wenn du von mühelosem Notizen-Machen begeistert bist, hilft eine schnelle Bewertung anderen, das auch zu entdecken ✨',
+      'rating_button': 'Bewerte uns ⭐',
       'rating_skip': 'Weiter',
       
       // Loading Screen
-      'loading_title': 'Alles Für Sie Anpassen',
-      'loading_task_1': 'Ihre Einstellungen werden konfiguriert',
+      'loading_title': 'Richte Alles Für Dich Ein',
+      'loading_task_1': 'Deine Einstellungen werden konfiguriert',
       'loading_task_2': 'Spracherkennung für {language} wird optimiert',
       'loading_task_3': 'KI-Assistent wird konfiguriert',
-      'loading_task_4': 'Ihr Arbeitsbereich wird vorbereitet',
+      'loading_task_4': 'Dein Arbeitsbereich wird vorbereitet',
       'loading_task_5': 'Gleich fertig...',
       
       // Completion Screen
-      'completion_title': 'Willkommen zu Ihrem Neuen\nSprach-Workflow',
-      'completion_subtitle': 'Ihre Gedanken, in Sekunden organisiert',
-      'completion_cta': 'Aufnahme Starten',
+      'completion_title': 'Willkommen zu Deinem Neuen\nSprach-Workflow',
+      'completion_subtitle': 'Deine Gedanken, in Sekunden organisiert',
+      'completion_cta': 'Los geht\'s mit der Aufnahme',
       
       // Settings Screen
       'language': 'Sprache',
@@ -1255,6 +1382,16 @@ class LocalizationService {
       'settings_background': 'Hintergrundanimation',
       'settings_note_view': 'Notizen-Ansichtsstil',
       'settings_auto_close': 'Notizen Automatisch Schließen',
+      'settings_auto_close_title': 'Auto-Schließen Nach Eintrag',
+      'settings_auto_close_subtitle': 'Notiz nach 2 Sekunden automatisch schließen',
+      'settings_unorganized_notes': 'Unorganisierte Notizen: {count}',
+      'settings_tap_to_organize': 'Tippe hier, um jetzt zu organisieren',
+      'settings_all_organized': 'Alle Notizen organisiert!',
+      'settings_export_subtitle': 'Sichere deine Notizen als JSON, Markdown oder CSV',
+      'settings_delete_all_title': 'Alle Notizen Löschen',
+      'settings_delete_all_subtitle': 'Alle deine Notizen dauerhaft löschen',
+      'settings_delete_all_confirm_title': 'Alle Notizen Löschen?',
+      'settings_delete_all_confirm_message': 'Diese Aktion kann nicht rückgängig gemacht werden. Alle deine Notizen werden dauerhaft gelöscht.',
       
       // Common
       'cancel': 'Abbrechen',
@@ -1262,7 +1399,7 @@ class LocalizationService {
       'save': 'Speichern',
       'search': 'Suchen',
       'select_language': 'Sprache Auswählen',
-      'language_beta_disclaimer': 'Nur Englisch ist vollständig optimiert. Andere Sprachen sind in der Beta und können Übersetzungsprobleme haben.',
+      'language_beta_disclaimer': 'Nur Englisch ist vollständig optimiert. Andere Sprachen sind in der Beta und können noch Übersetzungsprobleme haben.',
       'delete': 'Löschen',
       'edit': 'Bearbeiten',
       'share': 'Teilen',
@@ -1286,12 +1423,10 @@ class LocalizationService {
       'search_notes_or_ask_ai': 'Notizen durchsuchen oder KI fragen...',
       'note_updated': 'Notiz aktualisiert',
       'note_deleted': 'Notiz gelöscht',
-      'pin_note': 'Notiz Anheften',
-      'unpin_note': 'Notiz Loslösen',
       'note_pinned': 'Notiz angeheftet',
       'note_unpinned': 'Notiz losgelöst',
-      'delete_note': 'Notiz Löschen',
       'edit_note': 'Notiz Bearbeiten',
+      'home_delete_note_confirm': 'Dies löscht "{name}" und alle Einträge dauerhaft.',
       'this_week': 'Diese Woche',
       'today': 'Heute',
       'more': 'Mehr',
@@ -1319,18 +1454,32 @@ class LocalizationService {
       'record_entry': 'Eintrag Aufnehmen',
       'entry_deleted': 'Eintrag gelöscht',
       'not_found': 'Nicht Gefunden',
+      'note_not_found': 'Notiz nicht gefunden',
       'pinned_sections': 'Angeheftete Abschnitte',
+      'unclear_notes': 'Unklare Notizen',
+      'no_folders_found': 'Keine Ordner gefunden',
+      'unclear_notes_warning': '{count} Notizen haben keine klare Zuordnung.\n\nBitte überprüfe diese Notizen manuell, bevor du alle Vorschläge anwendest.',
+      'ok': 'OK',
+      'apply_all': 'Alle anwenden',
+      'reorganize': 'Neu organisieren',
+      'update': 'Aktualisieren',
+      'delete_note': 'Notiz löschen',
+      'delete_note_confirm_title': 'Notiz löschen',
+      'delete_note_confirm_message': 'Bist du sicher, dass du diese Notiz löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.',
+      'pin_note': 'Notiz anheften',
+      'unpin_note': 'Notiz loslösen',
+      'default': 'Standard',
       
       // Create Note Dialog
       'note_name': 'Notizname',
-      'note_name_hint': 'Notizname eingeben',
+      'note_name_hint': 'Gib einen Notiznamen ein',
       
       // AI Actions Menu
       'ai_actions': 'KI-Aktionen',
       'ai_actions_subtitle': 'Wobei kann ich dir helfen?',
       'action_create_note_from_chat': 'Notiz aus Chat erstellen',
-      'type_message_hint': 'Schreibe deine Nachricht in der Suchleiste oben',
-      'type_message_placeholder': 'Schreibe deine Nachricht...',
+      'type_message_hint': 'Schreib deine Nachricht in die Suchleiste',
+      'type_message_placeholder': 'Schreib deine Nachricht...',
       'consolidate_entries': 'Einträge konsolidieren',
       'move_entries': 'Einträge verschieben',
       'create_summary': 'Zusammenfassung erstellen',
@@ -1343,6 +1492,7 @@ class LocalizationService {
       
       // Note Organization
       'organize_notes': 'Notizen Organisieren',
+      'organize': 'Organisieren',
       'view_type': 'Ansichtstyp',
       'sort_by': 'Sortieren Nach',
       'date_updated': 'Aktualisierungsdatum',
@@ -1352,6 +1502,20 @@ class LocalizationService {
       'entry_count': 'Anzahl der Einträge',
       'ascending': 'Aufsteigend',
       'descending': 'Absteigend',
+      'move_to_folder': 'In Ordner Verschieben',
+      'view_note': 'Notiz Ansehen',
+      'dismiss_all': 'Alle Verwerfen',
+      'manage_folders': 'Ordner Verwalten',
+      'create_folder': 'Ordner Erstellen',
+      'change_color': 'Farbe Ändern',
+      'current': 'Aktuell',
+      'create_new_folder': 'Neuen Ordner Erstellen',
+      'failed_to_load': 'Fehler beim Laden der Vorschläge',
+      'note_organized_success': 'Notiz erfolgreich organisiert!',
+      'error': 'Fehler',
+      'error_creating_folder': 'Fehler beim Erstellen des Ordners',
+      'accept': 'Akzeptieren',
+      'apply': 'Anwenden',
       
       // Theme Names
       'theme_modern': 'Modern Dunkel',
@@ -1362,9 +1526,9 @@ class LocalizationService {
       
       // Empty States
       'empty_notes_title': 'Noch Keine Notizen',
-      'empty_notes_message': 'Tippen Sie auf die + Schaltfläche, um Ihre erste Notiz zu erstellen',
+      'empty_notes_message': 'Tippe auf den + Button, um deine erste Notiz zu erstellen',
       'empty_search_title': 'Keine Ergebnisse',
-      'empty_search_message': 'Versuchen Sie einen anderen Suchbegriff',
+      'empty_search_message': 'Versuch einen anderen Suchbegriff',
       
       // Time Formats
       'time_just_now': 'Gerade eben',
@@ -1404,7 +1568,7 @@ class LocalizationService {
       
       // Export
       'export_title': 'Daten Exportieren',
-      'export_choose_format': 'Exportformat wählen:',
+      'export_choose_format': 'Wähle ein Exportformat:',
       'export_json_title': 'JSON',
       'export_json_subtitle': 'Vollständige Sicherung mit allen Daten',
       'export_markdown_title': 'Markdown',
@@ -1415,39 +1579,39 @@ class LocalizationService {
       'export_cancel': 'Abbrechen',
       'export_success': 'Export erfolgreich! {count} Notizen exportiert.',
       'export_failed': 'Export fehlgeschlagen: {error}',
-      'action_find_insights_desc': 'Muster und Verbindungen in Notizen entdecken',
-      'action_insights_example': 'Wiederkehrende Themen in meinen Projektnotizen zeigen',
+      'action_find_insights_desc': 'Muster und Verbindungen in deinen Notizen entdecken',
+      'action_insights_example': 'Zeig mir wiederkehrende Themen in meinen Projektnotizen',
       'action_suggest_tags_desc': 'Relevante Tags für bessere Organisation empfehlen',
       'action_tags_example': 'Alle Notizen mit relevanten Themen taggen',
       'action_smart_search_desc': 'In allen Notizen mit natürlicher Sprache suchen',
-      'action_search_example': 'Alle Notizen über Projektplanung finden',
+      'action_search_example': 'Finde alle Notizen über Projektplanung',
       'extract_action_items': 'Aktionspunkte Extrahieren',
       'organization': 'Organisation',
       
       // Sample Notes - Note 1: Welcome to Voice Notes
       'sample_note_1_name': 'Willkommen bei Voice Notes',
       'sample_note_1_headline_1': 'Erste Schritte',
-      'sample_note_1_entry_1_1': 'Willkommen bei Voice Notes! Diese App wurde entwickelt, um Ihre Gedanken mühelos durch Sprachaufnahmen zu erfassen. Tippen Sie einfach auf die Mikrofon-Schaltfläche am unteren Bildschirmrand, um die Aufnahme zu starten. Die App transkribiert Ihre Sprache automatisch in Text mithilfe fortschrittlicher Spracherkennungstechnologie, sodass Sie sich auf Ihre Ideen konzentrieren können, anstatt zu tippen.',
-      'sample_note_1_entry_1_2': 'Ihre Aufnahmen werden intelligent organisiert. Die KI erstellt Überschriften, die verwandte Inhalte gruppieren. Dies geschieht automatisch. Sie können kontinuierlich aufnehmen und die KI die Organisation übernehmen lassen - sie ist darauf ausgelegt, Kontext zu verstehen und aus Ihrer Sprache sinnvolle Abschnitte zu erstellen.',
-      'sample_note_1_entry_1_3': 'Die Benutzeroberfläche ist sauber. Minimalistisch. Sie können zwischen verschiedenen Ansichtsmodi wechseln, indem Sie die Schaltfläche oben rechts verwenden. Probieren Sie die Rasteransicht für eine visuelle Übersicht oder die minimalistische Liste zum Fokussieren. Beide funktionieren großartig!',
+      'sample_note_1_entry_1_1': 'Willkommen bei Voice Notes! Diese App wurde entwickelt, um deine Gedanken mühelos durch Sprachaufnahmen zu erfassen. Tippe einfach auf den Mikrofon-Button unten am Bildschirm, um die Aufnahme zu starten. Die App transkribiert deine Sprache automatisch in Text mithilfe fortschrittlicher Spracherkennungstechnologie, sodass du dich auf deine Ideen konzentrieren kannst, anstatt zu tippen.',
+      'sample_note_1_entry_1_2': 'Deine Aufnahmen werden intelligent organisiert. Die KI erstellt Überschriften, die verwandte Inhalte gruppieren. Das passiert automatisch. Du kannst kontinuierlich aufnehmen und die KI die Organisation übernehmen lassen - sie ist darauf ausgelegt, Kontext zu verstehen und aus deiner Sprache sinnvolle Abschnitte zu erstellen.',
+      'sample_note_1_entry_1_3': 'Die Benutzeroberfläche ist sauber. Minimalistisch. Du kannst zwischen verschiedenen Ansichtsmodi wechseln, indem du den Button oben rechts nutzt. Probier die Rasteransicht für eine visuelle Übersicht oder die minimalistische Liste zum Fokussieren. Beide funktionieren super!',
       
       'sample_note_1_headline_2': 'Kernfunktionen',
-      'sample_note_1_entry_2_1': 'Die Suchfunktion ermöglicht es Ihnen, jede Notiz oder jeden Eintrag schnell zu finden, indem Sie Schlüsselwörter eingeben. Die Suche funktioniert über alle Ihre Inhalte. Sie können auch den KI-Assistenten verwenden, indem Sie von oben nach unten ziehen. Fragen Sie einfach!',
-      'sample_note_1_entry_2_2': 'Heften Sie wichtige Notizen an, um sie oben zu halten. Perfekt für laufende Projekte oder häufig referenzierte Informationen. Angeheftete Elemente bleiben unabhängig von Ihren Sortiereinstellungen oben und sind sofort zugänglich, wenn Sie sie benötigen.',
-      'sample_note_1_entry_2_3': 'Sie haben die volle Kontrolle. Tippen Sie auf einen beliebigen Eintrag, um ihn zu bearbeiten. Halten Sie gedrückt, um weitere Optionen zu sehen, einschließlich des Verschiebens von Einträgen zwischen Abschnitten oder sogar zu anderen Notizen. Sie können auch manuell neue Abschnitte erstellen, indem Sie auf Überschriften tippen und alles neu organisieren.',
-      'sample_note_1_entry_2_4': 'Der KI-Assistent ist immer verfügbar. Ziehen Sie vom oberen Bildschirmrand nach unten. Bitten Sie ihn, Ihre Notizen zusammenzufassen, bestimmte Informationen zu finden oder neue Notizen aus Ihren Fragen zu erstellen. Er hat Zugriff auf alle Ihre Notizen und liefert kontextbezogene Antworten basierend auf Ihren Inhalten.',
+      'sample_note_1_entry_2_1': 'Die Suchfunktion ermöglicht es dir, jede Notiz oder jeden Eintrag schnell zu finden, indem du Schlüsselwörter eingibst. Die Suche funktioniert über alle deine Inhalte. Du kannst auch den KI-Assistenten verwenden, indem du von oben nach unten ziehst. Frag einfach!',
+      'sample_note_1_entry_2_2': 'Hefte wichtige Notizen an, um sie oben zu halten. Perfekt für laufende Projekte oder häufig referenzierte Informationen. Angeheftete Elemente bleiben unabhängig von deinen Sortiereinstellungen oben und sind sofort zugänglich, wenn du sie brauchst.',
+      'sample_note_1_entry_2_3': 'Du hast die volle Kontrolle. Tippe auf einen beliebigen Eintrag, um ihn zu bearbeiten. Halte gedrückt, um weitere Optionen zu sehen, einschließlich des Verschiebens von Einträgen zwischen Abschnitten oder sogar zu anderen Notizen. Du kannst auch manuell neue Abschnitte erstellen, indem du auf Überschriften tippst und alles neu organisierst.',
+      'sample_note_1_entry_2_4': 'Der KI-Assistent ist immer verfügbar. Zieh vom oberen Bildschirmrand nach unten. Bitte ihn, deine Notizen zusammenzufassen, bestimmte Informationen zu finden oder neue Notizen aus deinen Fragen zu erstellen. Er hat Zugriff auf alle deine Notizen und liefert kontextbezogene Antworten basierend auf deinen Inhalten.',
       
       'sample_note_1_headline_3': 'Tipps für Beste Ergebnisse',
-      'sample_note_1_entry_3_1': 'Für die beste Transkriptionsqualität sprechen Sie deutlich. Ein natürliches Tempo funktioniert am besten. Die KI versteht vollständige Sätze besser, kann aber auch mit Fragmenten und schnellen Gedanken umgehen. Wenn Sie sich in einer lauten Umgebung befinden, bleiben Sie nah an Ihrem Gerät und sprechen Sie etwas lauter als gewöhnlich.',
-      'sample_note_1_entry_3_2': 'Erstellen Sie verschiedene Notizen für verschiedene Kontexte. Arbeitstreffen. Persönliche Ideen. Projektplanung. Tägliche Journale. Lernnotizen. Diese Organisation hilft Ihnen, Informationen später zu finden und hält Ihre Gedanken natürlich kategorisiert.',
-      'sample_note_1_entry_3_3': 'Die KI lernt aus Ihren Nutzungsmustern. Sie erkennt, wie Sie Inhalte organisieren. Passen Sie die Vorschläge der KI gerne manuell an. Dies hilft dem System, sich im Laufe der Zeit zu verbessern und sich an Ihren einzigartigen Workflow und Denkstil anzupassen!',
+      'sample_note_1_entry_3_1': 'Für die beste Transkriptionsqualität sprich klar und deutlich. Ein natürliches Tempo funktioniert am besten. Die KI versteht vollständige Sätze besser, kann aber auch mit Fragmenten und schnellen Gedanken umgehen. Wenn du dich in einer lauten Umgebung befindest, bleib nah an deinem Gerät und sprich etwas lauter als gewöhnlich.',
+      'sample_note_1_entry_3_2': 'Erstelle verschiedene Notizen für verschiedene Kontexte. Arbeitstreffen. Persönliche Ideen. Projektplanung. Tägliche Journale. Lernnotizen. Diese Organisation hilft dir, Informationen später zu finden und hält deine Gedanken natürlich kategorisiert.',
+      'sample_note_1_entry_3_3': 'Die KI lernt aus deinen Nutzungsmustern. Sie erkennt, wie du Inhalte organisierst. Passe die Vorschläge der KI gerne manuell an. Das hilft dem System, sich im Laufe der Zeit zu verbessern und sich an deinen einzigartigen Workflow und Denkstil anzupassen!',
       
       // Sample Notes - Note 2: Q4 Product Planning
       'sample_note_2_name': 'Q4 Produktplanung',
       'sample_note_2_headline_1': 'Prioritäre Aktionspunkte',
-      'sample_note_2_entry_1_1': 'Planen Sie eine umfassende Review-Sitzung mit dem Design-Team. Wir benötigen ihr Feedback bis Ende der Woche. Dies ist kritisch für den Q4-Start-Zeitplan. Stellen Sie sicher, dass sowohl die Senior-Designer als auch das UX-Research-Team einbezogen werden, damit alle abgestimmt sind.',
-      'sample_note_2_entry_1_2': 'Follow-up-Meeting nächsten Dienstag um 14 Uhr. Senden Sie Kalendereinladungen an alle Stakeholder. Produkt-, Engineering- und Marketing-Teams. Bereiten Sie vorab ein kurzes Status-Update-Dokument vor, um das Meeting fokussiert und effizient zu halten.',
-      'sample_note_2_entry_1_3': 'Beginnen Sie mit der Ausarbeitung des technischen Spezifikationsdokuments. Arbeiten Sie mit den Engineering-Leitern zusammen. Stellen Sie sicher, dass alle Anforderungen technisch machbar und klar definiert sind. Zielabschluss bis nächsten Freitag!',
+      'sample_note_2_entry_1_1': 'Plan eine umfassende Review-Session mit dem Design-Team. Wir brauchen ihr Feedback bis Ende der Woche. Das ist kritisch für den Q4-Start-Zeitplan. Stell sicher, dass sowohl die Senior-Designer als auch das UX-Research-Team einbezogen werden, damit alle auf dem gleichen Stand sind.',
+      'sample_note_2_entry_1_2': 'Follow-up-Meeting nächsten Dienstag um 14 Uhr. Schick Kalendereinladungen an alle Stakeholder. Produkt-, Engineering- und Marketing-Teams. Bereite vorab ein kurzes Status-Update-Dokument vor, um das Meeting fokussiert und effizient zu halten.',
+      'sample_note_2_entry_1_3': 'Beginne mit der Ausarbeitung des technischen Spezifikationsdokuments. Arbeite mit den Engineering-Leitern zusammen. Stelle sicher, dass alle Anforderungen technisch machbar und klar definiert sind. Zielabschluss bis nächsten Freitag!',
       
       'sample_note_2_headline_2': 'Wichtige Diskussionspunkte',
       'sample_note_2_entry_2_1': 'Wir hatten eine ausführliche Diskussion über den Zeitplan für den Rollout des neuen Features. Nach Berücksichtigung verschiedener Ansätze stimmte das Team einstimmig für eine phasenweise Rollout-Strategie. Phase 1 zielt auf Power-User im Oktober ab, Phase 2 wird auf alle User im November ausgeweitet, und Phase 3 führt im Dezember erweiterte Funktionen ein.',
@@ -1455,24 +1619,24 @@ class LocalizationService {
       'sample_note_2_entry_2_3': 'Das Marketing möchte den Produktstart mit der jährlichen Konferenz im Dezember ausrichten. Dies gibt uns eine großartige Plattform für die Ankündigung, fügt aber auch Druck auf den Zeitplan hinzu. Das Team ist zuversichtlich, dass wir diese Frist mit der aktuellen Ressourcenallokation einhalten können.',
       
       'sample_note_2_headline_3': 'Follow-up Erforderlich',
-      'sample_note_2_entry_3_1': 'Senden Sie bis Ende heute eine umfassende Meeting-Zusammenfassung an alle Teilnehmer. Fügen Sie die getroffenen Schlüsselentscheidungen, Aktionspunkte mit zugewiesenen Eigentümern und den aktualisierten Zeitplan hinzu. Stellen Sie sicher, dass Sie das Executive-Team in CC setzen für Sichtbarkeit.',
-      'sample_note_2_entry_3_2': 'Kontaktieren Sie das Rechtsteam, um sicherzustellen, dass alle Compliance-Anforderungen für die neuen Datenverarbeitungsfunktionen erfüllt sind. Planen Sie Anfang nächster Woche ein Meeting mit ihnen, um die technischen Details durchzugehen.',
+      'sample_note_2_entry_3_1': 'Schick bis Ende heute eine umfassende Meeting-Zusammenfassung an alle Teilnehmer. Füge die getroffenen Schlüsselentscheidungen, Aktionspunkte mit zugewiesenen Eigentümern und den aktualisierten Zeitplan hinzu. Setze das Executive-Team in CC für Sichtbarkeit.',
+      'sample_note_2_entry_3_2': 'Kontaktiere das Rechtsteam, um sicherzustellen, dass alle Compliance-Anforderungen für die neuen Datenverarbeitungsfunktionen erfüllt sind. Plane Anfang nächster Woche ein Meeting mit ihnen, um die technischen Details durchzugehen.',
       
       // Sample Notes - Note 3: Innovation Brainstorm
       'sample_note_3_name': 'Innovations-Brainstorming',
       'sample_note_3_headline_1': 'App-Konzepte',
-      'sample_note_3_entry_1_1': 'Idee für eine persönliche Produktivitäts-App, die KI verwendet, um tägliche Gewohnheiten zu verfolgen und intelligente Einblicke zu bieten. Die App würde aus Ihren Mustern lernen und optimale Zeiten für verschiedene Aktivitäten vorschlagen. Sie könnte sich mit Kalender, Gesundheitsdaten und sogar Wetter integrieren, um kontextbezogene Empfehlungen zu geben.',
-      'sample_note_3_entry_1_2': 'Konzept für ein kollaboratives Workspace-Tool, das Sprachnotizen nahtlos mit traditionellem Task-Management integriert. Teams könnten schnelle Updates, Brainstorming-Sessions oder Meeting-Notizen aufnehmen, und die KI würde automatisch Aktionspunkte extrahieren, Aufgaben zuweisen und Projektzeitpläne aktualisieren. Dies könnte revolutionieren, wie verteilte Teams zusammenarbeiten.',
+      'sample_note_3_entry_1_1': 'Idee für eine persönliche Produktivitäts-App, die KI verwendet, um tägliche Gewohnheiten zu verfolgen und intelligente Einblicke zu bieten. Die App würde aus deinen Mustern lernen und optimale Zeiten für verschiedene Aktivitäten vorschlagen. Sie könnte sich mit Kalender, Gesundheitsdaten und sogar Wetter integrieren, um kontextbezogene Empfehlungen zu geben.',
+      'sample_note_3_entry_1_2': 'Konzept für ein kollaboratives Workspace-Tool, das Sprachnotizen nahtlos mit traditionellem Task-Management integriert. Teams könnten schnelle Updates, Brainstorming-Sessions oder Meeting-Notizen aufnehmen, und die KI würde automatisch Aktionspunkte extrahieren, Aufgaben zuweisen und Projektzeitpläne aktualisieren. Das könnte revolutionieren, wie verteilte Teams zusammenarbeiten.',
       'sample_note_3_entry_1_3': 'Idee für eine Bildungsplattform, die Spaced Repetition und Sprachinteraktion verwendet, um Menschen beim Sprachenlernen zu helfen. Anstelle traditioneller Karteikarten würden Benutzer natürliche Gespräche mit einer KI führen, die sich an ihr Lerntempo und ihre Interessen anpasst. Der Sprachaspekt macht es natürlicher als textbasiertes Lernen.',
       
       'sample_note_3_headline_2': 'Reflexionen',
-      'sample_note_3_entry_2_1': 'Denke darüber nach, wie Sprachschnittstellen natürlicher und intuitiver werden. Was wäre, wenn wir Sprachnotizen nicht nur zum Aufnehmen verwenden könnten, sondern um automatische tägliche Zusammenfassungen zu erstellen? Stellen Sie sich vor, jeden Tag damit zu beenden, eine KI-generierte Zusammenfassung von allem zu überprüfen, was Sie erfasst haben - Ihre Gedanken, Aufgaben und Erkenntnisse, alle organisiert.',
+      'sample_note_3_entry_2_1': 'Denke darüber nach, wie Sprachschnittstellen natürlicher und intuitiver werden. Was wäre, wenn wir Sprachnotizen nicht nur zum Aufnehmen verwenden könnten, sondern um automatische tägliche Zusammenfassungen zu erstellen? Stell dir vor, jeden Tag damit zu beenden, eine KI-generierte Zusammenfassung von allem zu überprüfen, was du erfasst hast - deine Gedanken, Aufgaben und Erkenntnisse, alle organisiert.',
       'sample_note_3_entry_2_2': 'Die Zukunft von Produktivitätstools könnte nicht darin bestehen, mehr Funktionen hinzuzufügen, sondern Reibung zu entfernen. Sprache ist von Natur aus weniger reibungsbehaftet als Tippen. Wenn wir Organisation und Abruf genauso mühelos gestalten können, könnten wir grundlegend ändern, wie Menschen Informationen erfassen und nutzen.',
       
       'sample_note_3_headline_3': 'Forschungsthemen',
       'sample_note_3_entry_3_1': 'Muss erforschen, wie KI Kontext in Sprachaufnahmen besser verstehen kann. Aktuelle Systeme sind gut bei der Transkription, haben aber Schwierigkeiten mit dem Verständnis von Absicht, Emotion und implizitem Kontext. Was wäre nötig, um ein System zu bauen, das wirklich versteht, was jemand meint, nicht nur was er sagt?',
-      'sample_note_3_entry_3_2': 'Was sind die Best Practices für die Organisation und den Abruf großer Mengen an Sprachdaten? Traditionelle Suche funktioniert für Text, aber Sprache fügt Dimensionen wie Ton, Tempo und Emotion hinzu. Wie können wir dies durchsuchbar und nützlich machen? Gibt es neue Interaktionsparadigmen, die wir erkunden sollten?',
-      'sample_note_3_entry_3_3': 'Datenschutz- und Sicherheitserwägungen für Sprachdaten sind entscheidend. Benutzer müssen darauf vertrauen können, dass ihre persönlichen Gedanken und Gespräche geschützt sind. Erforschen Sie End-to-End-Verschlüsselungsoptionen und erkunden Sie lokale Verarbeitungsmöglichkeiten, um an Server gesendete Daten zu minimieren.',
+      'sample_note_3_entry_3_2': 'Was sind die Best Practices für die Organisation und den Abruf großer Mengen an Sprachdaten? Traditionelle Suche funktioniert für Text, aber Sprache fügt Dimensionen wie Ton, Tempo und Emotion hinzu. Wie können wir das durchsuchbar und nützlich machen? Gibt es neue Interaktionsparadigmen, die wir erkunden sollten?',
+      'sample_note_3_entry_3_3': 'Datenschutz- und Sicherheitserwägungen für Sprachdaten sind entscheidend. Benutzer müssen darauf vertrauen können, dass ihre persönlichen Gedanken und Gespräche geschützt sind. End-to-End-Verschlüsselungsoptionen erforschen und lokale Verarbeitungsmöglichkeiten erkunden, um an Server gesendete Daten zu minimieren.',
     },
   };
 }

@@ -178,12 +178,13 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildAutoCloseToggle(BuildContext context, ThemeConfig themeConfig) {
     return Consumer<SettingsProvider>(
       builder: (context, provider, child) {
+        final localization = LocalizationService();
         return _buildTile(
           context,
           themeConfig,
           icon: Icons.timer,
-          title: 'Auto-Close After Entry',
-          subtitle: 'Automatically close note after 2 seconds',
+          title: localization.t('settings_auto_close_title'),
+          subtitle: localization.t('settings_auto_close_subtitle'),
           trailing: Switch(
             value: provider.settings.autoCloseAfterEntry,
             activeTrackColor: themeConfig.primaryColor,
@@ -602,6 +603,7 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildOrganizeNowButton(BuildContext context, ThemeConfig themeConfig) {
     return Consumer3<NotesProvider, SettingsProvider, FoldersProvider>(
       builder: (context, notesProvider, settingsProvider, foldersProvider, child) {
+        final localization = LocalizationService();
         // Count unorganized notes (both null and explicit unorganized folder ID)
         final unorganizedFolderId = foldersProvider.unorganizedFolderId;
         final unorganizedCount = notesProvider.notes.where((n) {
@@ -612,8 +614,10 @@ class SettingsScreen extends StatelessWidget {
           context,
           themeConfig,
           icon: Icons.folder_special,
-          title: 'Unorganized Notes: $unorganizedCount',
-          subtitle: unorganizedCount > 0 ? 'Tap to organize now' : 'All notes organized!',
+          title: localization.t('settings_unorganized_notes', {'count': unorganizedCount.toString()}),
+          subtitle: unorganizedCount > 0 
+              ? localization.t('settings_tap_to_organize')
+              : localization.t('settings_all_organized'),
           trailing: unorganizedCount > 0 ? Icon(
             Icons.arrow_forward_ios,
             size: 16,
@@ -641,7 +645,7 @@ class SettingsScreen extends StatelessWidget {
       themeConfig,
       icon: Icons.upload_file,
       title: localization.t('export_title'),
-      subtitle: 'Backup your notes as JSON, Markdown, or CSV',
+      subtitle: localization.t('settings_export_subtitle'),
       onTap: () {
         HapticService.light();
         showDialog(
@@ -653,12 +657,13 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildDeleteAllNotesButton(BuildContext context, ThemeConfig themeConfig) {
+    final localization = LocalizationService();
     return _buildTile(
       context,
       themeConfig,
       icon: Icons.delete_forever,
-      title: 'Delete All Notes',
-      subtitle: 'Permanently delete all your notes',
+      title: localization.t('settings_delete_all_title'),
+      subtitle: localization.t('settings_delete_all_subtitle'),
       onTap: () {
         HapticService.light();
         _showDeleteAllNotesDialog(context);
@@ -827,6 +832,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showDeleteAllNotesDialog(BuildContext context) {
+    final localization = LocalizationService();
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -852,14 +858,14 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: AppTheme.spacing12),
                       Text(
-                        'Delete All Notes?',
+                        localization.t('settings_delete_all_confirm_title'),
                         style: Theme.of(context).textTheme.displaySmall,
                       ),
                     ],
                   ),
                   const SizedBox(height: AppTheme.spacing16),
                   Text(
-                    'This action cannot be undone. All your notes will be permanently deleted.',
+                    localization.t('settings_delete_all_confirm_message'),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.textSecondary,
                         ),

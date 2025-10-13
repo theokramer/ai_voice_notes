@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 
 class CreateFolderDialog extends StatefulWidget {
@@ -262,12 +263,12 @@ class _CreateFolderDialogState extends State<CreateFolderDialog> {
                         HapticService.light();
                         Navigator.of(context).pop();
                       },
-                      child: const Text('Cancel'),
+                      child: Text(LocalizationService().t('cancel')),
                     ),
                     const SizedBox(width: 12),
                     FilledButton(
                       onPressed: _handleCreate,
-                      child: const Text('Create'),
+                      child: Text(LocalizationService().t('create')),
                     ),
                   ],
                 ),

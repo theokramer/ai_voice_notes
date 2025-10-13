@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/folder.dart';
 import '../../models/organization_suggestion.dart';
 import '../../providers/folders_provider.dart';
+import '../../services/localization_service.dart';
 
 /// Dialog for picking or creating a folder for organization
 class FolderPickerDialog extends StatefulWidget {
@@ -95,7 +96,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating folder: $e'),
+            content: Text('${LocalizationService().t('error_creating_folder')}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -173,7 +174,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
                       children: [
                         const Icon(Icons.folder_outlined, size: 16, color: Colors.blue),
                         const SizedBox(width: 8),
-                        const Text('Current: ', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text('${LocalizationService().t('current')}: ', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                         Text(_currentFolderName!, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
                     ),
@@ -223,7 +224,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
                       const Divider(),
                       ListTile(
                         leading: const Icon(Icons.add_circle_outline),
-                        title: const Text('Create new folder'),
+                        title: Text(LocalizationService().t('create_new_folder')),
                         onTap: () => setState(() => _isCreatingNew = true),
                       ),
                       
@@ -244,12 +245,12 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
                                 children: [
                                   TextButton(
                                     onPressed: () => setState(() => _isCreatingNew = false),
-                                    child: const Text('Cancel'),
+                                    child: Text(LocalizationService().t('cancel')),
                                   ),
                                   const Spacer(),
                                   FilledButton(
                                     onPressed: () => _createFolderAndReturn(context, _newFolderController.text),
-                                    child: const Text('Create'),
+                                    child: Text(LocalizationService().t('create')),
                                   ),
                                 ],
                               ),

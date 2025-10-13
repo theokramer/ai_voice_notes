@@ -5,6 +5,7 @@ import '../../models/folder.dart';
 import '../../models/organization_suggestion.dart';
 import '../../providers/folders_provider.dart';
 import '../../services/haptic_service.dart';
+import '../../services/localization_service.dart';
 import 'folder_picker_dialog.dart';
 
 /// Displays a single note organization suggestion with actions
@@ -170,7 +171,7 @@ class NoteOrganizationCard extends StatelessWidget {
                   child: FilledButton.icon(
                     onPressed: onApply,
                     icon: const Icon(Icons.check_circle_outline, size: 18),
-                    label: const Text('Akzeptieren'),
+                    label: Text(LocalizationService().t('accept')),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       backgroundColor: Colors.green.shade700,

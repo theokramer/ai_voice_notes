@@ -5,6 +5,7 @@ import '../../models/folder.dart';
 import '../../models/organization_suggestion.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/folders_provider.dart';
+import '../../services/localization_service.dart';
 import 'note_organization_card.dart';
 
 /// Groups organization suggestions by folder with expand/collapse functionality
@@ -141,7 +142,7 @@ class _FolderGroupCardState extends State<FolderGroupCard> {
                                   color: Colors.green.shade900,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: const Text('NEW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                child: Text(LocalizationService().t('new'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                               ),
                             Expanded(
                               child: Text(

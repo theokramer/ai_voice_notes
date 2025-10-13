@@ -9,6 +9,7 @@ import '../providers/notes_provider.dart';
 import '../providers/folders_provider.dart';
 import '../services/openai_service.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 import '../widgets/loading_indicator.dart';
 import '../widgets/organization/folder_group_card.dart';
 
@@ -268,7 +269,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load suggestions: $e'),
+            content: Text('${LocalizationService().t('failed_to_load')}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -287,15 +288,14 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
       await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Unklare Notizen'),
+          title: Text(LocalizationService().t('unclear_notes')),
           content: Text(
-            '${unclearSuggestions.length} Notizen haben keine klare Zuordnung.\n\n'
-            'Bitte überprüfe diese Notizen manuell, bevor du alle Vorschläge anwendest.'
+            LocalizationService().t('unclear_notes_warning', {'count': unclearSuggestions.length.toString()})
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('OK'),
+              child: Text(LocalizationService().t('ok')),
             ),
           ],
         ),
@@ -432,10 +432,10 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Notiz erfolgreich organisiert!'),
+            SnackBar(
+              content: Text(LocalizationService().t('note_organized_success')),
               backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -445,7 +445,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fehler: $e'),
+            content: Text('${LocalizationService().t('error')}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -457,17 +457,17 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Notiz löschen'),
-        content: const Text('Möchtest du diese Notiz wirklich löschen?'),
+        title: Text(LocalizationService().t('delete_note_confirm_title')),
+        content: Text(LocalizationService().t('delete_note_confirm_message')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Abbrechen'),
+            child: Text(LocalizationService().t('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Löschen'),
+            child: Text(LocalizationService().t('delete')),
           ),
         ],
       ),
@@ -504,7 +504,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
             TextButton.icon(
               onPressed: _applyAllSuggestions,
               icon: const Icon(Icons.auto_fix_high),
-              label: const Text('Alle anwenden'),
+              label: Text(LocalizationService().t('apply_all')),
             ),
         ],
       ),
@@ -527,7 +527,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
                     await _loadSuggestions();
                   },
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Neu organisieren'),
+                  label: Text(LocalizationService().t('reorganize')),
                   backgroundColor: Theme.of(context).primaryColor,
                 ),
               ),
@@ -620,7 +620,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
             FilledButton.icon(
               onPressed: _loadSuggestions,
               icon: const Icon(Icons.refresh),
-              label: const Text('Aktualisieren'),
+              label: Text(LocalizationService().t('update')),
             ),
           ],
         ),

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/folder.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 
 /// Quick dialog to move a note to a different folder
@@ -267,7 +268,7 @@ class _QuickMoveDialogState extends State<QuickMoveDialog> {
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: Text(LocalizationService().t('cancel')),
               ),
             ),
           ],

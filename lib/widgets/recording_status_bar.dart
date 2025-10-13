@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/recording_queue_service.dart';
+import '../services/localization_service.dart';
 import '../providers/notes_provider.dart';
 import '../providers/folders_provider.dart';
 import '../models/folder.dart';
@@ -208,7 +209,7 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
                 onPressed: () {
                   queueService.clearCompleted();
                 },
-                child: const Text('Dismiss All'),
+                child: Text(LocalizationService().t('dismiss_all')),
               ),
             ),
         ],
@@ -264,17 +265,17 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
         trailing = PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, size: 20),
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'move',
-              child: Text('Move to folder'),
+              child: Text(LocalizationService().t('move_to_folder')),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'view',
-              child: Text('View note'),
+              child: Text(LocalizationService().t('view_note')),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'delete',
-              child: Text('Delete'),
+              child: Text(LocalizationService().t('delete')),
             ),
           ],
           onSelected: (value) async {
@@ -492,9 +493,9 @@ class _FolderPickerDialogState extends State<_FolderPickerDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Title
-                const Text(
-                  'Move to Folder',
-                  style: TextStyle(
+                Text(
+                  LocalizationService().t('move_to_folder'),
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
@@ -559,10 +560,10 @@ class _FolderPickerDialogState extends State<_FolderPickerDialog> {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 350),
                   child: _filteredFolders.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Text('Keine Ordner gefunden'),
+                            padding: const EdgeInsets.all(20),
+                            child: Text(LocalizationService().t('no_folders_found')),
                           ),
                         )
                       : ListView.separated(
@@ -592,9 +593,9 @@ class _FolderPickerDialogState extends State<_FolderPickerDialog> {
                                         color: Colors.grey.withOpacity(0.3),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text(
-                                        'Default',
-                                        style: TextStyle(fontSize: 10, color: Colors.grey),
+                                      child: Text(
+                                        LocalizationService().t('default'),
+                                        style: const TextStyle(fontSize: 10, color: Colors.grey),
                                       ),
                                     ),
                                   ],
@@ -624,7 +625,7 @@ class _FolderPickerDialogState extends State<_FolderPickerDialog> {
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
+                    child: Text(LocalizationService().t('cancel')),
                   ),
                 ),
               ],

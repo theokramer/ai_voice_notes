@@ -10,6 +10,7 @@ import '../providers/settings_provider.dart';
 import '../services/haptic_service.dart';
 import '../services/openai_service.dart';
 import '../services/export_service.dart';
+import '../services/localization_service.dart';
 import '../widgets/tag_editor.dart';
 import '../widgets/quick_move_dialog.dart';
 import '../widgets/custom_snackbar.dart';
@@ -279,8 +280,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
               Navigator.pop(context);
             }
           });
-          return const Scaffold(
-            body: Center(child: Text('Note not found')),
+          return Scaffold(
+            body: Center(child: Text(LocalizationService().t('note_not_found'))),
           );
         }
 

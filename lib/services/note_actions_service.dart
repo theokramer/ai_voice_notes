@@ -4,6 +4,7 @@ import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import '../providers/folders_provider.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 import '../widgets/quick_move_dialog.dart';
 import '../widgets/custom_snackbar.dart';
 
@@ -45,17 +46,17 @@ class NoteActionsService {
               const SizedBox(height: 8),
               ListTile(
                 leading: const Icon(Icons.folder_outlined),
-                title: const Text('Move to folder'),
+                title: Text(LocalizationService().t('move_to_folder')),
                 onTap: () => Navigator.of(context).pop('move'),
               ),
               ListTile(
                 leading: Icon(note.isPinned ? Icons.push_pin : Icons.push_pin_outlined),
-                title: Text(note.isPinned ? 'Unpin note' : 'Pin note'),
+                title: Text(note.isPinned ? LocalizationService().t('unpin_note') : LocalizationService().t('pin_note')),
                 onTap: () => Navigator.of(context).pop('pin'),
               ),
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('Delete note', style: TextStyle(color: Colors.red)),
+                title: Text(LocalizationService().t('delete_note'), style: const TextStyle(color: Colors.red)),
                 onTap: () => Navigator.of(context).pop('delete'),
               ),
               const SizedBox(height: 20),
@@ -147,17 +148,17 @@ class NoteActionsService {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Note'),
-        content: const Text('Are you sure you want to delete this note? This action cannot be undone.'),
+        title: Text(LocalizationService().t('delete_note_confirm_title')),
+        content: Text(LocalizationService().t('delete_note_confirm_message')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(LocalizationService().t('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: Text(LocalizationService().t('delete')),
           ),
         ],
       ),

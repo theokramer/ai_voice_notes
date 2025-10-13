@@ -611,7 +611,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                   const SizedBox(height: AppTheme.spacing8),
                   Text(
-                    'This will permanently delete "${note.name}" and all its entries.',
+                    LocalizationService().t('home_delete_note_confirm', {'name': note.name}),
                     style: Theme.of(context).textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -1224,7 +1224,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         );
                       },
                       icon: const Icon(Icons.auto_fix_high),
-                      label: const Text('Organize'),
+                      label: Text(LocalizationService().t('organize')),
                       backgroundColor: Theme.of(context).colorScheme.primary,
                     );
                   } else {

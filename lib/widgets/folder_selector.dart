@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/folder.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 
 /// Dropdown selector for choosing which folder to view
@@ -321,7 +322,7 @@ class _FolderMenuSheetState extends State<_FolderMenuSheet> {
                     // Manage folders
                     ListTile(
                       leading: const Icon(Icons.settings, size: 24),
-                      title: const Text('Manage Folders'),
+                      title: Text(LocalizationService().t('manage_folders')),
                       onTap: () {
                         Navigator.of(context).pop(
                           _FolderMenuResult(isManageAction: true),

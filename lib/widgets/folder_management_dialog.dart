@@ -5,6 +5,7 @@ import '../models/folder.dart';
 import '../providers/folders_provider.dart';
 import '../providers/notes_provider.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 import 'create_folder_dialog.dart';
 
@@ -205,7 +206,7 @@ class _FolderManagementDialogState extends State<FolderManagementDialog> {
                     }
                   },
                   icon: const Icon(Icons.add),
-                  label: const Text('Create Folder'),
+                  label: Text(LocalizationService().t('create_folder')),
                 ),
               ),
             ),
@@ -321,33 +322,33 @@ class _FolderListItemState extends State<_FolderListItem> {
             }
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'rename',
               child: Row(
                 children: [
-                  Icon(Icons.edit, size: 20),
-                  SizedBox(width: 12),
-                  Text('Rename'),
+                  const Icon(Icons.edit, size: 20),
+                  const SizedBox(width: 12),
+                  Text(LocalizationService().t('rename')),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'changeColor',
               child: Row(
                 children: [
-                  Icon(Icons.color_lens, size: 20),
-                  SizedBox(width: 12),
-                  Text('Change Color'),
+                  const Icon(Icons.color_lens, size: 20),
+                  const SizedBox(width: 12),
+                  Text(LocalizationService().t('change_color')),
                 ],
               ),
             ),
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'delete',
               child: Row(
                 children: [
-                  Icon(Icons.delete, size: 20, color: Colors.red),
-                  SizedBox(width: 12),
-                  Text('Delete', style: TextStyle(color: Colors.red)),
+                  const Icon(Icons.delete, size: 20, color: Colors.red),
+                  const SizedBox(width: 12),
+                  Text(LocalizationService().t('delete'), style: const TextStyle(color: Colors.red)),
                 ],
               ),
             ),
@@ -408,7 +409,7 @@ class _FolderListItemState extends State<_FolderListItem> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
+                        child: Text(LocalizationService().t('cancel')),
                       ),
                       const SizedBox(width: 12),
                       FilledButton(
@@ -418,7 +419,7 @@ class _FolderListItemState extends State<_FolderListItem> {
                             Navigator.of(context).pop(name);
                           }
                         },
-                        child: const Text('Rename'),
+                        child: Text(LocalizationService().t('rename')),
                       ),
                     ],
                   ),
@@ -473,7 +474,7 @@ class _FolderListItemState extends State<_FolderListItem> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('Cancel'),
+                        child: Text(LocalizationService().t('cancel')),
                       ),
                       const SizedBox(width: 12),
                       FilledButton(
@@ -481,7 +482,7 @@ class _FolderListItemState extends State<_FolderListItem> {
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.red,
                         ),
-                        child: const Text('Delete'),
+                        child: Text(LocalizationService().t('delete')),
                       ),
                     ],
                   ),
@@ -579,7 +580,7 @@ class _FolderListItemState extends State<_FolderListItem> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
+                        child: Text(LocalizationService().t('cancel')),
                       ),
                     ],
                   ),
