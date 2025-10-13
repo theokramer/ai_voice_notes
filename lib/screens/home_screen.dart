@@ -28,6 +28,9 @@ import '../widgets/minimalistic_note_card.dart';
 import '../widgets/folder_selector.dart';
 import '../widgets/recording_status_bar.dart';
 import '../widgets/folder_management_dialog.dart';
+import '../widgets/home/home_search_overlay.dart';
+import '../widgets/home/home_ask_ai_button.dart';
+import '../widgets/home/home_animated_header.dart';
 import 'note_detail_screen.dart';
 import 'settings_screen.dart';
 import 'organization_screen.dart';
@@ -955,10 +958,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       // Animated Header with smooth collapsing effect
                       SliverPersistentHeader(
                         pinned: true,
-                        delegate: _AnimatedHeaderDelegate(
-                          builder: _buildAnimatedHeader,
-                          expandedHeight: 140.0 + MediaQuery.of(context).padding.top, // Increased by 10px to prevent overflow (greeting + search bar)
-                          collapsedHeight: 56.0 + MediaQuery.of(context).padding.top, // Smaller collapsed height
+                        delegate: AnimatedHeaderDelegate(
+                          builder: (progress) => HomeAnimatedHeader(
+                            progress: progress,
+                            greeting: _getGreeting(),
+                            onSearchTap: () {
+                              HapticService.light();
+                              setState(() => _showSearchOverlay = true);
+                              _searchAnimationController.forward();
+                            },
+                            onOrganizeTap: _showOrganizeBottomSheet,
+                          ),
+                          expandedHeight: 140.0 + MediaQuery.of(context).padding.top,
+                          collapsedHeight: 56.0 + MediaQuery.of(context).padding.top,
                         ),
                       ),
                       // Folder Selector
