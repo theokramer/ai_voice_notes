@@ -9,6 +9,7 @@ import '../providers/folders_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/haptic_service.dart';
 import '../services/openai_service.dart';
+import '../services/export_service.dart';
 import '../widgets/tag_editor.dart';
 import '../widgets/quick_move_dialog.dart';
 import '../widgets/custom_snackbar.dart';
@@ -206,6 +207,60 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
   // Pin and delete methods removed per user request
 
+  Future<void> _shareNote(Note note, BuildContext context) async {
+    try {
+      await HapticService.light();
+      
+      final foldersProvider = context.read<FoldersProvider>();
+      final folder = note.folderId != null 
+          ? foldersProvider.getFolderById(note.folderId!)
+          : null;
+      
+      // Export as human-readable Markdown
+      final content = await ExportService.exportNoteAsMarkdown(
+        note: note,
+        folderName: folder?.name,
+      );
+      
+      final filename = '${note.name.replaceAll(RegExp(r'[^\w\s-]'), '')}_${DateTime.now().millisecondsSinceEpoch}.md';
+      
+      // Get the render box for positioning the share dialog on iPad
+      final box = context.findRenderObject() as RenderBox?;
+      final sharePositionOrigin = box != null
+          ? box.localToGlobal(Offset.zero) & box.size
+          : null;
+      
+      await ExportService.shareExport(
+        content: content,
+        filename: filename,
+        mimeType: 'text/markdown',
+        sharePositionOrigin: sharePositionOrigin,
+      );
+      
+      await HapticService.success();
+      if (mounted) {
+        final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
+        CustomSnackbar.show(
+          context,
+          message: 'Note exported successfully',
+          type: SnackbarType.success,
+          themeConfig: themeConfig,
+        );
+      }
+    } catch (e) {
+      await HapticService.error();
+      if (mounted) {
+        final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
+        CustomSnackbar.show(
+          context,
+          message: 'Failed to export note: ${e.toString()}',
+          type: SnackbarType.error,
+          themeConfig: themeConfig,
+        );
+      }
+    }
+  }
+
   void _toggleTagEditor() {
     HapticService.light();
       setState(() {
@@ -282,7 +337,12 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                               maxLines: 1,
                             ),
                           ),
-                          // Actions removed (pin/delete) per user request
+                          // Share button for exporting single note
+                          IconButton(
+                            icon: const Icon(Icons.share),
+                            onPressed: () => _shareNote(note, context),
+                            tooltip: 'Share note',
+                          ),
                         ],
                       ),
                     ),

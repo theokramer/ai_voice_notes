@@ -15,6 +15,7 @@ import '../widgets/custom_snackbar.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/theme_preview_card.dart';
 import '../widgets/settings/settings_section.dart';
+import '../widgets/export_dialog.dart';
 import 'organization_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -105,6 +106,7 @@ class SettingsScreen extends StatelessWidget {
                     SettingsSection(
                       title: 'Data',
                       children: [
+                        _buildExportDataButton(context, settingsProvider.currentThemeConfig),
                         _buildClearCacheButton(context, settingsProvider.currentThemeConfig),
                         _buildDeleteAllNotesButton(context, settingsProvider.currentThemeConfig),
                       ],
@@ -627,6 +629,24 @@ class SettingsScreen extends StatelessWidget {
               MaterialPageRoute(builder: (context) => const OrganizationScreen()),
             );
           } : null,
+        );
+      },
+    );
+  }
+
+  Widget _buildExportDataButton(BuildContext context, ThemeConfig themeConfig) {
+    final localization = LocalizationService();
+    return _buildTile(
+      context,
+      themeConfig,
+      icon: Icons.upload_file,
+      title: localization.t('export_title'),
+      subtitle: 'Backup your notes as JSON, Markdown, or CSV',
+      onTap: () {
+        HapticService.light();
+        showDialog(
+          context: context,
+          builder: (context) => const ExportDialog(),
         );
       },
     );

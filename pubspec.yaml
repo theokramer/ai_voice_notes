@@ -47,6 +47,9 @@ dependencies:
   
   # In-app review for rating prompt
   in_app_review: ^2.0.9
+  
+  # Share functionality for data export
+  share_plus: ^10.1.2
 
 dev_dependencies:
   flutter_test:
