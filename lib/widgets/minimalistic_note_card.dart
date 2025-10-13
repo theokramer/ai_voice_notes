@@ -53,7 +53,7 @@ class MinimalisticNoteCard extends StatelessWidget {
                   Text(
                     note.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontSize: 14,
+                          fontSize: 16,
                           fontWeight: FontWeight.w600,
                           letterSpacing: -0.2,
                         ),
@@ -67,8 +67,8 @@ class MinimalisticNoteCard extends StatelessWidget {
                       firstLine,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.textTertiary.withValues(alpha: 0.7),
-                            fontSize: 11,
-                            height: 1.3,
+                            fontSize: 13,
+                            height: 1.4,
                           ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -95,11 +95,16 @@ class MinimalisticNoteCard extends StatelessWidget {
   }
 
   String? _getFirstLine() {
-    if (note.content.isEmpty) return null;
+    // Use contentPreview which properly handles JSON/markdown extraction
+    final preview = note.contentPreview;
+    if (preview.isEmpty || preview == 'Unable to display content') return null;
     
-    // Get first line of text
-    final lines = note.content.split('\n');
-    return lines.first.trim();
+    // Get first line from the preview
+    final lines = preview.split('\n');
+    final firstLine = lines.first.trim();
+    
+    // Limit length for display
+    return firstLine.length > 80 ? '${firstLine.substring(0, 80)}...' : firstLine;
   }
 
   String _formatTime(DateTime date) {

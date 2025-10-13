@@ -74,19 +74,42 @@ class OpenAIService {
 
   /// Beautify raw transcription into structured note (GPT-4o for quality)
   /// Outputs clean plain text without any markdown formatting
-  Future<String> beautifyTranscription(String rawText) async {
+  /// If detectedLanguage is provided (from Whisper), uses it to ensure language preservation
+  Future<String> beautifyTranscription(String rawText, {String? detectedLanguage}) async {
     try {
+      // Get language name from ISO code for clearer instructions
+      String? languageName;
+      if (detectedLanguage != null) {
+        final langMap = {
+          'en': 'English',
+          'de': 'German',
+          'es': 'Spanish',
+          'fr': 'French',
+          'it': 'Italian',
+          'pt': 'Portuguese',
+          'nl': 'Dutch',
+          'pl': 'Polish',
+          'ru': 'Russian',
+          'ja': 'Japanese',
+          'zh': 'Chinese',
+          'ko': 'Korean',
+          'ar': 'Arabic',
+        };
+        languageName = langMap[detectedLanguage];
+      }
+      
       final prompt = '''You are a note formatter. Your ONLY job is to format text nicely while keeping the EXACT same language.
 
 INPUT TEXT:
 "$rawText"
 
 🚨 CRITICAL RULE - LANGUAGE PRESERVATION:
-DETECT the language of the input text above and respond in THE EXACT SAME LANGUAGE.
+${languageName != null ? 'The user spoke in $languageName (detected: $detectedLanguage). You MUST respond in $languageName ONLY.' : 'DETECT the language of the input text above and respond in THE EXACT SAME LANGUAGE.'}
 - German input → German output
 - English input → English output  
 - Spanish input → Spanish output
 - French input → French output
+${languageName != null ? '\nCONFIRMED LANGUAGE: $languageName - DO NOT USE ANY OTHER LANGUAGE.' : ''}
 
 DO NOT TRANSLATE. DO NOT SWITCH LANGUAGES. SAME LANGUAGE IN = SAME LANGUAGE OUT.
 
@@ -136,10 +159,10 @@ Return ONLY the formatted plain text in the SAME language as input. No markdown.
         body: jsonEncode({
           'model': 'gpt-4o', // Use GPT-4o for better quality
           'messages': [
-            {'role': 'system', 'content': 'You are a plain text formatter that NEVER uses markdown syntax or formatting characters. You only output clean, readable plain text while preserving the original language.'},
+            {'role': 'system', 'content': 'You are a plain text formatter that NEVER uses markdown syntax or formatting characters. You only output clean, readable plain text while preserving the original language. NEVER translate or change the language of the input text.'},
             {'role': 'user', 'content': prompt},
           ],
-          'temperature': 0.1, // Very low to ensure strict language preservation
+          'temperature': 0.05, // Extremely low to ensure strict language preservation
           'max_tokens': 1000,
         }),
       );
@@ -193,10 +216,22 @@ RULES:
 1. If recent notes suggest a pattern (e.g., multiple notes about same topic), use same folder
 2. STRONGLY prefer using existing folders, even if not perfect match (confidence > 0.7)
 3. If no good match AND content is distinct new topic, suggest creating new folder
-4. Only suggest new folder if confidence > 0.9 AND folder name is GENERIC
+4. Only suggest new folder if confidence > 0.9 AND folder name is GENERIC and BROAD
 5. Ask: "Could 10+ other future notes fit in this folder?" If no, don't create it
 6. If uncertain (confidence < 0.7), return "Unorganized"
-7. AVOID specific folder names like "Voting Experiences" - prefer generic like "Personal Thoughts"
+7. CRITICAL: ALWAYS use GENERIC, UNIVERSAL folder names - ignore user's previous specific patterns
+8. AVOID time references (Weekly, Daily, Monthly) - remove them and use generic category
+9. AVOID specific contexts - use broad categories that work for many notes
+
+EXAMPLES OF CORRECT GENERIC NAMES:
+✓ "Personal Thoughts" (not "Personal Reflections" or "Weekly Journal")
+✓ "Work" (not "Work Notes" or "Office Updates")
+✓ "Ideas" (not "Creative Ideas" or "Brainstorming")
+✓ "Learning" (not "Study Notes" or "Course Material")
+✓ "Planning" (not "Weekly Planning" or "Task Lists")
+
+WRONG - TOO SPECIFIC:
+✗ "Voting Experiences", "Grocery Shopping", "Meeting Notes Tuesday"
 
 Return JSON:
 {
@@ -327,14 +362,23 @@ FOLDER CREATION RULES (EXTREMELY IMPORTANT):
 - STRONGLY prefer using existing folders, even if not perfect match
 - Only suggest NEW folder if confidence > 0.9 AND folder name is GENERIC AND broad
 - Ask yourself: "Could 10+ OTHER FUTURE notes reasonably fit in this folder?"
-- PREFER generic, broad categories like "Personal Thoughts", "Work", "Ideas", "Learning"
-- AVOID overly specific folders like "Voting Experiences", "Grocery Trip May 2024", "Meeting Notes Tuesday"
+- CRITICAL: ALWAYS use GENERIC, UNIVERSAL names - IGNORE user's previous specific patterns
+- AVOID time references (Weekly, Daily, Monthly) - remove them, use generic category only
+- PREFER: "Personal Thoughts", "Work", "Ideas", "Learning", "Planning", "Health", "Finance"
+- AVOID: overly specific contexts, time periods, or one-time events
 
-WRONG EXAMPLES (too specific):
+CORRECT GENERIC NAMES:
+✓ "Personal Thoughts" (not "Reflections", "Weekly Journal", "Daily Thoughts")
+✓ "Work" (not "Work Notes", "Office Tasks", "Project Updates")
+✓ "Planning" (not "Weekly Planning", "Task Lists", "Goal Setting")
+✓ "Learning" (not "Study Notes", "Course Material")
+
+WRONG - TOO SPECIFIC:
 ❌ "Reflections" → Too narrow, use "Personal Thoughts"
-❌ "Voting Experiences" → Too specific, use "Journaling" or "Personal Thoughts"  
+❌ "Voting Experiences" → One-time event, use "Personal Thoughts"
 ❌ "Grocery Shopping" → Too specific, use "Daily Tasks" or existing folder
-❌ "Project X Notes" → Too specific, use "Work Notes"
+❌ "Weekly Planning" → Has time reference, use "Planning"
+❌ "Project X Notes" → Too specific, use "Work"
 
 CORRECT EXAMPLES:
 ✓ "Personal Thoughts" (covers reflections, journal, diary, musings)

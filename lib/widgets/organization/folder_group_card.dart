@@ -6,6 +6,7 @@ import '../../models/organization_suggestion.dart';
 import '../../providers/notes_provider.dart';
 import '../../providers/folders_provider.dart';
 import '../../services/localization_service.dart';
+import '../../services/recording_queue_service.dart';
 import 'note_organization_card.dart';
 
 /// Groups organization suggestions by folder with expand/collapse functionality
@@ -63,9 +64,10 @@ class _FolderGroupCardState extends State<FolderGroupCard> {
               targetFolderId = existingFolder.id;
               newFolders[folderNameLower] = existingFolder;
             } else {
+              final smartIcon = suggestion.newFolderIcon ?? getSmartEmojiForFolder(folderName);
               final newFolder = await foldersProvider.createFolder(
                 name: folderName,
-                icon: suggestion.newFolderIcon ?? '📁',
+                icon: smartIcon,
                 aiCreated: true,
               );
               newFolders[folderNameLower] = newFolder;

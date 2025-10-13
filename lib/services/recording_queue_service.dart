@@ -10,6 +10,114 @@ import '../providers/settings_provider.dart';
 import 'openai_service.dart';
 import 'voice_command_service.dart';
 
+/// Get smart emoji for folder based on name semantics
+String getSmartEmojiForFolder(String folderName) {
+  final name = folderName.toLowerCase();
+  
+  // Work & Professional
+  if (name.contains('work') || name.contains('job') || name.contains('career') || 
+      name.contains('business') || name.contains('office') || name.contains('professional')) {
+    return '💼';
+  }
+  
+  // Personal & Thoughts
+  if (name.contains('personal') || name.contains('thought') || name.contains('reflect') || 
+      name.contains('journal') || name.contains('diary') || name.contains('feeling')) {
+    return '💭';
+  }
+  
+  // Ideas & Creativity
+  if (name.contains('idea') || name.contains('brain') || name.contains('creative') || 
+      name.contains('innovation') || name.contains('concept')) {
+    return '💡';
+  }
+  
+  // Learning & Education
+  if (name.contains('learn') || name.contains('study') || name.contains('education') || 
+      name.contains('course') || name.contains('lesson') || name.contains('school') ||
+      name.contains('university') || name.contains('college')) {
+    return '📚';
+  }
+  
+  // Health & Fitness
+  if (name.contains('health') || name.contains('fitness') || name.contains('workout') || 
+      name.contains('exercise') || name.contains('medical') || name.contains('doctor') ||
+      name.contains('hospital') || name.contains('wellness')) {
+    return '🏥';
+  }
+  
+  // Finance & Money
+  if (name.contains('finance') || name.contains('money') || name.contains('budget') || 
+      name.contains('invest') || name.contains('bank') || name.contains('expense') ||
+      name.contains('payment') || name.contains('bill')) {
+    return '💰';
+  }
+  
+  // Projects & Goals
+  if (name.contains('project') || name.contains('goal') || name.contains('task') || 
+      name.contains('plan') || name.contains('objective') || name.contains('target')) {
+    return '🎯';
+  }
+  
+  // Travel & Adventure
+  if (name.contains('travel') || name.contains('trip') || name.contains('vacation') || 
+      name.contains('adventure') || name.contains('journey') || name.contains('tour')) {
+    return '✈️';
+  }
+  
+  // Shopping & Purchases
+  if (name.contains('shop') || name.contains('buy') || name.contains('purchase') || 
+      name.contains('store') || name.contains('groceries') || name.contains('market')) {
+    return '🛒';
+  }
+  
+  // Food & Cooking
+  if (name.contains('food') || name.contains('cook') || name.contains('recipe') || 
+      name.contains('meal') || name.contains('restaurant') || name.contains('eat') ||
+      name.contains('kitchen')) {
+    return '🍽️';
+  }
+  
+  // Home & Living
+  if (name.contains('home') || name.contains('house') || name.contains('apartment') || 
+      name.contains('living') || name.contains('room') || name.contains('furniture')) {
+    return '🏠';
+  }
+  
+  // Meeting & Events
+  if (name.contains('meet') || name.contains('event') || name.contains('conference') || 
+      name.contains('appointment') || name.contains('calendar')) {
+    return '📅';
+  }
+  
+  // Music & Entertainment
+  if (name.contains('music') || name.contains('song') || name.contains('entertainment') || 
+      name.contains('movie') || name.contains('show') || name.contains('concert')) {
+    return '🎵';
+  }
+  
+  // Art & Design
+  if (name.contains('art') || name.contains('design') || name.contains('draw') || 
+      name.contains('paint') || name.contains('creative') || name.contains('graphic')) {
+    return '🎨';
+  }
+  
+  // Technology & Coding
+  if (name.contains('tech') || name.contains('code') || name.contains('program') || 
+      name.contains('software') || name.contains('dev') || name.contains('computer')) {
+    return '💻';
+  }
+  
+  // Reading & Books
+  if (name.contains('book') || name.contains('read') || name.contains('literature') || 
+      name.contains('novel') || name.contains('story')) {
+    return '📖';
+  }
+  
+  // Default fallback
+  return '📁';
+}
+
 enum RecordingStatus {
   transcribing,
   organizing,
@@ -255,7 +363,7 @@ class RecordingQueueService extends ChangeNotifier {
               // Create new folder
               final newFolder = await foldersProvider.createFolder(
                 name: voiceCommand.newFolderName!,
-                icon: _getSmartEmojiForFolder(voiceCommand.newFolderName!),
+                icon: getSmartEmojiForFolder(voiceCommand.newFolderName!),
               );
               voiceCommandFolderId = newFolder.id;
               debugPrint('✨ Created new folder: ${newFolder.name} (${newFolder.id})');
@@ -280,7 +388,11 @@ class RecordingQueueService extends ChangeNotifier {
       if (settings.transcriptionMode == TranscriptionMode.aiBeautify) {
         try {
           debugPrint('🎨 Starting beautification for ${contentForProcessing.length} chars...');
-          content = await openAIService.beautifyTranscription(contentForProcessing);
+          debugPrint('🌍 Using detected language: $detectedLanguage');
+          content = await openAIService.beautifyTranscription(
+            contentForProcessing,
+            detectedLanguage: detectedLanguage,
+          );
           
           // Validate beautified content
           if (content.trim().isEmpty) {
@@ -422,10 +534,11 @@ class RecordingQueueService extends ChangeNotifier {
             folderId = existingFolder.id;
             folderName = existingFolder.name;
           } else {
-            // No existing folder, create new one
+            // No existing folder, create new one with smart icon
+            final smartIcon = result.suggestedFolderIcon ?? getSmartEmojiForFolder(proposedFolderName);
             final newFolder = await foldersProvider.createFolder(
               name: proposedFolderName,
-              icon: result.suggestedFolderIcon ?? '📁',
+              icon: smartIcon,
               aiCreated: true,
             );
             debugPrint('✨ Created new folder: ${newFolder.name} (ID: ${newFolder.id})');
@@ -614,102 +727,6 @@ class RecordingQueueService extends ChangeNotifier {
   }
 
   /// Get smart emoji for folder based on name keywords
-  static String _getSmartEmojiForFolder(String folderName) {
-    final lowerName = folderName.toLowerCase();
-    
-    // Common folder name patterns and their emojis
-    final emojiMap = {
-      // Work & productivity
-      'work': '💼',
-      'arbeit': '💼',
-      'trabajo': '💼',
-      'travail': '💼',
-      'office': '🏢',
-      'project': '📊',
-      'meeting': '📋',
-      
-      // Personal & life
-      'personal': '👤',
-      'private': '🔒',
-      'privat': '🔒',
-      'privado': '🔒',
-      'privé': '🔒',
-      'journal': '📖',
-      'diary': '📔',
-      'tagebuch': '📔',
-      
-      // Tasks & todos
-      'todo': '✅',
-      'task': '✅',
-      'aufgabe': '✅',
-      'tarea': '✅',
-      'reminder': '⏰',
-      'erinnerung': '⏰',
-      
-      // Shopping & food
-      'shopping': '🛒',
-      'einkauf': '🛒',
-      'compras': '🛒',
-      'grocery': '🛒',
-      'food': '🍽️',
-      'recipe': '👨‍🍳',
-      
-      // Ideas & creativity
-      'idea': '💡',
-      'idee': '💡',
-      'brainstorm': '🧠',
-      'creative': '🎨',
-      'kreativ': '🎨',
-      
-      // Learning & education
-      'learn': '📚',
-      'lernen': '📚',
-      'study': '📚',
-      'studium': '📚',
-      'school': '🎓',
-      'schule': '🎓',
-      'university': '🎓',
-      'course': '📖',
-      
-      // Health & fitness
-      'health': '🏥',
-      'gesundheit': '🏥',
-      'fitness': '💪',
-      'sport': '⚽',
-      'exercise': '🏃',
-      
-      // Finance
-      'money': '💰',
-      'finance': '💵',
-      'finanzen': '💵',
-      'budget': '💳',
-      
-      // Travel
-      'travel': '✈️',
-      'reise': '✈️',
-      'viaje': '✈️',
-      'voyage': '✈️',
-      'vacation': '🏖️',
-      'urlaub': '🏖️',
-      
-      // Home
-      'home': '🏠',
-      'haus': '🏠',
-      'casa': '🏠',
-      'maison': '🏠',
-    };
-    
-    // Check for keyword matches
-    for (final entry in emojiMap.entries) {
-      if (lowerName.contains(entry.key)) {
-        return entry.value;
-      }
-    }
-    
-    // Default folder emoji
-    return '📁';
-  }
-
   @override
   void dispose() {
     _cleanupTimer?.cancel();

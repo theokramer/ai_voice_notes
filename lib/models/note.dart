@@ -9,7 +9,6 @@ class Note {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? lastAccessedAt;
-  final List<String> tags;
   final bool isPinned;
   final String? folderId; // null = Unorganized folder
   final bool aiOrganized; // true if AI placed it in a folder
@@ -24,7 +23,6 @@ class Note {
     required this.createdAt,
     required this.updatedAt,
     this.lastAccessedAt,
-    this.tags = const [],
     this.isPinned = false,
     this.folderId,
     this.aiOrganized = false,
@@ -112,7 +110,6 @@ class Note {
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? lastAccessedAt,
-    List<String>? tags,
     bool? isPinned,
     String? folderId,
     bool? aiOrganized,
@@ -127,7 +124,6 @@ class Note {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastAccessedAt: lastAccessedAt ?? this.lastAccessedAt,
-      tags: tags ?? this.tags,
       isPinned: isPinned ?? this.isPinned,
       folderId: folderId ?? this.folderId,
       aiOrganized: aiOrganized ?? this.aiOrganized,
@@ -145,7 +141,6 @@ class Note {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'lastAccessedAt': lastAccessedAt?.toIso8601String(),
-      'tags': tags,
       'isPinned': isPinned,
       'folderId': folderId,
       'aiOrganized': aiOrganized,
@@ -176,7 +171,7 @@ class Note {
       lastAccessedAt: json['lastAccessedAt'] != null
           ? DateTime.parse(json['lastAccessedAt'])
           : null,
-      tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
+      // Tags removed - ignore if present in old data
       isPinned: json['isPinned'] ?? false,
       folderId: json['folderId'],
       aiOrganized: json['aiOrganized'] ?? false,

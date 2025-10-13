@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/note.dart';
 import '../services/storage_service.dart';
 import '../utils/markdown_to_delta_converter.dart';
+import 'folders_provider.dart';
 
 enum SortOption {
   recentlyUpdated,
@@ -203,7 +204,7 @@ class NotesProvider extends ChangeNotifier {
   }
 
   // NEW: Add note with folder context support
-  Future<void> addNote(Note note, {String? folderContext}) async {
+  Future<void> addNote(Note note, {String? folderContext, FoldersProvider? foldersProvider}) async {
     // If folderContext provided, use it
     final noteToAdd = folderContext != null 
         ? note.copyWith(folderId: folderContext)
@@ -213,6 +214,11 @@ class NotesProvider extends ChangeNotifier {
     _notes.insert(0, noteToAdd);
     _invalidateCache();
     notifyListeners();
+    
+    // Update folder count if foldersProvider is provided
+    if (foldersProvider != null && noteToAdd.folderId != null) {
+      foldersProvider.incrementNoteCount(noteToAdd.folderId!);
+    }
     
     // Save to storage in background (fire-and-forget)
     _storageService.saveNotes(_notes).catchError((e) {
@@ -245,14 +251,20 @@ class NotesProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteNote(String noteId) async {
+  Future<void> deleteNote(String noteId, {FoldersProvider? foldersProvider}) async {
     final noteIndex = _notes.indexWhere((n) => n.id == noteId);
     if (noteIndex != -1) {
       // Optimistic update - update UI immediately
       _deletedNote = _notes[noteIndex];
+      final deletedFolderId = _deletedNote!.folderId;
       _notes.removeAt(noteIndex);
       _invalidateCache();
       notifyListeners();
+      
+      // Update folder count if foldersProvider is provided
+      if (foldersProvider != null && deletedFolderId != null) {
+        foldersProvider.decrementNoteCount(deletedFolderId);
+      }
       
       // Save to storage in background (fire-and-forget)
       _storageService.saveNotes(_notes).catchError((e) {
@@ -261,13 +273,19 @@ class NotesProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> undoDelete() async {
+  Future<void> undoDelete({FoldersProvider? foldersProvider}) async {
     if (_deletedNote != null) {
       // Optimistic update - update UI immediately
-      _notes.insert(0, _deletedNote!);
+      final restoredNote = _deletedNote!;
+      _notes.insert(0, restoredNote);
       _deletedNote = null;
       _invalidateCache();
       notifyListeners();
+      
+      // Update folder count if foldersProvider is provided
+      if (foldersProvider != null && restoredNote.folderId != null) {
+        foldersProvider.incrementNoteCount(restoredNote.folderId!);
+      }
       
       // Save to storage in background (fire-and-forget)
       _storageService.saveNotes(_notes).catchError((e) {
@@ -384,35 +402,17 @@ class NotesProvider extends ChangeNotifier {
       final isTagSearch = query.startsWith('#');
       final searchTerm = isTagSearch ? query.substring(1) : query;
       
-      // If tag-only search, only match tags
+      // If tag-only search, skip (tags removed)
       if (isTagSearch && searchTerm.isNotEmpty) {
-      for (final note in _notes) {
-          for (final tag in note.tags) {
-            if (tag.toLowerCase().contains(searchTerm)) {
-          filtered.add(note);
-              break;
-            }
-          }
-        }
+        // Tags feature removed - no results for tag searches
       } else {
-        // Normal search: name, tags, and content
+        // Normal search: name and content
         for (final note in _notes) {
           // Quick check: name match (most common)
           if (note.name.toLowerCase().contains(query)) {
             filtered.add(note);
             continue;
           }
-          
-          // Check tags (high priority)
-          bool found = false;
-          for (final tag in note.tags) {
-            if (tag.toLowerCase().contains(query)) {
-              filtered.add(note);
-              found = true;
-              break;
-            }
-          }
-          if (found) continue;
           
           // Check content
           if (note.content.toLowerCase().contains(query)) {
@@ -559,17 +559,29 @@ class NotesProvider extends ChangeNotifier {
   }
 
   /// Move a note to a different folder
-  Future<void> moveNoteToFolder(String noteId, String? folderId) async {
+  Future<void> moveNoteToFolder(String noteId, String? folderId, {FoldersProvider? foldersProvider}) async {
     final noteIndex = _notes.indexWhere((n) => n.id == noteId);
     if (noteIndex == -1) return;
 
     final note = _notes[noteIndex];
+    final oldFolderId = note.folderId;
+    
     final updatedNote = note.copyWith(
       folderId: folderId,
       updatedAt: DateTime.now(),
     );
 
     await updateNote(updatedNote);
+    
+    // Update folder counts if foldersProvider is provided
+    if (foldersProvider != null) {
+      if (oldFolderId != null) {
+        foldersProvider.decrementNoteCount(oldFolderId);
+      }
+      if (folderId != null) {
+        foldersProvider.incrementNoteCount(folderId);
+      }
+    }
   }
 
   /// Move all notes from a deleted folder to the unorganized folder
@@ -590,62 +602,5 @@ class NotesProvider extends ChangeNotifier {
       _invalidateCache();
       notifyListeners();
     }
-  }
-
-  /// Get all notes with a specific tag
-  /// Pinned notes are always shown at the top
-  List<Note> getNotesWithTag(String tag) {
-    final filtered = _notes.where((note) => note.tags.contains(tag)).toList();
-    
-    // Sort to show pinned notes first, then by updated date
-    filtered.sort((a, b) {
-      if (a.isPinned != b.isPinned) {
-        return a.isPinned ? -1 : 1;
-      }
-      return b.updatedAt.compareTo(a.updatedAt);
-    });
-    
-    return filtered;
-  }
-
-  /// Get all notes with any of the specified tags
-  /// Pinned notes are always shown at the top
-  List<Note> getNotesWithTags(List<String> tags) {
-    final filtered = _notes.where((note) {
-      return note.tags.any((tag) => tags.contains(tag));
-    }).toList();
-    
-    // Sort to show pinned notes first, then by updated date
-    filtered.sort((a, b) {
-      if (a.isPinned != b.isPinned) {
-        return a.isPinned ? -1 : 1;
-      }
-      return b.updatedAt.compareTo(a.updatedAt);
-    });
-    
-    return filtered;
-  }
-
-  /// Get all unique tags across all notes
-  List<String> getAllTags() {
-    final Set<String> allTags = {};
-    for (final note in _notes) {
-      allTags.addAll(note.tags);
-    }
-    return allTags.toList()..sort();
-  }
-
-  /// Update note tags
-  Future<void> updateNoteTags(String noteId, List<String> tags) async {
-    final noteIndex = _notes.indexWhere((n) => n.id == noteId);
-    if (noteIndex == -1) return;
-
-    final note = _notes[noteIndex];
-    final updatedNote = note.copyWith(
-      tags: tags,
-      updatedAt: DateTime.now(),
-    );
-
-    await updateNote(updatedNote);
   }
 }

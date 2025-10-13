@@ -10,6 +10,7 @@ import '../providers/folders_provider.dart';
 import '../services/openai_service.dart';
 import '../services/haptic_service.dart';
 import '../services/localization_service.dart';
+import '../services/recording_queue_service.dart';
 import '../widgets/loading_indicator.dart';
 import '../widgets/organization/folder_group_card.dart';
 
@@ -338,10 +339,11 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
               newFolders[folderNameLower] = existingFolder;
               debugPrint('Reusing existing folder: ${existingFolder.name} (${existingFolder.id})');
             } else {
-              // Create new folder
+              // Create new folder with smart icon
+              final smartIcon = suggestion.newFolderIcon ?? getSmartEmojiForFolder(folderName);
               final newFolder = await foldersProvider.createFolder(
                 name: folderName,
-                icon: suggestion.newFolderIcon ?? '📁',
+                icon: smartIcon,
                 aiCreated: true,
               );
               newFolders[folderNameLower] = newFolder;
@@ -408,10 +410,11 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
           targetFolderId = existingFolder.id;
           debugPrint('Reusing existing folder: ${existingFolder.name} (${existingFolder.id})');
         } else {
-          // Create new folder
+          // Create new folder with smart icon
+          final smartIcon = suggestion.newFolderIcon ?? getSmartEmojiForFolder(folderName);
           final newFolder = await foldersProvider.createFolder(
             name: folderName,
-            icon: suggestion.newFolderIcon ?? '📁',
+            icon: smartIcon,
             aiCreated: true,
           );
           targetFolderId = newFolder.id;

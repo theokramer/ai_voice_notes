@@ -5,6 +5,7 @@ import '../../models/folder.dart';
 import '../../models/organization_suggestion.dart';
 import '../../providers/folders_provider.dart';
 import '../../services/localization_service.dart';
+import '../../services/recording_queue_service.dart';
 
 /// Dialog for picking or creating a folder for organization
 class FolderPickerDialog extends StatefulWidget {
@@ -82,7 +83,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
       
       final newFolder = await foldersProvider.createFolder(
         name: folderName,
-        icon: '📁',
+        icon: getSmartEmojiForFolder(folderName),
         aiCreated: false,
       );
       

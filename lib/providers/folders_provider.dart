@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/folder.dart';
+import '../models/note.dart';
 import '../services/storage_service.dart';
 
 class FoldersProvider extends ChangeNotifier {
@@ -45,6 +46,31 @@ class FoldersProvider extends ChangeNotifier {
 
     _isLoading = false;
     notifyListeners();
+  }
+  
+  // Recalculate folder counts based on actual notes
+  void recalculateFolderCounts(List<Note> notes) {
+    // Reset all counts
+    for (var folder in _folders) {
+      folder.noteCount = 0;
+    }
+    
+    // Count notes in each folder
+    for (var note in notes) {
+      if (note.folderId != null) {
+        final folder = getFolderById(note.folderId!);
+        if (folder != null) {
+          folder.noteCount++;
+        }
+      }
+    }
+    
+    notifyListeners();
+    
+    // Save updated counts
+    _storageService.saveFolders(_folders).catchError((e) {
+      debugPrint('Error saving folder counts: $e');
+    });
   }
 
   // Ensure there's only one Unorganized folder

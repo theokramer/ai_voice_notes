@@ -76,11 +76,6 @@ class _NoteCardState extends State<NoteCard>
 
   @override
   Widget build(BuildContext context) {
-    // Word count as metadata (replacing old entry count)
-    final wordCount = widget.note.content.trim().isEmpty 
-        ? 0 
-        : widget.note.content.trim().split(RegExp(r'\s+')).length;
-
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
         final themeConfig = settingsProvider.currentThemeConfig;
@@ -172,39 +167,34 @@ class _NoteCardState extends State<NoteCard>
                                                   .textTheme
                                                   .titleLarge
                                                   ?.copyWith(
-                                                    fontSize: 15,
+                                                    fontSize: 17,
                                                     fontWeight: FontWeight.w600,
                                                     letterSpacing: -0.2,
                                                   ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                           if (widget.note.isPinned)
-                                            Container(
-                                            margin: const EdgeInsets.only(left: AppTheme.spacing4),
-                                            padding: const EdgeInsets.all(3),
-                                            decoration: BoxDecoration(
-                                              color: themeConfig.primaryColor.withValues(alpha: 0.2),
-                                              borderRadius: BorderRadius.circular(3),
+                                            Padding(
+                                              padding: const EdgeInsets.only(left: AppTheme.spacing4),
+                                              child: Icon(
+                                                Icons.push_pin,
+                                                size: 14,
+                                                color: themeConfig.primaryColor.withOpacity(0.7),
+                                              ),
                                             ),
-                                            child: Icon(
-                                              Icons.push_pin,
-                                              size: 11,
-                                              color: themeConfig.primaryColor,
-                                            ),
-                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: AppTheme.spacing4),
                                       Text(
-                                        widget.isGridView
-                                            ? _formatDate(widget.note.updatedAt)
-                                            : '$wordCount ${wordCount == 1 ? 'word' : 'words'} • ${_formatDate(widget.note.updatedAt)}',
+                                        _formatDate(widget.note.updatedAt),
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall
                                             ?.copyWith(
                                               color: AppTheme.textTertiary.withOpacity(0.6),
-                                              fontSize: 11,
+                                              fontSize: 13,
                                               letterSpacing: 0.2,
                                             ),
                                       ),
@@ -218,8 +208,8 @@ class _NoteCardState extends State<NoteCard>
                                               .bodySmall
                                               ?.copyWith(
                                                 color: AppTheme.textSecondary.withOpacity(0.8),
-                                                fontSize: 12,
-                                                height: 1.4,
+                                                fontSize: 14,
+                                                height: 1.5,
                                               ),
                                         ),
                                       ],
@@ -241,61 +231,9 @@ class _NoteCardState extends State<NoteCard>
                                                 ))
                                             .toList(),
                                       ],
-                                      if (widget.note.tags.isNotEmpty) ...[
-                                        const SizedBox(height: AppTheme.spacing4),
-                                        Wrap(
-                                          spacing: AppTheme.spacing4,
-                                          runSpacing: AppTheme.spacing4,
-                                          children: widget.note.tags.take(2).map((tag) {
-                                            return Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: AppTheme.spacing4,
-                                                vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: themeConfig.primaryColor.withValues(alpha: 0.15),
-                                              borderRadius: BorderRadius.circular(
-                                                AppTheme.radiusSmall,
-                                              ),
-                                              border: Border.all(
-                                                color: themeConfig.primaryColor.withValues(alpha: 0.3),
-                                                width: 0.5,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              tag,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: themeConfig.primaryColor,
-                                                      fontSize: 9,
-                                                      fontWeight: FontWeight.w500,
-                                                    ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ],
                                     ],
                                   ),
                                 ),
-                                // Arrow removed for cleaner grid view
-                                if (!widget.isGridView) ...[
-                                  const SizedBox(width: AppTheme.spacing12),
-                                  // Arrow with animation
-                                  AnimatedRotation(
-                                    duration: const Duration(milliseconds: 200),
-                                    turns: _isPressed ? -0.125 : 0,
-                                    child: Icon(
-                                      Icons.arrow_forward_ios_rounded,
-                                      size: 16,
-                                      color: _isPressed
-                                          ? themeConfig.accentColor
-                                          : AppTheme.textTertiary.withOpacity(0.5),
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           ),

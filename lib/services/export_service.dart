@@ -80,10 +80,6 @@ class ExportService {
         buffer.writeln('**Created:** ${note.createdAt.toString()}');
         buffer.writeln('**Updated:** ${note.updatedAt.toString()}');
 
-        if (note.tags.isNotEmpty) {
-          buffer.writeln('**Tags:** ${note.tags.join(", ")}');
-        }
-
         buffer.writeln('');
         buffer.writeln(_extractPlainText(note.content));
         buffer.writeln('');
@@ -103,7 +99,7 @@ class ExportService {
     final buffer = StringBuffer();
     
     // Header
-    buffer.writeln('ID,Name,Icon,Folder,Content Preview,Tags,Created,Modified');
+    buffer.writeln('ID,Name,Icon,Folder,Content Preview,Created,Modified');
 
     // Rows
     for (final note in notes) {
@@ -130,7 +126,6 @@ class ExportService {
         folder?.name ?? 'Unorganized',
         _escapeCSV(contentPreview.substring(
             0, contentPreview.length > 200 ? 200 : contentPreview.length)),
-        _escapeCSV(note.tags.join(', ')),
         note.createdAt.toIso8601String(),
         note.updatedAt.toIso8601String(),
       ].join(',');
@@ -220,10 +215,6 @@ class ExportService {
     }
     buffer.writeln('**Created:** ${note.createdAt.toString().split('.')[0]}');
     buffer.writeln('**Updated:** ${note.updatedAt.toString().split('.')[0]}');
-    
-    if (note.tags.isNotEmpty) {
-      buffer.writeln('**Tags:** ${note.tags.join(", ")}');
-    }
     
     buffer.writeln('');
     buffer.writeln('---');

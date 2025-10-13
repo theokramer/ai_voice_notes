@@ -1204,40 +1204,51 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
               
               // Microphone button - centered (or Organize button when viewing Unorganized)
-              Positioned(
-            bottom: 24,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Consumer<FoldersProvider>(
-                builder: (context, foldersProvider, child) {
-                  final isViewingUnorganized = _currentFolderContext == foldersProvider.unorganizedFolderId;
-                  
-                  if (isViewingUnorganized) {
-                    // Show Organize button when viewing unorganized folder
-                    return FloatingActionButton.extended(
-                      onPressed: () {
-                        HapticService.medium();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const OrganizationScreen()),
-                        );
-                      },
-                      icon: const Icon(Icons.auto_fix_high),
-                      label: Text(LocalizationService().t('organize')),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                    );
-                  } else {
-                    // Show microphone button for all other views
-                    return MicrophoneButton(
-                      onRecordingStart: _startRecording,
-                      onRecordingStop: _stopRecording,
-                    );
-                  }
-                },
-              ),
-            ),
-          ),
+              // Hide when search overlay is visible
+              if (!_showSearchOverlay)
+                Positioned(
+                  bottom: 24,
+                  left: 0,
+                  right: 0,
+                  child: AnimatedOpacity(
+                    opacity: _showSearchOverlay ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: AnimatedSlide(
+                      offset: _showSearchOverlay ? const Offset(0, 1) : Offset.zero,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      child: Center(
+                        child: Consumer<FoldersProvider>(
+                          builder: (context, foldersProvider, child) {
+                            final isViewingUnorganized = _currentFolderContext == foldersProvider.unorganizedFolderId;
+                            
+                            if (isViewingUnorganized) {
+                              // Show Organize button when viewing unorganized folder
+                              return FloatingActionButton.extended(
+                                onPressed: () {
+                                  HapticService.medium();
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const OrganizationScreen()),
+                                  );
+                                },
+                                icon: const Icon(Icons.auto_fix_high),
+                                label: Text(LocalizationService().t('organize')),
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                              );
+                            } else {
+                              // Show microphone button for all other views
+                              return MicrophoneButton(
+                                onRecordingStart: _startRecording,
+                                onRecordingStop: _stopRecording,
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
           
               // Pull-to-search overlay
               if (_showSearchOverlay)

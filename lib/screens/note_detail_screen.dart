@@ -11,7 +11,6 @@ import '../services/haptic_service.dart';
 import '../services/openai_service.dart';
 import '../services/export_service.dart';
 import '../services/localization_service.dart';
-import '../widgets/tag_editor.dart';
 import '../widgets/quick_move_dialog.dart';
 import '../widgets/custom_snackbar.dart';
 import '../widgets/animated_background.dart';
@@ -36,7 +35,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   late TextEditingController _contentController;
   Timer? _saveTimer;
   bool _hasUnsavedChanges = false;
-  bool _showTagEditor = false;
   bool _isBeautifying = false;
 
   @override
@@ -262,13 +260,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     }
   }
 
-  void _toggleTagEditor() {
-    HapticService.light();
-      setState(() {
-      _showTagEditor = !_showTagEditor;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer2<NotesProvider, SettingsProvider>(
@@ -404,67 +395,9 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
         },
                             ),
                           ),
-                          const SizedBox(width: 12),
-
-                          // Tags display
-                          if (note.tags.isNotEmpty && !_showTagEditor)
-                      Expanded(
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-            child: Row(
-                                  children: note.tags.take(3).map((tag) {
-                                    return Container(
-                                      margin: const EdgeInsets.only(right: 6),
-                            padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                                        color: themeConfig.primaryColor.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: themeConfig.primaryColor.withOpacity(0.5),
-                                          width: 1,
-                                        ),
-                                      ),
-                              child: Text(
-                                        tag,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                              ),
-                            ),
-                          ),
-
-                          if (!_showTagEditor) const Spacer(),
-
-                          // Edit tags button
-                          IconButton(
-                            icon: Icon(_showTagEditor ? Icons.close : Icons.local_offer_outlined),
-                            onPressed: _toggleTagEditor,
-                            iconSize: 20,
-                ),
               ],
             ),
           ),
-
-                    // Tag editor (expanded)
-                    if (_showTagEditor)
-                  Container(
-                        padding: const EdgeInsets.all(16),
-                        child: TagEditor(
-                          tags: note.tags,
-                          onTagsChanged: (newTags) {
-                            final updatedNote = note.copyWith(tags: newTags);
-                            context.read<NotesProvider>().updateNote(updatedNote);
-                          },
-                        ),
-                      ),
 
                     const Divider(height: 1),
 
