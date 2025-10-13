@@ -414,17 +414,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             final screenWidth = MediaQuery.of(context).size.width;
             
             // Calculate max video height to prevent overflow
-            // Leave room for: top spacing (24) + bottom text (~200) + spacer (50) + button (80)
-            final maxVideoHeight = availableHeight - 380;
-            final maxVideoWidth = screenWidth - (isSmallScreen ? 48 : 64); // Account for padding
+            // Leave room for: top spacing (16) + bottom text (~220) + spacer + button (80)
+            final maxVideoHeight = availableHeight - 340;
+            final maxVideoWidth = screenWidth - (isSmallScreen ? 40 : 48); // Account for padding
             
             return Column(
               children: [
-                SizedBox(height: isSmallScreen ? 12 : 16),
+                SizedBox(height: isSmallScreen ? 8 : 12),
               
               // Video with fly-in/fly-out animation - CONSTRAINED
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 24 : 32),
+                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 20 : 24),
                 child: AnimatedSlide(
                   offset: _videoHasFlownOut 
                       ? const Offset(0, -2) 
@@ -497,19 +497,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 ),
               ),
               
-              SizedBox(height: isSmallScreen ? 16 : 24),
+              SizedBox(height: isSmallScreen ? 24 : 32),
                 
               // Main hook text
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
-                child: _buildWordByWordText(
-                  localization.t('onboarding_subtitle'),
-                  Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontSize: isSmallScreen ? 24 : (availableHeight < 800 ? 28 : 36),
-                        height: 1.15,
-                        fontWeight: FontWeight.w800,
-                      ) ?? const TextStyle(),
-                ),
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          fontSize: isSmallScreen ? 24 : (availableHeight < 800 ? 28 : 36),
+                          height: 1.3,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.textPrimary,
+                        ) ?? const TextStyle(),
+                    children: _buildAnimatedTextSpans(
+                      localization.t('onboarding_subtitle'),
+                    ),
+                  ),
+                )
+                    .animate()
+                    .fadeIn(delay: 1200.ms, duration: 800.ms)
+                    .slideY(begin: 0.2, end: 0),
               ),
               
               SizedBox(height: isSmallScreen ? 8 : 12),
@@ -540,26 +549,25 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  Widget _buildWordByWordText(String text, TextStyle style) {
-    final words = text.split(' ');
-    return Wrap(
-      alignment: WrapAlignment.center,
-      children: words.asMap().entries.map((entry) {
-        final index = entry.key;
-        final word = entry.value;
-        return Text(
-          '$word ',
-          style: style,
-          textAlign: TextAlign.center,
-        )
-            .animate()
-            .fadeIn(
-              delay: Duration(milliseconds: 1200 + (index * 150)),
-              duration: 400.ms,
-            )
-            .slideY(begin: 0.3, end: 0);
-      }).toList(),
-    );
+  List<TextSpan> _buildAnimatedTextSpans(String text) {
+    // Replace \n with actual newlines and split into words while preserving line breaks
+    final lines = text.split('\n');
+    final List<TextSpan> spans = [];
+    
+    for (int lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      final words = lines[lineIndex].split(' ');
+      for (final word in words) {
+        if (word.isNotEmpty) {
+          spans.add(TextSpan(text: '$word '));
+        }
+      }
+      // Add line break if not the last line
+      if (lineIndex < lines.length - 1) {
+        spans.add(const TextSpan(text: '\n'));
+      }
+    }
+    
+    return spans;
   }
 
   // Record Explanation Page - "Just Tap & Speak"
