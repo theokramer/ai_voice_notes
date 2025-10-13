@@ -24,15 +24,16 @@ import '../widgets/animated_background.dart';
 import '../widgets/hero_page_route.dart';
 import '../widgets/ai_chat_overlay.dart';
 import '../widgets/note_organization_sheet.dart';
-import '../widgets/minimalistic_note_card.dart';
 import '../widgets/folder_selector.dart';
 import '../widgets/recording_status_bar.dart';
 import '../widgets/folder_management_dialog.dart';
 import '../widgets/home/home_search_overlay.dart';
 import '../widgets/home/home_ask_ai_button.dart';
 import '../widgets/home/home_animated_header.dart';
+import '../widgets/home/home_empty_state.dart';
+import '../widgets/home/home_notes_list.dart';
+import '../widgets/home/home_notes_grid.dart';
 import 'note_detail_screen.dart';
-import 'settings_screen.dart';
 import 'organization_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -450,48 +451,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   // Estimate the height of a note card for grid layout balancing
   // This must match the actual NoteCard rendering in grid view
-  double _estimateNoteCardHeight(Note note) {
-    // Base structure for grid view (reduced padding):
-    // top padding (12) + icon (48) + name row (16) + spacing (4) + date (13) + spacing (8)
-    double height = 12.0 + 48.0 + 16.0 + 4.0 + 13.0 + 8.0; // ~101px
-    
-    // Get the content text
-    final latestText = note.content;
-    
-    if (latestText.isEmpty) {
-      // "No content" text
-      height += 12.0 * 1.4; // fontSize 12, height 1.4
-      height += 12.0; // bottom padding (reduced)
-      return height + 12.0; // margin bottom
-    }
-    
-    // Calculate text that will actually be shown (first 35 words or less)
-    final words = latestText.split(RegExp(r'\s+'));
-    final displayedWords = words.length <= 35 ? words : words.take(35).toList();
-    final displayedText = displayedWords.join(' ');
-    
-    // Estimate how many lines this text will take
-    // In grid view, cards are narrower - estimate ~30-35 characters per line
-    const charsPerLine = 32; // conservative estimate for grid width
-    final estimatedLines = (displayedText.length / charsPerLine).ceil().clamp(1, 15);
-    
-    // Text height: fontSize 12 * lineHeight 1.4 = 16.8px per line
-    final textHeight = estimatedLines * 16.8;
-    height += textHeight;
-    
-    // Add search snippet height if there's a search query
-    // (Note: we don't have search query here, but typically adds ~30-50px per snippet)
-    
-    // Bottom padding (reduced for grid view)
-    height += 12.0;
-    
-    // Bottom margin
-    height += 12.0;
-    
-    // Round to prevent floating point issues
-    return height.roundToDouble().clamp(130.0, 600.0);
-  }
-
   Future<void> _startRecording() async {
     // Fire haptic feedback immediately (don't await)
     HapticService.medium();
@@ -1022,76 +981,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       // Empty state when no notes
                       if (filteredNotes.isEmpty)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(AppTheme.spacing48),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  // Only show icon for search empty state
-                                  if (_searchController.text.isNotEmpty) ...[
-                                    ClipOval(
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                        child: Container(
-                                          width: 80,
-                                          height: 80,
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.glassStrongSurface,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: AppTheme.glassBorder,
-                                              width: 2,
-                                            ),
-                                          ),
-                                          child: Icon(
-                                            Icons.search_off,
-                                            size: 40,
-                                            color: AppTheme.textPrimary,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: AppTheme.spacing24),
-                                  ],
-                                  Text(
-                                    _searchController.text.isNotEmpty
-                                        ? 'No results found'
-                                        : 'No notes yet',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineMedium
-                                        ?.copyWith(
-                                          color: AppTheme.textSecondary,
-                                        ),
-                                  ),
-                                  const SizedBox(height: AppTheme.spacing8),
-                                  Text(
-                                    _searchController.text.isNotEmpty
-                                        ? 'Try different search terms'
-                                        : 'Press and hold the microphone\nto record your first note',
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: AppTheme.textTertiary,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            )
-                                .animate()
-                                .fadeIn(
-                                  duration: AppTheme.animationSlow,
-                                  delay: 200.ms,
-                                )
-                                .slideY(
-                                  begin: 0.1,
-                                  end: 0,
-                                  duration: AppTheme.animationSlow,
-                                  delay: 200.ms,
-                                ),
-                          ),
+                        HomeEmptyState(
+                          hasSearchQuery: _searchController.text.isNotEmpty,
+                          searchQuery: _searchController.text,
                         ),
                       // Notes list - View type based on provider setting
                       if (filteredNotes.isNotEmpty)
@@ -1101,202 +993,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             
                             // Minimalistic List View
                             if (viewType == NoteViewType.minimalisticList) {
-                              final groupedNotes = notesProvider.groupNotesByTimePeriod(filteredNotes);
-                              final todayCount = groupedNotes['Today']!.length;
-                              final thisWeekCount = groupedNotes['This Week']!.length;
-                              final moreCount = groupedNotes['More']!.length;
-                              
-                              return SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    // Calculate which group and item we're rendering
-                                    
-                                    // Today section
-                                    if (todayCount > 0 && index == 0) {
-                                      return _buildSectionHeader(LocalizationService().t('today'));
-                                    }
-                                    if (index > 0 && index <= todayCount) {
-                                      final note = groupedNotes['Today']![index - 1];
-                                      return GestureDetector(
-                                        onLongPress: () => _showNoteOptions(note),
-                                        child: MinimalisticNoteCard(
-                                          note: note,
-                                          index: index - 1,
-                                          onTap: () async {
-                                            await HapticService.light();
-                                            provider.markNoteAsAccessed(note.id);
-                                            if (_searchController.text.isNotEmpty) {
-                                              _hideSearchOverlay();
-                                            }
-                                            await context.pushHero(
-                                              NoteDetailScreen(noteId: note.id),
-                                            );
-                                          },
-                                        ),
-                                      );
-                                    }
-                                    
-                                    // This Week section
-                                    int weekStartIndex = todayCount > 0 ? todayCount + 1 : 0;
-                    if (thisWeekCount > 0 && index == weekStartIndex) {
-                      return _buildSectionHeader(LocalizationService().t('this_week'));
-                    }
-                                    if (index > weekStartIndex && index <= weekStartIndex + thisWeekCount) {
-                                      final note = groupedNotes['This Week']![index - weekStartIndex - 1];
-                                      return GestureDetector(
-                                        onLongPress: () => _showNoteOptions(note),
-                                        child: MinimalisticNoteCard(
-                                          note: note,
-                                          index: index - weekStartIndex - 1,
-                                          onTap: () async {
-                                            await HapticService.light();
-                                            provider.markNoteAsAccessed(note.id);
-                                            if (_searchController.text.isNotEmpty) {
-                                              _hideSearchOverlay();
-                                            }
-                                            await context.pushHero(
-                                              NoteDetailScreen(noteId: note.id),
-                                            );
-                                          },
-                                        ),
-                                      );
-                                    }
-                                    
-                                    // More section
-                                    int moreStartIndex = weekStartIndex + (thisWeekCount > 0 ? thisWeekCount + 1 : 0);
-                                    if (groupedNotes['More']!.isNotEmpty && index == moreStartIndex) {
-                                      return _buildSectionHeader(LocalizationService().t('more'));
-                                    }
-                                    if (index > moreStartIndex) {
-                                      final note = groupedNotes['More']![index - moreStartIndex - 1];
-                                      return GestureDetector(
-                                        onLongPress: () => _showNoteOptions(note),
-                                        child: MinimalisticNoteCard(
-                                          note: note,
-                                          index: index - moreStartIndex - 1,
-                                          onTap: () async {
-                                            await HapticService.light();
-                                            provider.markNoteAsAccessed(note.id);
-                                            if (_searchController.text.isNotEmpty) {
-                                              _hideSearchOverlay();
-                                            }
-                                            await context.pushHero(
-                                              NoteDetailScreen(noteId: note.id),
-                                            );
-                                          },
-                                        ),
-                                      );
-                                    }
-                                    return const SizedBox.shrink();
-                                  },
-                                  childCount: (todayCount > 0 ? todayCount + 1 : 0) +
-                                      (thisWeekCount > 0 ? thisWeekCount + 1 : 0) +
-                                      (moreCount > 0 ? moreCount + 1 : 0),
-                                ),
+                              return HomeNotesList(
+                                notes: filteredNotes,
+                                provider: provider,
+                                searchQuery: _searchController.text,
+                                onHideSearchOverlay: _hideSearchOverlay,
+                                onShowNoteOptions: _showNoteOptions,
                               );
                             }
                             // Grid View - using custom layout for varying heights
                             else if (viewType == NoteViewType.grid) {
-                              final crossAxisCount = MediaQuery.of(context).size.width > 600 ? 3 : 2;
-                              final notes = filteredNotes;
-                              
-                              // Group notes into columns for masonry effect with balanced heights
-                              // Track column heights to balance the layout
-                              final columns = List.generate(crossAxisCount, (_) => <Note>[]);
-                              final columnHeights = List.generate(crossAxisCount, (_) => 0.0);
-                              
-                              // Distribute notes by adding each to the shortest column
-                              // This maintains roughly the same sort order while balancing heights
-                              for (var i = 0; i < notes.length; i++) {
-                                final note = notes[i];
-                                
-                                // Estimate note height based on content
-                                final estimatedHeight = _estimateNoteCardHeight(note);
-                                
-                                // Find the shortest column
-                                // When heights are equal, prefer the column with fewer items (better distribution)
-                                var shortestColumnIndex = 0;
-                                var shortestHeight = columnHeights[0];
-                                
-                                for (var col = 1; col < crossAxisCount; col++) {
-                                  // Use <= to ensure we check all columns
-                                  // Prefer the column with shorter height, or if equal, the one with fewer items
-                                  if (columnHeights[col] < shortestHeight ||
-                                      (columnHeights[col] == shortestHeight && 
-                                       columns[col].length < columns[shortestColumnIndex].length)) {
-                                    shortestHeight = columnHeights[col];
-                                    shortestColumnIndex = col;
-                                  }
-                                }
-                                
-                                // Add note to the shortest column
-                                columns[shortestColumnIndex].add(note);
-                                columnHeights[shortestColumnIndex] += estimatedHeight;
-                              }
-                              
-                              return SliverPadding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppTheme.spacing16,
-                                ),
-                                sliver: SliverToBoxAdapter(
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: List.generate(crossAxisCount, (columnIndex) {
-                                      return Expanded(
-                                        child: Padding(
-                                          padding: EdgeInsets.only(
-                                            left: columnIndex == 0 ? 0 : AppTheme.spacing4,
-                                            right: columnIndex == crossAxisCount - 1 ? 0 : AppTheme.spacing4,
-                                          ),
-                                          child: Column(
-                                            children: columns[columnIndex].map((note) {
-                                              final index = notes.indexOf(note);
-                                              final snippets = _extractSnippets(note, _searchController.text);
-                                              
-                                              return GestureDetector(
-                                                onLongPress: () => _showNoteOptions(note),
-                                                child: NoteCard(
-                                                  note: note,
+                              return HomeNotesGrid(
+                                notes: filteredNotes,
+                                provider: provider,
                                                   searchQuery: _searchController.text,
-                                                  matchedSnippets: snippets,
-                                                  index: index,
-                                                  isGridView: true,
-                                                  onTap: () async {
-                                                    await HapticService.light();
-                                                    provider.markNoteAsAccessed(note.id);
-                                                    
-                                                    final searchQuery = _searchController.text.isNotEmpty
-                                                        ? _searchController.text
-                                                        : null;
-                                                    
-                                                    if (searchQuery != null) {
-                                                      _hideSearchOverlay();
-                                                    }
-                                                    
-                                                    await context.pushHero(
-                                                      NoteDetailScreen(
-                                                        noteId: note.id,
-                                                        searchQuery: searchQuery,
-                                                      ),
-                                                    );
-                                                  },
-                                                ),
-                                              )
-                                                  .animate(
-                                                    onPlay: (controller) => controller.repeat(reverse: true),
-                                                  )
-                                                  .shimmer(
-                                                    duration: 2000.ms,
-                                                    delay: (index * 100 + 2000).ms,
-                                                    color: Colors.white.withOpacity(0.3),
-                                                  );
-                                            }).toList(),
-                                          ),
-                                        ),
-                                      );
-                                    }),
-                                  ),
-                                ),
+                                onHideSearchOverlay: _hideSearchOverlay,
+                                onShowNoteOptions: _showNoteOptions,
+                                extractSnippets: _extractSnippets,
                               );
                             }
                             // Standard List View
@@ -1532,7 +1245,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   top: 0,
                   left: 0,
                   right: 0,
-                  child: _buildSearchOverlay(themeConfig),
+                  child: HomeSearchOverlay(
+                    animation: _searchAnimation,
+                    searchController: _searchController,
+                    isInChatMode: _isInChatMode,
+                    primaryColor: themeConfig.primaryColor,
+                    onClose: _hideSearchOverlay,
+                    onChanged: (value) {
+                      if (!_isInChatMode) {
+                        context.read<NotesProvider>().setSearchQuery(value);
+                        setState(() {}); // Rebuild to update Ask AI button
+                      }
+                    },
+                    onSubmitted: (value) async {
+                      if (value.trim().isEmpty) return;
+                      if (_isInChatMode) {
+                        await _sendToAI(value);
+                        _searchController.clear();
+                      }
+                    },
+                    askAIButton: HomeAskAIButton(
+                      searchQuery: _searchController.text,
+                      hasResults: _getFilteredNotes(context.read<NotesProvider>().notes).isNotEmpty,
+                      primaryColor: themeConfig.primaryColor,
+                      onTap: () {
+                        HapticService.light();
+                        _enterChatMode(_searchController.text.isNotEmpty 
+                            ? _searchController.text 
+                            : '');
+                      },
+                    ),
+                  ),
                 ),
               // Chat overlay
               if (_isInChatMode)
@@ -1576,255 +1319,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-
-  Widget _buildSearchOverlay(ThemeConfig themeConfig) {
-    return AnimatedBuilder(
-      animation: _searchAnimation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, -100 * (1 - _searchAnimation.value)),
-          child: Opacity(
-            opacity: _searchAnimation.value,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withValues(alpha: 0.7 * _searchAnimation.value),
-                        Colors.black.withValues(alpha: 0.4 * _searchAnimation.value),
-                        Colors.black.withValues(alpha: 0.1 * _searchAnimation.value),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.0, 0.3, 0.7, 1.0],
-                    ),
-                  ),
-                  padding: const EdgeInsets.only(
-                    top: AppTheme.spacing48,
-                    bottom: AppTheme.spacing8,
-                  ),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppTheme.glassStrongSurface,
-                            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-                            border: Border.all(
-                              color: themeConfig.primaryColor.withValues(alpha: 0.3),
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: themeConfig.primaryColor.withValues(alpha: 0.2),
-                                blurRadius: 20,
-                                spreadRadius: 0,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextField(
-                                controller: _searchController,
-                                autofocus: true,
-                                style: Theme.of(context).textTheme.bodyLarge,
-                                decoration: InputDecoration(
-                                  hintText: _isInChatMode
-                                      ? LocalizationService().t('ask_ai_hint')
-                                      : LocalizationService().t('search_notes_or_ask_ai'),
-                                  hintStyle: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        color: AppTheme.textTertiary,
-                                      ),
-                                  prefixIcon: Icon(
-                                    _isInChatMode ? Icons.psychology : Icons.search,
-                                    color: _isInChatMode ? themeConfig.primaryColor : AppTheme.textTertiary,
-                                  ),
-                                  suffixIcon: IconButton(
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: AppTheme.textTertiary,
-                                    ),
-                                    onPressed: _hideSearchOverlay,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.all(AppTheme.spacing16),
-                                ),
-                                onChanged: (value) {
-                                  if (!_isInChatMode) {
-                                    context.read<NotesProvider>().setSearchQuery(value);
-                                    setState(() {}); // Rebuild to update Ask AI button
-                                  }
-                                },
-                                onSubmitted: (value) async {
-                                  if (value.trim().isEmpty) return;
-                                  
-                                  if (_isInChatMode) {
-                                    // Send to AI
-                                    await _sendToAI(value);
-                                    _searchController.clear();
-                                  }
-                                  // In search mode, do nothing (live filtering already happens)
-                                },
-                              ),
-                              const SizedBox(height: AppTheme.spacing12),
-                              // Ask AI button
-                              _buildAskAIButton(context.read<NotesProvider>(), themeConfig),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildAskAIButton(NotesProvider provider, ThemeConfig themeConfig) {
-    final hasQuery = _searchController.text.isNotEmpty;
-    final filteredNotes = _getFilteredNotes(provider.notes);
-    final hasResults = filteredNotes.isNotEmpty;
-    final noResults = hasQuery && !hasResults;
-    
-    final buttonText = hasQuery 
-        ? LocalizationService().t('ask_ai_about', {'query': _searchController.text})
-        : LocalizationService().t('ask_ai');
-    
-    return AnimatedContainer(
-      duration: AppTheme.animationNormal,
-      curve: Curves.easeOutCubic,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppTheme.spacing24,
-          0,
-          AppTheme.spacing24,
-          AppTheme.spacing16,
-        ),
-        child: GestureDetector(
-          onTap: () {
-            HapticService.light();
-            _enterChatMode(_searchController.text.isNotEmpty 
-                ? _searchController.text 
-                : '');
-          },
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: AnimatedContainer(
-                duration: AppTheme.animationNormal,
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.all(AppTheme.spacing16),
-                decoration: BoxDecoration(
-                  gradient: hasQuery
-                      ? LinearGradient(
-                          colors: [
-                            themeConfig.primaryColor.withValues(alpha: 0.25),
-                            themeConfig.primaryColor.withValues(alpha: 0.15),
-                          ],
-                        )
-                      : null,
-                  color: hasQuery ? null : AppTheme.glassSurface,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                  border: Border.all(
-                    color: hasQuery
-                        ? themeConfig.primaryColor.withValues(alpha: 0.5)
-                        : AppTheme.glassBorder,
-                    width: hasQuery ? 2 : 1.5,
-                  ),
-                  boxShadow: hasQuery
-                      ? [
-                          BoxShadow(
-                            color: themeConfig.primaryColor.withValues(alpha: 0.2),
-                            blurRadius: 12,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AnimatedSwitcher(
-                      duration: AppTheme.animationNormal,
-                      child: Icon(
-                        Icons.psychology,
-                        key: ValueKey(hasQuery),
-                        size: 20,
-                        color: hasQuery ? AppTheme.textPrimary : AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: AppTheme.spacing8),
-                    Flexible(
-                      child: AnimatedDefaultTextStyle(
-                        duration: AppTheme.animationNormal,
-                        curve: Curves.easeOutCubic,
-                        style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                              color: hasQuery ? AppTheme.textPrimary : AppTheme.textSecondary,
-                              fontWeight: hasQuery ? FontWeight.w600 : FontWeight.w500,
-                            ),
-                        child: Text(
-                          buttonText,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        )
-            .animate(
-              onPlay: (controller) => controller.repeat(reverse: true),
-            )
-            .shimmer(
-              duration: noResults ? 1500.ms : 3000.ms,
-              delay: noResults ? 0.ms : 5000.ms,
-            ),
-      ),
-    );
-  }
-
   void _showOrganizeBottomSheet() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => const NoteOrganizationSheet(),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.spacing24,
-        vertical: AppTheme.spacing16,
-      ),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-            ),
-      ),
     );
   }
   
@@ -1922,282 +1421,4 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ];
     }
   }
-  
-  Widget _buildAnimatedHeader(double progress) {
-    // Get safe area insets
-    final safePadding = MediaQuery.of(context).padding.top;
-    
-    // Interpolate values based on scroll progress
-    final double fontSize = 28 - (progress * 10); // 28 -> 18
-    final double topPadding = 40 - (progress * 24); // 40 -> 16
-    final double horizontalPadding = 24.0; // Fixed 24px to align with note cards
-    final double iconOpacity = 0.85 + ((1 - progress) * 0.15);
-    
-    // Search bar and greeting scale down during transition
-    final double searchBarHeight = 40 - (progress * 15); // 40 -> 25 (shrinks)
-    final double greetingBottomPadding = 20 - (progress * 16); // 20 -> 4 (shrinks spacing)
-    
-    // Control when elements appear/disappear - better transition timing
-    // Only show expanded when progress < 0.8 (mostly expanded)
-    final double expandedOpacity = (1.0 - progress).clamp(0.0, 1.0);
-    // Only show collapsed when progress > 0.7 (mostly scrolled)  
-    final double collapsedOpacity = ((progress - 0.7) * 3.33).clamp(0.0, 1.0);
-    
-    // Background opacity increases as we scroll
-    final double backgroundOpacity = progress * 0.5; // More visible when scrolled
-    final double blurAmount = progress * 20;
-    
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blurAmount, sigmaY: blurAmount),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppTheme.glassDarkSurface.withValues(alpha: backgroundOpacity),
-            border: progress > 0.5 ? const Border(
-              bottom: BorderSide(
-                color: AppTheme.glassBorder,
-                width: 1.5,
-              ),
-            ) : null,
-          ),
-          child: Stack(
-            children: [
-              // EXPANDED STATE: Greeting + Search Bar
-              if (expandedOpacity > 0)
-                Positioned(
-                  left: horizontalPadding,
-                  right: horizontalPadding,
-                  top: safePadding + topPadding,
-                  child: Opacity(
-                    opacity: expandedOpacity.clamp(0.0, 1.0),
-                    child: IgnorePointer(
-                      ignoring: expandedOpacity < 0.3,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Greeting text with dynamic padding
-                          Padding(
-                            padding: EdgeInsets.only(bottom: greetingBottomPadding.clamp(4.0, 20.0)),
-                            child: Text(
-                              _getGreeting(),
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontSize: fontSize,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: -0.5,
-                                    height: 1.0,
-                                    color: AppTheme.textPrimary.withOpacity(0.9),
-                                  ),
-                              overflow: TextOverflow.clip,
-                              maxLines: 1,
-                            ),
-                          ),
-                          // Search bar with ellipsis - shrinks during scroll
-                          Row(
-                            children: [
-                              // Search bar - fills available width
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    HapticService.light();
-                                    setState(() {
-                                      _showSearchOverlay = true;
-                                    });
-                                    _searchAnimationController.forward();
-                                  },
-                                  child: Container(
-                                    height: searchBarHeight.clamp(25.0, 40.0),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.glassSurface.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: AppTheme.glassBorder.withOpacity(0.25),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.auto_awesome,
-                                          size: 16,
-                                          color: AppTheme.textSecondary.withOpacity(0.7),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          LocalizationService().t('ask_ai'),
-                                          style: TextStyle(
-                                            color: AppTheme.textSecondary.withOpacity(0.7),
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              // Ellipsis button - matches search bar height
-                              GestureDetector(
-                                onTap: () {
-                                  HapticService.light();
-                                  _showOrganizeBottomSheet();
-                                },
-                                child: Container(
-                                  width: searchBarHeight.clamp(25.0, 40.0),
-                                  height: searchBarHeight.clamp(25.0, 40.0),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.glassSurface.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: AppTheme.glassBorder.withOpacity(0.25),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.more_horiz,
-                                      size: 18,
-                                      color: AppTheme.textPrimary.withOpacity(0.7),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              
-              // COLLAPSED STATE: Home title with search and settings icons
-              if (collapsedOpacity > 0)
-                Positioned.fill(
-                  top: safePadding,
-                  child: Opacity(
-                    opacity: collapsedOpacity.clamp(0.0, 1.0),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                      alignment: Alignment.center,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Search icon on left
-                          GestureDetector(
-                            onTap: () {
-                              HapticService.light();
-                              setState(() {
-                                _showSearchOverlay = true;
-                              });
-                              _searchAnimationController.forward();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                Icons.search,
-                                size: 22,
-                                color: AppTheme.textPrimary.withOpacity(iconOpacity),
-                              ),
-                            ),
-                          ),
-                          // "Home" title - centered
-                          Expanded(
-                            child: Text(
-                              'Home',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: -0.5,
-                                    color: AppTheme.textPrimary,
-                                  ),
-                              overflow: TextOverflow.visible,
-                              maxLines: 1,
-                            ),
-                          ),
-                          // Settings icon on right
-                          GestureDetector(
-                            onTap: () async {
-                              await HapticService.light();
-                              await context.pushHero(const SettingsScreen());
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                Icons.settings_outlined,
-                                size: 22,
-                                color: AppTheme.textPrimary.withOpacity(iconOpacity),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              
-              // Settings icon for expanded state (top-right)
-              if (expandedOpacity > 0)
-                Positioned(
-                  top: safePadding + 8,
-                  right: 24,
-                  child: Opacity(
-                    opacity: expandedOpacity.clamp(0.0, 1.0),
-                    child: GestureDetector(
-                      onTap: () async {
-                        await HapticService.light();
-                        await context.pushHero(const SettingsScreen());
-                      },
-                      child: Icon(
-                        Icons.settings_outlined,
-                        size: 22,
-                        color: AppTheme.textPrimary.withOpacity(iconOpacity),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
-
-// Custom SliverPersistentHeaderDelegate for animated header
-class _AnimatedHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final Widget Function(double) builder;
-  final double expandedHeight;
-  final double collapsedHeight;
-
-  _AnimatedHeaderDelegate({
-    required this.builder,
-    required this.expandedHeight,
-    required this.collapsedHeight,
-  });
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // Calculate progress based on how much the header has shrunk
-    final double shrinkProgress = (shrinkOffset / (expandedHeight - collapsedHeight)).clamp(0.0, 1.0);
-    return SizedBox.expand(
-      child: builder(shrinkProgress),
-    );
-  }
-
-  @override
-  double get maxExtent => expandedHeight;
-
-  @override
-  double get minExtent => collapsedHeight;
-
-  @override
-  bool shouldRebuild(covariant _AnimatedHeaderDelegate oldDelegate) {
-    return true; // Always rebuild for smooth animation
-  }
-}
-
