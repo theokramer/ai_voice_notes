@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/notes_provider.dart';
 import '../services/haptic_service.dart';
+import '../services/localization_service.dart';
 
 class TagEditor extends StatefulWidget {
   final List<String> tags;
@@ -139,7 +140,7 @@ class _TagEditorState extends State<TagEditor> {
           controller: _controller,
           focusNode: _focusNode,
           decoration: InputDecoration(
-            hintText: 'Add tag...',
+            hintText: LocalizationService().t('add_tag_placeholder'),
             prefixIcon: const Icon(Icons.tag, size: 20),
             suffixIcon: _controller.text.isNotEmpty
                 ? IconButton(

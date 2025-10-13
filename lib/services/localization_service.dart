@@ -266,6 +266,10 @@ class LocalizationService {
       'pin_note': 'Pin note',
       'unpin_note': 'Unpin note',
       'default': 'Default',
+      'notes_organized_count': '{count} notes organized!',
+      'note_count_single': '1 note',
+      'note_count_plural': '{count} notes',
+      'add_tag_placeholder': 'Add tag...',
       
       // Create Note Dialog
       'note_name': 'Note name',
@@ -667,6 +671,10 @@ class LocalizationService {
       'pin_note': 'Fijar nota',
       'unpin_note': 'Desfijar nota',
       'default': 'Predeterminado',
+      'notes_organized_count': '¡{count} notas organizadas!',
+      'note_count_single': '1 nota',
+      'note_count_plural': '{count} notas',
+      'add_tag_placeholder': 'Añadir etiqueta...',
       
       // Create Note Dialog
       'note_name': 'Nombre de nota',
@@ -1068,6 +1076,10 @@ class LocalizationService {
       'pin_note': 'Épingler la note',
       'unpin_note': 'Désépingler la note',
       'default': 'Par défaut',
+      'notes_organized_count': '{count} notes organisées!',
+      'note_count_single': '1 note',
+      'note_count_plural': '{count} notes',
+      'add_tag_placeholder': 'Ajouter une étiquette...',
       
       // Create Note Dialog
       'note_name': 'Nom de la note',
@@ -1469,6 +1481,10 @@ class LocalizationService {
       'pin_note': 'Notiz anheften',
       'unpin_note': 'Notiz loslösen',
       'default': 'Standard',
+      'notes_organized_count': '{count} Notizen organisiert!',
+      'note_count_single': '1 Notiz',
+      'note_count_plural': '{count} Notizen',
+      'add_tag_placeholder': 'Tag hinzufügen...',
       
       // Create Note Dialog
       'note_name': 'Notizname',

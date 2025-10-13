@@ -369,7 +369,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$processed Notizen organisiert!'),
+          content: Text(LocalizationService().t('notes_organized_count', {'count': processed.toString()})),
           backgroundColor: Colors.green,
         ),
       );
