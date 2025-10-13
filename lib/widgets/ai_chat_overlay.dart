@@ -5,6 +5,8 @@ import '../theme/app_theme.dart';
 import '../services/haptic_service.dart';
 import '../services/localization_service.dart';
 import '../services/openai_service.dart';
+import 'chat/chat_message_bubble.dart';
+import 'chat/chat_input_field.dart';
 
 class AIChatOverlay extends StatefulWidget {
   final List<ChatMessage> messages;

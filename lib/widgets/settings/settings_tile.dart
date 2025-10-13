@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../models/settings.dart';
 import '../../theme/app_theme.dart';
 
 /// Reusable settings tile with icon, title, subtitle, and optional trailing widget
@@ -155,7 +154,7 @@ class SettingsToggleTile extends StatelessWidget {
             Switch(
               value: value,
               onChanged: onChanged,
-              activeColor: themeConfig.primaryColor,
+              activeTrackColor: themeConfig.primaryColor,
             ),
           ],
         ),

@@ -14,6 +14,7 @@ import '../services/localization_service.dart';
 import '../widgets/custom_snackbar.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/theme_preview_card.dart';
+import '../widgets/settings/settings_section.dart';
 import 'organization_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -59,18 +60,14 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                    _buildSection(
-                      context,
-                      settingsProvider.currentThemeConfig,
+                    SettingsSection(
                       title: LocalizationService().t('language'),
                       children: [
                         _buildLanguageSelector(context, settingsProvider.currentThemeConfig),
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
-                    _buildSection(
-                      context,
-                      settingsProvider.currentThemeConfig,
+                    SettingsSection(
                       title: LocalizationService().t('appearance'),
                       children: [
                         _buildThemeSelector(context, settingsProvider.currentThemeConfig),
@@ -78,18 +75,14 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
-                    _buildSection(
-                      context,
-                      settingsProvider.currentThemeConfig,
+                    SettingsSection(
                       title: LocalizationService().t('recording'),
                       children: [
                         _buildAudioQualitySelector(context, settingsProvider.currentThemeConfig),
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
-                    _buildSection(
-                      context,
-                      settingsProvider.currentThemeConfig,
+                    SettingsSection(
                       title: 'Smart Notes',
                       children: [
                         _buildTranscriptionModeSelector(context, settingsProvider.currentThemeConfig),
@@ -100,9 +93,7 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
-                    _buildSection(
-                      context,
-                      settingsProvider.currentThemeConfig,
+                    SettingsSection(
                       title: LocalizationService().t('preferences'),
                       children: [
                         _buildHapticsToggle(context, settingsProvider.currentThemeConfig),
@@ -111,9 +102,7 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
-                    _buildSection(
-                      context,
-                      settingsProvider.currentThemeConfig,
+                    SettingsSection(
                       title: 'Data',
                       children: [
                         _buildClearCacheButton(context, settingsProvider.currentThemeConfig),
@@ -121,9 +110,7 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
-                    _buildSection(
-                      context,
-                      settingsProvider.currentThemeConfig,
+                    SettingsSection(
                       title: 'About',
                       children: [
                         _buildAboutTile(context, settingsProvider.currentThemeConfig),
@@ -139,45 +126,6 @@ class SettingsScreen extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildSection(
-    BuildContext context,
-    ThemeConfig themeConfig, {
-    required String title,
-    required List<Widget> children,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(
-            left: AppTheme.spacing8,
-            bottom: AppTheme.spacing12,
-          ),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppTheme.textSecondary,
-                  fontSize: 12,
-                  letterSpacing: 1.2,
-                ),
-          ),
-        ),
-        // Removed BackdropFilter for better performance
-        Container(
-          decoration: BoxDecoration(
-            color: AppTheme.glassStrongSurface,
-            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-            border: Border.all(color: AppTheme.glassBorder, width: 1.5),
-            boxShadow: AppTheme.cardShadow,
-          ),
-          child: Column(
-            children: children,
-          ),
-        ),
-      ],
     );
   }
 
