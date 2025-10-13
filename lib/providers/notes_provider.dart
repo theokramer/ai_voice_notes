@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/note.dart';
 import '../services/storage_service.dart';
-import '../services/openai_service.dart';
 import '../utils/markdown_to_delta_converter.dart';
 
 enum SortOption {
@@ -29,8 +27,6 @@ class NotesProvider extends ChangeNotifier {
   final StorageService _storageService = StorageService();
   List<Note> _notes = [];
   bool _isLoading = false;
-  String? _apiKey;
-  OpenAIService? _openAIService;
   Note? _deletedNote;
   SortOption _sortOption = SortOption.recentlyUpdated;
   SortDirection _sortDirection = SortDirection.descending;
@@ -69,7 +65,6 @@ class NotesProvider extends ChangeNotifier {
   
   List<Note> get allNotes => _notes;
   bool get isLoading => _isLoading;
-  bool get hasApiKey => _apiKey != null && _apiKey!.isNotEmpty;
   SortOption get sortOption => _sortOption;
   SortDirection get sortDirection => _sortDirection;
   NoteViewType get noteViewType => _noteViewType;
@@ -87,12 +82,6 @@ class NotesProvider extends ChangeNotifier {
   Future<void> initialize() async {
     _isLoading = true;
     notifyListeners();
-
-    // Load API key from .env file and pre-initialize service
-    _apiKey = dotenv.env['OPENAI_API_KEY'];
-    if (_apiKey != null && _apiKey!.isNotEmpty) {
-      _openAIService = OpenAIService(apiKey: _apiKey!);
-    }
     
     _notes = await _storageService.loadNotes();
     
@@ -542,15 +531,7 @@ class NotesProvider extends ChangeNotifier {
     await updateNote(updatedNote);
   }
 
-  // DEPRECATED: Use RecordingQueueService instead
-  // Kept for backward compatibility
-  Future<String> transcribeAudio(String audioPath) async {
-    if (_openAIService == null) throw Exception('API key not set');
-    final result = await _openAIService!.transcribeAudio(audioPath);
-    return result.text;
-  }
-
-  // NEW: Folder-related methods
+  // Folder-related methods
   
   /// Get all notes in a specific folder
   /// Also includes notes with null folderId when querying for the unorganized folder

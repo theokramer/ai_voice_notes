@@ -43,10 +43,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final AudioRecorder _audioRecorder = AudioRecorder();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  // DEPRECATED: Removed in favor of RecordingQueueService
-  // String? _recordingPath;
-  // String? _transcribedText;
-  // bool _isTranscribing = false;
   bool _showSearchOverlay = false;
   late AnimationController _searchAnimationController;
   late Animation<double> _searchAnimation;
@@ -56,10 +52,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final List<ChatMessage> _chatMessages = [];
   String? _chatContext;
   bool _isAIProcessing = false;
-  
-  // Selection mode state
-  // DEPRECATED: Selection mode removed in favor of direct navigation
-  // bool _isInSelectionMode = false;
   
   // Folder context state (for context-aware recording)
   String? _currentFolderContext; // null = All Notes view
@@ -205,83 +197,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       );
 
       // Add AI response with citations
-      ChatMessage aiMessage = ChatMessage(
+      final aiMessage = ChatMessage(
         text: response.text,
         isUser: false,
         timestamp: DateTime.now(),
         noteCitations: response.noteCitations,
       );
-
-      // DEPRECATED: Action handling removed from new AIChatResponse
-      // The new implementation focuses on conversational AI without action triggers
-      /*
-      if (response.actionType != null && response.actionData != null) {
-        ChatAction? action;
-        
-        switch (response.actionType) {
-          case 'create_note':
-            action = ChatAction(
-              type: 'create_note',
-              description: 'Create note "${response.actionData}"',
-              buttonLabel: LocalizationService().t('create_note'),
-              data: {'noteName': response.actionData},
-            );
-            break;
-          case 'add_entry':
-            final parts = response.actionData!.split(':');
-            if (parts.length >= 2) {
-              final noteId = parts[0];
-              final entryText = parts.sublist(1).join(':');
-              final note = provider.allNotes.firstWhere((n) => n.id == noteId, orElse: () => provider.allNotes.first);
-              action = ChatAction(
-                type: 'add_entry',
-                description: 'Add to "${note.name}"',
-                buttonLabel: LocalizationService().t('add_entry'),
-                data: {'noteId': noteId, 'entryText': entryText},
-              );
-            }
-            break;
-          case 'consolidate':
-            final parts = response.actionData!.split(':');
-            if (parts.length >= 2) {
-              final targetName = parts[0];
-              final noteIds = parts[1].split(',');
-              action = ChatAction(
-                type: 'consolidate',
-                description: 'Consolidate ${noteIds.length} notes into "$targetName"',
-                buttonLabel: LocalizationService().t('consolidate_entries'),
-                data: {'targetName': targetName, 'noteIds': noteIds},
-              );
-            }
-            break;
-          case 'move_entry':
-            final parts = response.actionData!.split(':');
-            if (parts.length >= 3) {
-              action = ChatAction(
-                type: 'move_entry',
-                description: 'Move entry between notes',
-                buttonLabel: LocalizationService().t('move_entry'),
-                data: {
-                  'sourceNoteId': parts[0],
-                  'targetNoteId': parts[1],
-                  'entryId': parts[2],
-                },
-              );
-            }
-            break;
-        }
-        
-        if (action != null) {
-          aiMessage = ChatMessage(
-            text: response.text,
-            isUser: false,
-            timestamp: DateTime.now(),
-            action: action,
-            noteCitations: response.noteCitations,
-          );
-        }
-      }
-      */
 
       setState(() {
         _chatMessages.add(aiMessage);
@@ -310,22 +231,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final noteId = _undoData as String;
           await provider.deleteNote(noteId);
           break;
-        // DEPRECATED: add_entry no longer exists with new Note model
-        /*
-        case 'add_entry':
-          final data = _undoData as Map<String, dynamic>;
-          final note = provider.allNotes.firstWhere((n) => n.id == data['noteId']);
-          final headlines = note.headlines.map((h) {
-            if (h.id == data['headlineId']) {
-              return h.copyWith(
-                entries: h.entries.where((e) => e.id != data['entryId']).toList(),
-              );
-            }
-            return h;
-          }).toList();
-          await provider.updateNote(note.copyWith(headlines: headlines));
-          break;
-        */
         case 'consolidate':
           final data = _undoData as Map<String, dynamic>;
           // Delete consolidated note
@@ -429,74 +334,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
         break;
         
-      // DEPRECATED: add_entry action references old headlines model
-      /*
-      case 'add_entry':
-        final noteId = action.data['noteId'] as String;
-        final entryText = action.data['entryText'] as String;
-        
-        // Try to find note by ID, fall back to finding by name if ID doesn't match
-        Note note;
-        try {
-          note = provider.allNotes.firstWhere((n) => n.id == noteId);
-        } catch (e) {
-          // Try to find by partial ID match or name
-          note = provider.allNotes.firstWhere(
-            (n) => n.name.toLowerCase().contains(noteId.toLowerCase()),
-            orElse: () => provider.allNotes.first,
-          );
-        }
-        
-        // NEW: Just append to content instead
-        final updatedContent = note.content.isEmpty 
-            ? entryText 
-            : '${note.content}\n\n$entryText';
-        final updatedNote = note.copyWith(content: updatedContent);
-        await provider.updateNote(updatedNote);
-        
-        // Save undo data
-        _lastAction = {'type': 'add_entry'};
-        _undoData = {
-          'noteId': noteId,
-        };
-        
-        HapticService.success();
-        setState(() {
-          _chatMessages.add(ChatMessage(
-            text: '✅ Added entry to "${note.name}"!',
-            isUser: false,
-            timestamp: DateTime.now(),
-          ));
-        });
-        
-        // Show undo snackbar
-        if (mounted) {
-          final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
-          CustomSnackbar.show(
-            context,
-            message: LocalizationService().t('added_entry_to', {'name': note.name}),
-            type: SnackbarType.success,
-            actionLabel: 'UNDO',
-            onAction: _undoLastAction,
-            duration: const Duration(seconds: 4),
-            themeConfig: themeConfig,
-          );
-        }
-        
-        // Navigate to the note
-        if (mounted) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => NoteDetailScreen(
-                noteId: note.id,
-              ),
-            ),
-          );
-        }
-        break;
-        */
-        
       case 'consolidate':
         final targetName = action.data['targetName'] as String;
         final noteIds = (action.data['noteIds'] as List).cast<String>();
@@ -564,26 +401,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           );
         }
         break;
-        
-      // DEPRECATED: move_entry references removed moveEntry method
-      /*
-      case 'move_entry':
-        final sourceNoteId = action.data['sourceNoteId'] as String;
-        final targetNoteId = action.data['targetNoteId'] as String;
-        final entryId = action.data['entryId'] as String;
-        
-        await provider.moveEntry(sourceNoteId, '', targetNoteId, entryId);
-        
-        HapticService.success();
-        setState(() {
-          _chatMessages.add(ChatMessage(
-            text: '✅ Moved entry!',
-            isUser: false,
-            timestamp: DateTime.now(),
-          ));
-        });
-        break;
-      */
       }
     } catch (e) {
       // Handle any errors
@@ -761,237 +578,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
     }
   }
-
-  // DEPRECATED: Selection mode no longer used with new RecordingQueueService
-  /*
-  void _enterSelectionMode() {
-    setState(() {
-      _isInSelectionMode = true;
-    });
-    HapticService.light();
-  }
-
-  void _exitSelectionMode() {
-    setState(() {
-      _isInSelectionMode = false;
-    });
-    // Clear recording data if user cancels
-    _recordingPath = null;
-    _transcribedText = null;
-    HapticService.light();
-  }
-
-  void _handleNoteSelectionInMode(Note note) async {
-    // Exit selection mode
-    setState(() {
-      _isInSelectionMode = false;
-    });
-    
-    // Process the recording
-    await _processRecording(note);
-  }
-  */
-
-  // DEPRECATED: This method is replaced by RecordingQueueService
-  /*
-  void _handleCreateNoteInSelectionMode() async {
-    final result = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (context) => const CreateNoteDialog(),
-    );
-
-    if (result != null && mounted) {
-      HapticService.success();
-      final provider = context.read<NotesProvider>();
-      final newNote = Note(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: result['name']!,
-        icon: result['icon']!,
-        content: '',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      provider.addNote(newNote);
-      
-      // Exit selection mode and process recording
-      setState(() {
-        _isInSelectionMode = false;
-      });
-      
-      await _processRecording(newNote);
-    }
-  }
-  */
-
-  // DEPRECATED: Transcription now handled by RecordingQueueService
-  /*
-  Future<void> _startTranscription() async {
-    if (_recordingPath == null) return;
-
-    setState(() {
-      _isTranscribing = true;
-      _transcribedText = null;
-    });
-
-    try {
-      final provider = context.read<NotesProvider>();
-      _transcribedText = await provider.transcribeAudio(_recordingPath!);
-    } catch (e) {
-      if (mounted) {
-        final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
-        CustomSnackbar.show(
-          context,
-          message: LocalizationService().t('transcription_failed', {'error': e.toString()}),
-          type: SnackbarType.error,
-          themeConfig: themeConfig,
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isTranscribing = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _processRecording(Note note) async {
-    if (_recordingPath == null) return;
-
-    try {
-      final provider = context.read<NotesProvider>();
-      final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
-
-      // Show processing dialog immediately
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => _buildProcessingDialog(
-            isTranscribing: _isTranscribing,
-            themeConfig: themeConfig,
-          ),
-        );
-      }
-
-      // Wait for transcription if still in progress (non-blocking for modal)
-      String? transcribedText = _transcribedText;
-      if (_isTranscribing) {
-        // Wait for transcription to complete
-        while (_isTranscribing && mounted) {
-          await Future.delayed(const Duration(milliseconds: 100));
-        }
-        transcribedText = _transcribedText;
-      }
-
-      if (transcribedText == null || transcribedText.isEmpty) {
-        throw Exception('Transcription failed or returned empty text');
-      }
-
-      // Add transcription to note and get the created entry ID
-      final entryId = await provider.addTranscriptionToNote(transcribedText, note.id);
-
-      // Close dialog immediately
-      if (mounted) {
-        Navigator.pop(context);
-      }
-
-      // Provide haptic feedback and navigate (fire-and-forget)
-      HapticService.success();
-      
-      if (mounted) {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => NoteDetailScreen(
-              noteId: note.id,
-              highlightedEntryId: entryId,
-              autoCloseAfterDelay: true,
-            ),
-          ),
-        );
-      }
-
-      _transcribedText = null;
-      _recordingPath = null;
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        HapticService.error();
-        final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
-        CustomSnackbar.show(
-          context,
-          message: 'Error processing recording: $e',
-          type: SnackbarType.error,
-          themeConfig: themeConfig,
-        );
-      }
-    }
-  }
-  */
-
-  // DEPRECATED: Processing dialog replaced by RecordingStatusBar
-  /*
-  Widget _buildProcessingDialog({
-    required bool isTranscribing,
-    required ThemeConfig themeConfig,
-  }) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: const EdgeInsets.all(AppTheme.spacing32),
-            decoration: BoxDecoration(
-              color: AppTheme.glassStrongSurface,
-              borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-              border: Border.all(color: AppTheme.glassBorder, width: 1.5),
-              boxShadow: AppTheme.cardShadow,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 4,
-                    color: themeConfig.primaryColor,
-                  ),
-                ),
-                const SizedBox(height: AppTheme.spacing24),
-                Text(
-                  isTranscribing ? 'Transcribing...' : 'Organizing...',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: AppTheme.spacing8),
-                Text(
-                  isTranscribing
-                      ? 'Converting speech to text'
-                      : 'Categorizing your note',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    )
-        .animate()
-        .fadeIn(duration: AppTheme.animationFast)
-        .scale(
-          begin: const Offset(0.9, 0.9),
-          end: const Offset(1, 1),
-          duration: AppTheme.animationNormal,
-          curve: Curves.easeOutBack,
-        );
-  }
-  */
 
   void _showEditNoteDialog(Note note) async {
     HapticService.light();
@@ -1526,7 +1112,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                           index: index - 1,
                                           onTap: () async {
                                             await HapticService.light();
-                                            // Selection mode deprecated - always navigate
                                             provider.markNoteAsAccessed(note.id);
                                             if (_searchController.text.isNotEmpty) {
                                               _hideSearchOverlay();
@@ -1553,7 +1138,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                           index: index - weekStartIndex - 1,
                                           onTap: () async {
                                             await HapticService.light();
-                                            // Selection mode deprecated - always navigate
                                             provider.markNoteAsAccessed(note.id);
                                             if (_searchController.text.isNotEmpty) {
                                               _hideSearchOverlay();
@@ -1580,7 +1164,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                           index: index - moreStartIndex - 1,
                                           onTap: () async {
                                             await HapticService.light();
-                                            // Selection mode deprecated - always navigate
                                             provider.markNoteAsAccessed(note.id);
                                             if (_searchController.text.isNotEmpty) {
                                               _hideSearchOverlay();
@@ -1668,7 +1251,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                                   isGridView: true,
                                                   onTap: () async {
                                                     await HapticService.light();
-                                                    // Selection mode deprecated - always navigate
                                                     provider.markNoteAsAccessed(note.id);
                                                     
                                                     final searchQuery = _searchController.text.isNotEmpty
@@ -1857,7 +1439,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 index: adjustedIndex,
                                 onTap: () async {
                                   await HapticService.light();
-                                  // Selection mode deprecated - always navigate
                                   provider.markNoteAsAccessed(note.id);
                                   
                                   // Capture search query before clearing
@@ -1973,9 +1554,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                 ),
               
-              // DEPRECATED: Selection mode overlay removed
-              // if (_isInSelectionMode)
-              //   _buildSelectionModeOverlay(),
             ],
               ),
           ),
@@ -1986,189 +1564,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
-  // DEPRECATED: Selection mode overlay removed
-  /*
-  Widget _buildSelectionModeOverlay() {
-    return Consumer<SettingsProvider>(
-      builder: (context, settingsProvider, child) {
-        final themeConfig = settingsProvider.currentThemeConfig;
-        
-        return Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Compact banner at top
-                Container(
-                  margin: const EdgeInsets.all(AppTheme.spacing16),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.spacing20,
-                          vertical: AppTheme.spacing16,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.black.withOpacity(0.75),
-                              Colors.black.withOpacity(0.65),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-                          border: Border.all(
-                            color: themeConfig.primaryColor.withOpacity(0.4),
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: themeConfig.primaryColor.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 4),
-                            ),
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.4),
-                              blurRadius: 15,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            // Icon indicator
-                            Container(
-                              padding: const EdgeInsets.all(AppTheme.spacing8),
-                              decoration: BoxDecoration(
-                                color: themeConfig.primaryColor.withOpacity(0.25),
-                                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                                border: Border.all(
-                                  color: themeConfig.primaryColor.withOpacity(0.4),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Icon(
-                                _isTranscribing ? Icons.transcribe : Icons.touch_app,
-                                size: 20,
-                                color: themeConfig.primaryColor,
-                              ),
-                            ),
-                            const SizedBox(width: AppTheme.spacing12),
-                            // Text
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    _isTranscribing 
-                                        ? 'Transcribing...'
-                                        : 'Select a note',
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white,
-                                        ),
-                                  ),
-                                  if (!_isTranscribing)
-                                    Text(
-                                      'Choose where to save your entry',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: Colors.white.withOpacity(0.7),
-                                            fontSize: 13,
-                                          ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            // Action buttons
-                            GestureDetector(
-                              onTap: _handleCreateNoteInSelectionMode,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppTheme.spacing12,
-                                  vertical: AppTheme.spacing8,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      themeConfig.buttonColor,
-                                      themeConfig.buttonColor.withOpacity(0.8),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: themeConfig.buttonColor.withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.add,
-                                      size: 16,
-                                      color: Colors.white,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'New',
-                                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppTheme.spacing8),
-                            // Cancel button
-                            GestureDetector(
-                              onTap: _exitSelectionMode,
-                              child: Container(
-                                padding: const EdgeInsets.all(AppTheme.spacing8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.close,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-                    .animate()
-                    .fadeIn(duration: AppTheme.animationFast)
-                    .slideY(begin: -0.5, end: 0, duration: AppTheme.animationNormal, curve: Curves.easeOutCubic),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-  */
 
   Widget _buildSearchOverlay(ThemeConfig themeConfig) {
     return AnimatedBuilder(
