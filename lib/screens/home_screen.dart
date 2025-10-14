@@ -960,20 +960,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           );
                         },
                       ),
-                      // Recording Status Bar
-                      Consumer<RecordingQueueService>(
-                        builder: (context, queueService, child) {
-                          if (queueService.queue.isEmpty) {
-                            return const SliverToBoxAdapter(child: SizedBox.shrink());
-                          }
-                          return SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                              child: RecordingStatusBar(),
-                            ),
-                          );
-                        },
-                      ),
                       // Add top padding when search is active
                       if (_showSearchOverlay)
                         const SliverToBoxAdapter(
@@ -1319,6 +1305,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     themeConfig: themeConfig,
                   ),
                 ),
+              
+              // Recording Status Bar - Fixed at top
+              Consumer<RecordingQueueService>(
+                builder: (context, queueService, child) {
+                  if (queueService.queue.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Positioned(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    left: 16,
+                    right: 16,
+                    child: const RecordingStatusBar(),
+                  );
+                },
+              ),
               
             ],
               ),

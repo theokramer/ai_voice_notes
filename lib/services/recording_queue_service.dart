@@ -276,11 +276,13 @@ class RecordingQueueService extends ChangeNotifier {
       // 1. TRANSCRIBE
       updateRecording(id, status: RecordingStatus.transcribing);
       
-      // Use preferredLanguage as hint, but let Whisper detect actual spoken language
-      // If no preferred language is set, Whisper will auto-detect
+      // Let Whisper auto-detect the spoken language WITHOUT any hints
+      // The app UI language should NOT influence what language Whisper detects
+      // User speaks English → Whisper detects "en" → transcribes in English
+      // User speaks German → Whisper detects "de" → transcribes in German
       final transcriptionResult = await openAIService.transcribeAudio(
         item.audioPath!,
-        language: settings.preferredLanguage,
+        // NO language parameter - let Whisper detect the actual spoken language
       );
       
       final transcription = transcriptionResult.text;
@@ -535,7 +537,11 @@ class RecordingQueueService extends ChangeNotifier {
             folderName = existingFolder.name;
           } else {
             // No existing folder, create new one with smart icon
-            final smartIcon = result.suggestedFolderIcon ?? getSmartEmojiForFolder(proposedFolderName);
+            // Always use getSmartEmojiForFolder if AI returns default folder icon
+            final aiIcon = result.suggestedFolderIcon;
+            final smartIcon = (aiIcon == null || aiIcon == '📁') 
+                ? getSmartEmojiForFolder(proposedFolderName) 
+                : aiIcon;
             final newFolder = await foldersProvider.createFolder(
               name: proposedFolderName,
               icon: smartIcon,

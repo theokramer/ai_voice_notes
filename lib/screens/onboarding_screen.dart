@@ -19,10 +19,6 @@ import '../widgets/animated_background.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/onboarding_interstitial.dart';
 import '../widgets/customization_loading.dart';
-import '../widgets/onboarding/onboarding_video_page.dart';
-import '../widgets/onboarding/onboarding_theme_page.dart';
-import '../widgets/onboarding/onboarding_rating_page.dart';
-import '../widgets/onboarding/onboarding_completion_page.dart';
 
 /// Professional onboarding flow optimized for maximum conversion
 /// Flow: Video + Language → 3 Explanation Pages with Screenshots → Theme Selector →

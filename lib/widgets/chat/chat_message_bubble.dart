@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
-import '../../services/openai_service.dart';
 import '../ai_chat_overlay.dart';
 import '../note_citation_chip.dart';
 

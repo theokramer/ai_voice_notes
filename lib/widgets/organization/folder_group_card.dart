@@ -64,7 +64,11 @@ class _FolderGroupCardState extends State<FolderGroupCard> {
               targetFolderId = existingFolder.id;
               newFolders[folderNameLower] = existingFolder;
             } else {
-              final smartIcon = suggestion.newFolderIcon ?? getSmartEmojiForFolder(folderName);
+              // Always use getSmartEmojiForFolder if AI returns null or default folder icon
+              final aiIcon = suggestion.newFolderIcon;
+              final smartIcon = (aiIcon == null || aiIcon == '📁') 
+                  ? getSmartEmojiForFolder(folderName) 
+                  : aiIcon;
               final newFolder = await foldersProvider.createFolder(
                 name: folderName,
                 icon: smartIcon,

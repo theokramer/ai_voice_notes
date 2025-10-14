@@ -228,15 +228,17 @@ class _TaskItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppTheme.spacing12),
       padding: const EdgeInsets.all(AppTheme.spacing16),
       decoration: BoxDecoration(
+        // Use theme color background for better visibility on light backgrounds
         color: isCompleted || isCurrent
-            ? AppTheme.glassStrongSurface.withValues(alpha: 0.8)
-            : AppTheme.glassStrongSurface.withValues(alpha: 0.3),
+            ? primaryColor.withValues(alpha: 0.15)
+            : primaryColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         border: Border.all(
+          // Stronger border with theme color for better visibility
           color: isCompleted || isCurrent
-              ? primaryColor.withValues(alpha: 0.5)
-              : AppTheme.glassBorder.withValues(alpha: 0.3),
-          width: 1.5,
+              ? primaryColor.withValues(alpha: 0.6)
+              : primaryColor.withValues(alpha: 0.3),
+          width: isCompleted || isCurrent ? 2 : 1.5,
         ),
       ),
       child: Row(

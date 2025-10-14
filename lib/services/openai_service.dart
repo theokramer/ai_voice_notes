@@ -233,12 +233,11 @@ EXAMPLES OF CORRECT GENERIC NAMES:
 WRONG - TOO SPECIFIC:
 ✗ "Voting Experiences", "Grocery Shopping", "Meeting Notes Tuesday"
 
-Return JSON:
+Return JSON (do NOT include icon - it will be auto-selected):
 {
   "action": "use_existing" | "create_new" | "unorganized",
   "folderId": "id from list" | null,
   "folderName": "existing name" | "new folder name",
-  "suggestedIcon": "emoji for new folder" | null,
   "confidence": 0.0-1.0,
   "reasoning": "brief explanation"
 }''';
@@ -284,7 +283,7 @@ Return JSON:
             return AutoOrganizationResult(
               createNewFolder: true,
               folderName: result['folderName'],
-              suggestedFolderIcon: result['suggestedIcon'] ?? '📁',
+              suggestedFolderIcon: null, // Will use smart emoji selection
               confidence: (result['confidence'] ?? 0.8).toDouble(),
               reasoning: result['reasoning'] ?? '',
             );
@@ -355,7 +354,7 @@ CRITICAL: You MUST return exactly ${unorganizedNotes.length} suggestions, ONE fo
 
 For each note, decide:
 1. MOVE to existing folder (use targetFolderId and targetFolderName) - PREFER THIS
-2. CREATE new folder (use newFolderName and newFolderIcon) - ONLY if confidence > 0.9
+2. CREATE new folder (use newFolderName ONLY, icon will be auto-selected) - ONLY if confidence > 0.9
 3. If UNCERTAIN (confidence < 0.6), still provide best guess but mark confidence low
 
 FOLDER CREATION RULES (EXTREMELY IMPORTANT):
@@ -403,7 +402,7 @@ CORRECT (consolidating to one generic folder):
 ✓ Note 2: use "Personal Thoughts" folder (same as note 1)
 ✓ Note 3: use "Personal Thoughts" folder (same as note 1)
 
-Return JSON array with EXACTLY ${unorganizedNotes.length} objects:
+Return JSON array with EXACTLY ${unorganizedNotes.length} objects (do NOT include icon - it will be auto-selected):
 [
   {
     "noteId": "note id from list above",
@@ -411,7 +410,6 @@ Return JSON array with EXACTLY ${unorganizedNotes.length} objects:
     "targetFolderId": "existing folder id" | null,
     "targetFolderName": "existing folder name" | null,
     "newFolderName": "name for new folder" | null,
-    "newFolderIcon": "emoji for new folder" | null,
     "reasoning": "brief explanation (1 sentence)",
     "confidence": 0.0-1.0
   }
@@ -480,7 +478,7 @@ Guidelines:
               targetFolderId: s['targetFolderId'],
               targetFolderName: s['targetFolderName'],
               newFolderName: s['newFolderName'],
-              newFolderIcon: s['newFolderIcon'] ?? '📁',
+              newFolderIcon: null, // Will use smart emoji selection
               reasoning: s['reasoning'] ?? '',
               confidence: (s['confidence'] ?? 0.5).toDouble(),
             );

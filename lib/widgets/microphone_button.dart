@@ -46,6 +46,7 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
   double _dragStartY = 0.0;
   bool _isLocked = false;
   bool _isDragging = false;
+  bool _isStoppingRecording = false; // Guard to prevent duplicate recordings during stop
   static const double _lockThreshold = 150.0; // Drag 150px in local coords to lock
   static const double _dragStartThreshold = 30.0; // Min 30px moved to start counting as drag (prevents accidents)
 
@@ -212,8 +213,23 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
     widget.onRecordingStop();
   }
 
-  void _handleStopButtonTap() {
+  Future<void> _handleStopButtonTap() async {
     debugPrint('🛑 Stop button tapped!');
+    
+    // Set guard flag immediately to prevent new recordings
+    if (_isStoppingRecording) {
+      debugPrint('⚠️ Stop already in progress, ignoring tap');
+      return;
+    }
+    
+    setState(() {
+      _isStoppingRecording = true;
+    });
+    
+    // Prevent any new gestures from being processed during this operation
+    final wasRecording = _isRecording;
+    final wasLocked = _isLocked;
+    
     setState(() {
       _isRecording = false;
       _isLocked = false;
@@ -221,6 +237,15 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
       _dragOffset = 0.0;
       _dragStartY = 0.0;
     });
+    
+    if (!wasRecording || !wasLocked) {
+      debugPrint('⚠️ Stop button tapped but not in valid state (recording: $wasRecording, locked: $wasLocked)');
+      setState(() {
+        _isStoppingRecording = false;
+      });
+      return;
+    }
+    
     _recordingController.stop();
     _recordingController.reset();
     _pressController.reverse();
@@ -234,7 +259,18 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
       _successController.reset();
     });
     
+    // Call stop recording callback
     widget.onRecordingStop();
+    
+    // Add delay to prevent immediate re-recording and allow state to fully reset
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // Reset guard flag
+    if (mounted) {
+      setState(() {
+        _isStoppingRecording = false;
+      });
+    }
   }
 
   void _handleDragUpdate(double offset) {
@@ -302,8 +338,25 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
               (_AllowMultipleGestureRecognizer instance) {
                 instance
                   ..onDown = (details) {
+                    // Check if tap is on the stop button (when locked)
+                    // Stop button is positioned at top: 20, size: 60x60, centered horizontally
+                    if (_isLocked) {
+                      final dy = details.localPosition.dy;
+                      final dx = details.localPosition.dx;
+                      // Stop button bounds: center ±30px horizontally, 20-80px vertically
+                      final isInStopButton = dy >= 20 && dy <= 80 && 
+                                            dx >= 30 && dx <= 90;
+                      
+                      if (isInStopButton) {
+                        debugPrint('🛑 Stop button hit detected in parent handler');
+                        _handleStopButtonTap();
+                        return;
+                      }
+                    }
+                    
                     // Start recording immediately on touch down
-                    if (!_isRecording && !_isLocked) {
+                    // Prevent starting if we're in the middle of stopping a recording
+                    if (!_isRecording && !_isLocked && !_isStoppingRecording) {
                       setState(() {
                         _dragStartY = details.localPosition.dy;
                         _isDragging = false;
@@ -316,17 +369,17 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
                     // Track vertical drag
                     if (_isRecording && !_isLocked) {
                       // Calculate offset from start position in local widget coordinates
-                      // Positive offset = Y increases in widget space
+                      // Positive offset = Y increases in widget space (dragging downward)
                       final offset = details.localPosition.dy - _dragStartY;
-                      final moved = offset.abs();
                       
                       if (!_isDragging) {
-                        // Check if moved enough vertically to count as dragging
-                        if (moved > _dragStartThreshold) {
+                        // Only start dragging if moving DOWNWARD beyond threshold
+                        // This prevents accidental locks from horizontal or upward movement
+                        if (offset > _dragStartThreshold) {
                           setState(() {
                             _isDragging = true;
                           });
-                          debugPrint('🎯 Started dragging! Initial offset: $offset');
+                          debugPrint('🎯 Started dragging downward! offset: $offset');
                         }
                       }
                       
@@ -387,12 +440,12 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
                             scale: _stopButtonAnimation,
                             child: FadeTransition(
                               opacity: _stopButtonAnimation,
-                              child: Listener(
-                                behavior: HitTestBehavior.opaque,
-                                onPointerDown: (event) {
-                                  // Consume the event so parent doesn't receive it
+                              child: GestureDetector(
+                                onTapDown: (_) {
+                                  // Handle tap immediately to prevent propagation
                                   _handleStopButtonTap();
                                 },
+                                behavior: HitTestBehavior.opaque,
                                 child: Container(
                                   width: 60,
                                   height: 60,

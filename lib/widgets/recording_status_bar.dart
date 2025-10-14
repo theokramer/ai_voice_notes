@@ -66,20 +66,27 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
         final completedCount = queueService.completedCount;
         final errorCount = queueService.errorCount;
 
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.1),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: Column(
+              child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Collapsed header - always visible
@@ -95,6 +102,8 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
               if (_isExpanded)
                 _buildExpandedContent(context, queue, queueService),
             ],
+              ),
+            ),
           ),
         );
       },
@@ -164,7 +173,10 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
             Expanded(
               child: Text(
                 statusText,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
             AnimatedRotation(
@@ -172,7 +184,7 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
               duration: const Duration(milliseconds: 300),
               child: Icon(
                 Icons.keyboard_arrow_down,
-                color: Theme.of(context).textTheme.bodySmall?.color,
+                color: Colors.white.withOpacity(0.7),
               ),
             ),
           ],
@@ -209,7 +221,10 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
                 onPressed: () {
                   queueService.clearCompleted();
                 },
-                child: Text(LocalizationService().t('dismiss_all')),
+                child: Text(
+                  LocalizationService().t('dismiss_all'),
+                  style: TextStyle(color: Colors.white.withOpacity(0.9)),
+                ),
               ),
             ),
         ],
@@ -268,7 +283,7 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
           statusText = 'Saved';
         }
         trailing = PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, size: 20),
+          icon: Icon(Icons.more_vert, size: 20, color: Colors.white.withOpacity(0.7)),
           itemBuilder: (context) => [
             PopupMenuItem(
               value: 'move',
@@ -299,7 +314,7 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
         iconColor = Colors.red;
         statusText = item.errorMessage ?? 'Error';
         trailing = IconButton(
-          icon: const Icon(Icons.close, size: 20),
+          icon: Icon(Icons.close, size: 20, color: Colors.white.withOpacity(0.7)),
           onPressed: () {
             queueService.removeRecording(item.id);
           },
@@ -310,7 +325,13 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
     return Dismissible(
       key: Key(item.id),
       direction: DismissDirection.endToStart,
-      onDismissed: (_) {
+      onDismissed: (_) async {
+        // If note was created, delete it
+        if (item.noteId != null) {
+          final notesProvider = context.read<NotesProvider>();
+          await notesProvider.deleteNote(item.noteId!);
+        }
+        // Remove from queue
         queueService.removeRecording(item.id);
       },
       background: Container(
@@ -322,45 +343,55 @@ class _RecordingStatusBarState extends State<RecordingStatusBar> with SingleTick
         ),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Theme.of(context).dividerColor,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: iconColor, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.transcription != null && item.transcription!.isNotEmpty
-                        ? item.transcription!.length > 50
-                            ? '${item.transcription!.substring(0, 50)}...'
-                            : item.transcription!
-                        : 'Note ${item.timestamp.hour}:${item.timestamp.minute.toString().padLeft(2, '0')}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    statusText,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
+      child: GestureDetector(
+        onTap: (item.status == RecordingStatus.complete && item.noteId != null)
+            ? () => _navigateToNote(context, item.noteId!)
+            : null,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+              width: 1,
             ),
-            const SizedBox(width: 8),
-            trailing,
-          ],
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: iconColor, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.transcription != null && item.transcription!.isNotEmpty
+                          ? item.transcription!.length > 50
+                              ? '${item.transcription!.substring(0, 50)}...'
+                              : item.transcription!
+                          : 'Note ${item.timestamp.hour}:${item.timestamp.minute.toString().padLeft(2, '0')}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      statusText,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              trailing,
+            ],
+          ),
         ),
       ),
     );

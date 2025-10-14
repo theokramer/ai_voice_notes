@@ -33,15 +33,17 @@ class LanguageSelector extends StatelessWidget {
               vertical: 10,
             ),
             decoration: BoxDecoration(
-              color: AppTheme.glassStrongSurface.withValues(alpha: 0.8),
+              // Use theme color background for better visibility on light backgrounds
+              color: settingsProvider.currentThemeConfig.primaryColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: AppTheme.glassBorder.withValues(alpha: 0.5),
-                width: 1.5,
+                // Stronger border with theme color for better visibility
+                color: settingsProvider.currentThemeConfig.primaryColor.withValues(alpha: 0.6),
+                width: 2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
+                  color: settingsProvider.currentThemeConfig.primaryColor.withValues(alpha: 0.2),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),

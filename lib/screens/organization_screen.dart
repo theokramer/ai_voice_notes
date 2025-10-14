@@ -340,7 +340,11 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
               debugPrint('Reusing existing folder: ${existingFolder.name} (${existingFolder.id})');
             } else {
               // Create new folder with smart icon
-              final smartIcon = suggestion.newFolderIcon ?? getSmartEmojiForFolder(folderName);
+              // Always use getSmartEmojiForFolder if AI returns null or default folder icon
+              final aiIcon = suggestion.newFolderIcon;
+              final smartIcon = (aiIcon == null || aiIcon == '📁') 
+                  ? getSmartEmojiForFolder(folderName) 
+                  : aiIcon;
               final newFolder = await foldersProvider.createFolder(
                 name: folderName,
                 icon: smartIcon,
@@ -411,7 +415,11 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
           debugPrint('Reusing existing folder: ${existingFolder.name} (${existingFolder.id})');
         } else {
           // Create new folder with smart icon
-          final smartIcon = suggestion.newFolderIcon ?? getSmartEmojiForFolder(folderName);
+          // Always use getSmartEmojiForFolder if AI returns null or default folder icon
+          final aiIcon = suggestion.newFolderIcon;
+          final smartIcon = (aiIcon == null || aiIcon == '📁') 
+              ? getSmartEmojiForFolder(folderName) 
+              : aiIcon;
           final newFolder = await foldersProvider.createFolder(
             name: folderName,
             icon: smartIcon,
