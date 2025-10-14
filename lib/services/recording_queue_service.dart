@@ -457,14 +457,22 @@ class RecordingQueueService extends ChangeNotifier {
             debugPrint('✅ Appended to plain text format');
           }
           
-          // Update the note
+          // Update the note with dual-mode support
           final updatedNote = lastNote.copyWith(
             content: updatedContent,
+            // Append to raw transcription if it exists
+            rawTranscription: lastNote.rawTranscription != null 
+                ? '${lastNote.rawTranscription}\n\n$transcription'
+                : transcription,
+            // Append to beautified content if it exists and new content is beautified
+            beautifiedContent: lastNote.beautifiedContent != null && beautified
+                ? '${lastNote.beautifiedContent}\n\n$content'
+                : (beautified ? content : lastNote.beautifiedContent),
             updatedAt: DateTime.now(),
           );
           
           await notesProvider.updateNote(updatedNote);
-          debugPrint('✅ Note updated with appended content');
+          debugPrint('✅ Note updated with appended content (dual-mode)');
           
           // Mark as complete
           updateRecording(
@@ -582,6 +590,7 @@ class RecordingQueueService extends ChangeNotifier {
         noteTitle = await openAIService.generateNoteTitle(
           content,
           folderName: folderName, // Pass folder name to avoid redundant titles
+          detectedLanguage: detectedLanguage, // Use same language as content
         );
         
         // Validate title
@@ -606,7 +615,9 @@ class RecordingQueueService extends ChangeNotifier {
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: noteTitle, // Use AI-generated title
         icon: '🎤',
-        content: content, // Store as plain text
+        content: content, // Active content (beautified by default, or raw if not beautified)
+        rawTranscription: transcription, // Always save original Whisper transcription
+        beautifiedContent: beautified ? content : null, // Save beautified version if AI processed it
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         folderId: folderId,

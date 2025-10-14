@@ -154,7 +154,46 @@ class _FolderManagementDialogState extends State<FolderManagementDialog> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
+                          // Suggest creating folder with search query
+                          if (_searchQuery.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 32),
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  await HapticService.light();
+                                  if (!context.mounted) return;
+                                  
+                                  final result = await showDialog<Map<String, String?>>(
+                                    context: context,
+                                    builder: (context) => CreateFolderDialog(
+                                      initialName: _searchQuery,
+                                    ),
+                                  );
+                                  
+                                  if (result != null && context.mounted) {
+                                    await HapticService.success();
+                                    final foldersProvider = context.read<FoldersProvider>();
+                                    await foldersProvider.createFolder(
+                                      name: result['name']!,
+                                      icon: result['icon']!,
+                                      colorHex: result['colorHex'],
+                                    );
+                                    // Clear search to show new folder
+                                    setState(() {
+                                      _searchController.clear();
+                                      _searchQuery = '';
+                                    });
+                                  }
+                                },
+                                icon: const Icon(Icons.create_new_folder),
+                                label: Text('Ordner "$_searchQuery" erstellen'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                ),
+                              ),
+                            )
+                          else
+                            Text(
                             _searchQuery.isNotEmpty 
                                 ? 'Versuchen Sie eine andere Suche'
                                 : 'Create your first folder to organize notes',

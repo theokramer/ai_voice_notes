@@ -125,6 +125,7 @@ class _SplashScreenState extends State<SplashScreen> {
           body: AnimatedBackground(
             style: settingsProvider.settings.backgroundStyle,
             themeConfig: settingsProvider.currentThemeConfig,
+            isSimpleMode: false, // Always show fancy splash
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

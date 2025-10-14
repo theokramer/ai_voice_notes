@@ -45,20 +45,58 @@ class HomeNotesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final groupedNotes = provider.groupNotesByTimePeriod(notes);
+    // Separate pinned and unpinned notes
+    final pinnedNotes = notes.where((n) => n.isPinned).toList();
+    final unpinnedNotes = notes.where((n) => !n.isPinned).toList();
+    final hasPinned = pinnedNotes.isNotEmpty;
+    
+    // Group unpinned notes by time period
+    final groupedNotes = provider.groupNotesByTimePeriod(unpinnedNotes);
     final todayCount = groupedNotes['Today']!.length;
     final thisWeekCount = groupedNotes['This Week']!.length;
     final moreCount = groupedNotes['More']!.length;
 
+    // Calculate indices with pinned section
+    final pinnedCount = pinnedNotes.length;
+    final pinnedSectionCount = hasPinned ? pinnedCount + 1 : 0; // +1 for header
+
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
+          // Pinned section
+          if (hasPinned && index == 0) {
+            return _buildSectionHeader(context, 'Pinned');
+          }
+          if (hasPinned && index > 0 && index <= pinnedCount) {
+            final note = pinnedNotes[index - 1];
+            return GestureDetector(
+              onLongPress: () => onShowNoteOptions(note),
+              child: MinimalisticNoteCard(
+                note: note,
+                index: index - 1,
+                onTap: () async {
+                  await HapticService.light();
+                  provider.markNoteAsAccessed(note.id);
+                  if (searchQuery.isNotEmpty) {
+                    onHideSearchOverlay();
+                  }
+                  await context.pushHero(
+                    NoteDetailScreen(noteId: note.id),
+                  );
+                },
+              ),
+            );
+          }
+          
+          // Adjust index for remaining sections
+          final adjustedIndex = index - pinnedSectionCount;
+          
           // Today section
-          if (todayCount > 0 && index == 0) {
+          if (todayCount > 0 && adjustedIndex == 0) {
             return _buildSectionHeader(context, LocalizationService().t('today'));
           }
-          if (index > 0 && index <= todayCount) {
-            final note = groupedNotes['Today']![index - 1];
+          if (adjustedIndex > 0 && adjustedIndex <= todayCount) {
+            final note = groupedNotes['Today']![adjustedIndex - 1];
             return GestureDetector(
               onLongPress: () => onShowNoteOptions(note),
               child: MinimalisticNoteCard(
@@ -80,16 +118,16 @@ class HomeNotesList extends StatelessWidget {
 
           // This Week section
           int weekStartIndex = todayCount > 0 ? todayCount + 1 : 0;
-          if (thisWeekCount > 0 && index == weekStartIndex) {
+          if (thisWeekCount > 0 && adjustedIndex == weekStartIndex) {
             return _buildSectionHeader(context, LocalizationService().t('this_week'));
           }
-          if (index > weekStartIndex && index <= weekStartIndex + thisWeekCount) {
-            final note = groupedNotes['This Week']![index - weekStartIndex - 1];
+          if (adjustedIndex > weekStartIndex && adjustedIndex <= weekStartIndex + thisWeekCount) {
+            final note = groupedNotes['This Week']![adjustedIndex - weekStartIndex - 1];
             return GestureDetector(
               onLongPress: () => onShowNoteOptions(note),
               child: MinimalisticNoteCard(
                 note: note,
-                index: index - weekStartIndex - 1,
+                index: adjustedIndex - weekStartIndex - 1,
                 onTap: () async {
                   await HapticService.light();
                   provider.markNoteAsAccessed(note.id);
@@ -106,11 +144,11 @@ class HomeNotesList extends StatelessWidget {
 
           // More section
           int moreStartIndex = weekStartIndex + (thisWeekCount > 0 ? thisWeekCount + 1 : 0);
-          if (moreCount > 0 && index == moreStartIndex) {
+          if (moreCount > 0 && adjustedIndex == moreStartIndex) {
             return _buildSectionHeader(context, LocalizationService().t('more'));
           }
-          if (index > moreStartIndex) {
-            final note = groupedNotes['More']![index - moreStartIndex - 1];
+          if (adjustedIndex > moreStartIndex) {
+            final note = groupedNotes['More']![adjustedIndex - moreStartIndex - 1];
             return GestureDetector(
               onLongPress: () => onShowNoteOptions(note),
               child: MinimalisticNoteCard(
@@ -132,7 +170,8 @@ class HomeNotesList extends StatelessWidget {
 
           return const SizedBox.shrink();
         },
-        childCount: (todayCount > 0 ? todayCount + 1 : 0) +
+        childCount: pinnedSectionCount +
+            (todayCount > 0 ? todayCount + 1 : 0) +
             (thisWeekCount > 0 ? thisWeekCount + 1 : 0) +
             (moreCount > 0 ? moreCount + 1 : 0),
       ),

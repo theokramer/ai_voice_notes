@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +11,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/folders_provider.dart';
-import '../models/settings.dart';
 import '../services/haptic_service.dart';
 import '../services/recording_service.dart';
 import '../services/recording_queue_service.dart';
@@ -25,6 +27,7 @@ import '../widgets/hero_page_route.dart';
 import '../widgets/ai_chat_overlay.dart';
 import '../widgets/note_organization_sheet.dart';
 import '../widgets/folder_selector.dart';
+import '../widgets/recording_overlay.dart';
 import '../widgets/recording_status_bar.dart';
 import '../widgets/folder_management_dialog.dart';
 import '../widgets/home/home_search_overlay.dart';
@@ -47,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final AudioRecorder _audioRecorder = AudioRecorder();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<MicrophoneButtonState> _microphoneKey = GlobalKey<MicrophoneButtonState>();
   bool _showSearchOverlay = false;
   late AnimationController _searchAnimationController;
   late Animation<double> _searchAnimation;
@@ -57,8 +61,90 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String? _chatContext;
   bool _isAIProcessing = false;
   
+  // Recording state for overlay
+  bool _isRecording = false;
+  bool _isRecordingLocked = false;
+  bool _isPaused = false;
+  
+  // Recording timer and amplitude
+  DateTime? _recordingStartTime;
+  Timer? _recordingTimer;
+  Duration _recordingDuration = Duration.zero;
+  Duration _totalPausedDuration = Duration.zero; // Track total paused time
+  DateTime? _pauseStartTime; // Track when pause started
+  double _currentAmplitude = 0.5;
+  List<double> _amplitudeHistory = [];
+  StreamSubscription<Amplitude>? _amplitudeSubscription;
+  
+  void _onRecordingLock() {
+    setState(() {
+      _isRecordingLocked = true;
+    });
+  }
+
+  void _onRecordingUnlock() {
+    setState(() {
+      _isRecordingLocked = false;
+    });
+  }
+
+  // Convert dB (-160 to 0) to visual amplitude (0.0 to 1.0)
+  double _normalizeAmplitude(double db) {
+    // Clamp to reasonable range (-60dB to 0dB for voice)
+    final normalized = ((db + 60) / 60).clamp(0.0, 1.0);
+    return normalized;
+  }
+
+  Future<void> _pauseRecording() async {
+    if (!_isRecording || _isPaused) return;
+    
+    try {
+      await _audioRecorder.pause();
+      _recordingTimer?.cancel(); // Pause timer
+      _pauseStartTime = DateTime.now(); // Track when pause started
+      setState(() {
+        _isPaused = true;
+      });
+      debugPrint('⏸️ Recording paused');
+    } catch (e) {
+      debugPrint('Failed to pause recording: $e');
+    }
+  }
+
+  Future<void> _resumeRecording() async {
+    if (!_isRecording || !_isPaused) return;
+    
+    try {
+      await _audioRecorder.resume();
+      
+      // Add paused duration to total
+      if (_pauseStartTime != null) {
+        _totalPausedDuration += DateTime.now().difference(_pauseStartTime!);
+        _pauseStartTime = null;
+      }
+      
+      // Resume timer
+      _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (mounted && _recordingStartTime != null) {
+          setState(() {
+            // Calculate total elapsed time minus paused time
+            final totalElapsed = DateTime.now().difference(_recordingStartTime!);
+            _recordingDuration = totalElapsed - _totalPausedDuration;
+          });
+        }
+      });
+      
+      setState(() {
+        _isPaused = false;
+      });
+      debugPrint('▶️ Recording resumed');
+    } catch (e) {
+      debugPrint('Failed to resume recording: $e');
+    }
+  }
+  
   // Folder context state (for context-aware recording)
-  String? _currentFolderContext; // null = All Notes view
+  String? _currentFolderContext;
   
   // Undo state
   Map<String, dynamic>? _lastAction;
@@ -103,6 +189,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       debugPrint('Note: Recording stop during dispose completed with: $e');
       return null;
     });
+    
+    // Clean up timer and amplitude subscription
+    _recordingTimer?.cancel();
+    _amplitudeSubscription?.cancel();
     
     _audioRecorder.dispose();
     _searchController.dispose();
@@ -455,11 +545,80 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Fire haptic feedback immediately (don't await)
     HapticService.medium();
 
+    setState(() {
+      _isRecording = true;
+      _isRecordingLocked = false;
+      _recordingStartTime = DateTime.now();
+      _recordingDuration = Duration.zero;
+      _totalPausedDuration = Duration.zero; // Reset paused duration
+      _pauseStartTime = null; // Reset pause start time
+    });
+
+    // Start recording timer
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted && _recordingStartTime != null) {
+        setState(() {
+          // Calculate total elapsed time minus paused time
+          final totalElapsed = DateTime.now().difference(_recordingStartTime!);
+          _recordingDuration = totalElapsed - _totalPausedDuration;
+        });
+      }
+    });
+
+    // TODO: Implement real amplitude stream when available in record package
+    // For now, simulate realistic amplitude changes with history tracking
+    _amplitudeSubscription = Stream.periodic(const Duration(milliseconds: 50), (i) {
+      // Create more realistic voice-like amplitude patterns
+      final time = i * 0.05; // Time in seconds
+      final baseAmplitude = -40.0; // Base quiet level
+      
+      // Add voice-like patterns (speaking, pauses, emphasis)
+      double voicePattern = 0.0;
+      if (time % 10 < 7) { // Speaking for 7 seconds, pause for 3
+        // Simulate speech patterns with varying intensity
+        voicePattern = 15.0 * (0.5 + 0.5 * sin(time * 2)) * (0.3 + 0.7 * cos(time * 0.7));
+        
+        // Add occasional emphasis (louder words)
+        if (sin(time * 1.3) > 0.8) {
+          voicePattern *= 1.5;
+        }
+      }
+      
+      // Add some natural variation
+      final variation = 5.0 * sin(time * 3.7);
+      
+      final finalAmplitude = baseAmplitude + voicePattern + variation;
+      return Amplitude(current: finalAmplitude.clamp(-60.0, 0.0), max: 0.0);
+    }).listen((amplitude) {
+      if (mounted) {
+        setState(() {
+          final newAmplitude = _normalizeAmplitude(amplitude.current);
+          _currentAmplitude = newAmplitude;
+          
+          // Add to history (keep last 100 samples)
+          _amplitudeHistory.add(newAmplitude);
+          if (_amplitudeHistory.length > 100) {
+            _amplitudeHistory.removeAt(0);
+          }
+        });
+      }
+    });
+
     // Use optimized recording service
     final result = await RecordingService().startRecording(_audioRecorder);
 
     if (!result.success) {
+      // Clean up on failure
+      _recordingTimer?.cancel();
+      _amplitudeSubscription?.cancel();
+      
       if (mounted) {
+        setState(() {
+          _isRecording = false;
+          _recordingStartTime = null;
+          _recordingDuration = Duration.zero;
+        });
+        
         final errorMessage = result.errorType == RecordingErrorType.permissionDeniedPermanently
             ? 'Microphone permission required'
             : result.errorType == RecordingErrorType.permissionDenied
@@ -488,6 +647,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Future<void> _stopRecording() async {
     // Fire haptic feedback immediately (don't await)
     HapticService.medium();
+    
+    // Clean up timer and amplitude subscription
+    _recordingTimer?.cancel();
+    _amplitudeSubscription?.cancel();
+    
+    // Reset microphone button state
+    _microphoneKey.currentState?.resetRecordingState();
+    
+    setState(() {
+      _isRecording = false;
+      _isRecordingLocked = false;
+      _isPaused = false;
+      _recordingStartTime = null;
+      _recordingDuration = Duration.zero;
+      _totalPausedDuration = Duration.zero; // Reset paused duration
+      _pauseStartTime = null; // Reset pause start time
+      _currentAmplitude = 0.5;
+      _amplitudeHistory.clear();
+    });
     
     final stoppedPath = await RecordingService().stopRecording(_audioRecorder);
 
@@ -518,26 +696,70 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         settingsProvider: context.read<SettingsProvider>(),
       );
       
-      // Show brief hint if enabled
+      // Show brief hint if enabled (only for explicit folder saves)
       final settings = context.read<SettingsProvider>().settings;
-      if (settings.showOrganizationHints && mounted) {
-        final folderName = _currentFolderContext != null
-            ? context.read<FoldersProvider>().getFolderById(_currentFolderContext!)?.name
-            : null;
+      if (settings.showOrganizationHints && mounted && _currentFolderContext != null) {
+        final folderName = context.read<FoldersProvider>().getFolderById(_currentFolderContext!)?.name;
         
-        final message = folderName != null
-            ? 'Recording saved to $folderName'
-            : settings.organizationMode == OrganizationMode.autoOrganize
-                ? 'Recording will be organized automatically'
-                : 'Recording saved to Unorganized';
-
-        CustomSnackbar.show(
-          context,
-          message: message,
-          type: SnackbarType.success,
-          themeConfig: context.read<SettingsProvider>().currentThemeConfig,
-        );
+        if (folderName != null) {
+          CustomSnackbar.show(
+            context,
+            message: 'Recording saved to $folderName',
+            type: SnackbarType.success,
+            themeConfig: context.read<SettingsProvider>().currentThemeConfig,
+          );
+        }
       }
+    }
+  }
+
+  Future<void> _discardRecording() async {
+    // Fire haptic feedback immediately (don't await)
+    HapticService.medium();
+    
+    // Clean up timer and amplitude subscription
+    _recordingTimer?.cancel();
+    _amplitudeSubscription?.cancel();
+    
+    // Reset microphone button state
+    _microphoneKey.currentState?.resetRecordingState();
+    
+    setState(() {
+      _isRecording = false;
+      _isRecordingLocked = false;
+      _isPaused = false;
+      _recordingStartTime = null;
+      _recordingDuration = Duration.zero;
+      _totalPausedDuration = Duration.zero; // Reset paused duration
+      _pauseStartTime = null; // Reset pause start time
+      _currentAmplitude = 0.5;
+      _amplitudeHistory.clear();
+    });
+    
+    // Stop recording without processing
+    final stoppedPath = await RecordingService().stopRecording(_audioRecorder);
+    
+    // Delete the temp audio file if it exists
+    if (stoppedPath != null) {
+      try {
+        final file = File(stoppedPath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        debugPrint('Failed to delete discarded recording: $e');
+      }
+    }
+    
+    // Show confirmation toast
+    if (mounted) {
+      final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
+      CustomSnackbar.show(
+        context,
+        message: 'Recording discarded',
+        type: SnackbarType.success,
+        themeConfig: themeConfig,
+      );
     }
   }
 
@@ -884,6 +1106,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: AnimatedBackground(
             style: settingsProvider.settings.backgroundStyle,
             themeConfig: settingsProvider.currentThemeConfig,
+            isSimpleMode: settingsProvider.isSimpleMode,
             child: SafeArea(
               top: false, // Allow header to extend into safe area
           child: Stack(
@@ -967,9 +1190,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         ),
                       // Empty state when no notes
                       if (filteredNotes.isEmpty)
-                        HomeEmptyState(
-                          hasSearchQuery: _searchController.text.isNotEmpty,
-                          searchQuery: _searchController.text,
+                        Consumer<FoldersProvider>(
+                          builder: (context, foldersProvider, child) {
+                            final isViewingUnorganized = _currentFolderContext == foldersProvider.unorganizedFolderId;
+                            return HomeEmptyState(
+                              hasSearchQuery: _searchController.text.isNotEmpty,
+                              searchQuery: _searchController.text,
+                              isViewingUnorganized: isViewingUnorganized,
+                            );
+                          },
                         ),
                       // Notes list - View type based on provider setting
                       if (filteredNotes.isNotEmpty)
@@ -1189,6 +1418,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 },
               ),
               
+              // Recording Overlay - Full screen (background layer)
+              if (_isRecording)
+                RecordingOverlay(
+                  isLocked: _isRecordingLocked,
+                  isPaused: _isPaused,
+                  onStop: _stopRecording,
+                  onDiscard: _discardRecording,
+                  onPause: _pauseRecording,
+                  onResume: _resumeRecording,
+                  recordingDuration: _recordingDuration,
+                  amplitude: _currentAmplitude,
+                  amplitudeHistory: _amplitudeHistory,
+                ),
+              
               // Microphone button - centered (or Organize button when viewing Unorganized)
               // Hide when search overlay is visible
               if (!_showSearchOverlay)
@@ -1225,8 +1468,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             } else {
                               // Show microphone button for all other views
                               return MicrophoneButton(
+                                key: _microphoneKey,
                                 onRecordingStart: _startRecording,
                                 onRecordingStop: _stopRecording,
+                                onRecordingLock: _onRecordingLock,
+                                onRecordingUnlock: _onRecordingUnlock,
                               );
                             }
                           },

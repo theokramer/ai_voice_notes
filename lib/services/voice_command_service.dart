@@ -40,41 +40,68 @@ class VoiceCommandService {
     'continue',
     'add to last',
     'add to previous',
+    'adding to last',
+    'continue last note',
+    'add to last note',
     
     // German
     'ergänzung',
     'hinzufügen',
     'weiter',
     'fortsetzen',
+    'an letzte notiz',
+    'zu letzter notiz',
+    'letzte notiz weiter',
     
     // Spanish
     'añadir',
     'continuar',
     'agregar',
+    'añadir a última',
+    'añadir a última nota',
+    'continuar última nota',
     
     // French
     'ajouter',
     'continuer',
     'ajout',
+    'ajouter à dernière',
+    'ajouter à dernière note',
+    'continuer dernière note',
   ];
   
   // Multi-language keywords for "create new folder" command
   static const List<String> _createFolderKeywords = [
     // English
     'new',
+    'new folder',
+    'create folder',
+    'create',
     
     // German
     'neu',
     'neue',
     'neuer',
+    'neuer ordner',
+    'neue ordner',
+    'ordner',
     
     // Spanish
     'nuevo',
     'nueva',
+    'nueva carpeta',
+    'nuevo carpeta',
+    'crear carpeta',
+    'carpeta',
     
     // French
     'nouveau',
     'nouvelle',
+    'nouveau dossier',
+    'nouvelle dossier',
+    'créer dossier',
+    'créer',
+    'dossier',
   ];
   
   /// Detect voice command from transcription text
@@ -89,6 +116,8 @@ class VoiceCommandService {
   static VoiceCommand? detectCommand(String transcription, List<Folder> folders) {
     if (transcription.trim().isEmpty) return null;
     
+    debugPrint('🔍 Voice command detection for: "${transcription.substring(0, transcription.length > 100 ? 100 : transcription.length)}..."');
+    
     // Extract first sentence (everything before . ! ? or end of string)
     final firstSentenceMatch = RegExp(r'^[^.!?]+').firstMatch(transcription);
     if (firstSentenceMatch == null) return null;
@@ -98,9 +127,15 @@ class VoiceCommandService {
     
     // Normalize for comparison: lowercase, remove extra spaces
     final normalized = firstSentence.toLowerCase().trim();
+    debugPrint('🔍 First sentence: "$firstSentence"');
+    debugPrint('🔍 Normalized: "$normalized"');
     
     // 1. Check for "New {FolderName}" pattern first (highest priority)
-    for (final keyword in _createFolderKeywords) {
+    // Sort keywords by length (longest first) to match multi-word commands before single words
+    final sortedCreateKeywords = List<String>.from(_createFolderKeywords)
+      ..sort((a, b) => b.length.compareTo(a.length));
+    
+    for (final keyword in sortedCreateKeywords) {
       // Check if starts with "new" keyword followed by a space and folder name
       if (_startsWithKeyword(normalized, keyword)) {
         // Extract the folder name after "new"
@@ -117,7 +152,11 @@ class VoiceCommandService {
     }
     
     // 2. Check for append commands (high priority)
-    for (final keyword in _appendKeywords) {
+    // Sort keywords by length (longest first) to match multi-word commands before single words
+    final sortedAppendKeywords = List<String>.from(_appendKeywords)
+      ..sort((a, b) => b.length.compareTo(a.length));
+    
+    for (final keyword in sortedAppendKeywords) {
       if (_matchesKeyword(normalized, keyword)) {
         debugPrint('🎤 Voice command detected: APPEND ("$keyword")');
         return VoiceCommand(
@@ -191,6 +230,8 @@ class VoiceCommandService {
   /// Extract folder name after "New" keyword
   /// Example: "New Shopping" -> "Shopping"
   /// Example: "Neu Einkaufen" -> "Einkaufen"
+  /// Example: "Create folder Books" -> "Books"
+  /// Example: "Neuer Ordner Arbeit" -> "Arbeit"
   static String? _extractFolderNameAfterNew(String firstSentence, String keyword) {
     // Clean the text
     final cleanText = firstSentence
@@ -198,26 +239,31 @@ class VoiceCommandService {
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
     
-    final words = cleanText.split(' ');
+    final cleanTextLower = cleanText.toLowerCase();
+    final keywordLower = keyword.toLowerCase();
     
-    // Find the keyword in the words
-    int keywordIndex = -1;
-    for (int i = 0; i < words.length; i++) {
-      if (words[i].toLowerCase() == keyword.toLowerCase()) {
-        keywordIndex = i;
-        break;
-      }
+    // Check if text starts with keyword
+    if (!cleanTextLower.startsWith('$keywordLower ')) {
+      return null;
     }
     
-    // If keyword found and there's at least one word after it
-    if (keywordIndex >= 0 && keywordIndex < words.length - 1) {
-      // Get the next word as folder name (capitalize first letter)
-      final folderName = words[keywordIndex + 1];
-      // Capitalize first letter
-      return folderName[0].toUpperCase() + folderName.substring(1);
+    // Find where the keyword ends in the original text (case-insensitive)
+    // We need to preserve the original case for the folder name
+    final keywordWordCount = keywordLower.split(' ').length;
+    final textWords = cleanText.split(' ');
+    
+    // Skip the keyword words
+    if (textWords.length <= keywordWordCount) {
+      return null; // No folder name after keyword
     }
     
-    return null;
+    // Get the first word after the keyword as folder name
+    final folderName = textWords[keywordWordCount];
+    
+    if (folderName.isEmpty) return null;
+    
+    // Capitalize first letter if not already
+    return folderName[0].toUpperCase() + folderName.substring(1);
   }
   
   /// Extract the original keyword as it appeared in the text (preserving case)

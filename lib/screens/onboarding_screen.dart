@@ -234,6 +234,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           body: AnimatedBackground(
             style: settingsProvider.settings.backgroundStyle,
             themeConfig: settingsProvider.currentThemeConfig,
+            isSimpleMode: false, // Always show fancy onboarding
             child: SafeArea(
               child: Column(
                 children: [

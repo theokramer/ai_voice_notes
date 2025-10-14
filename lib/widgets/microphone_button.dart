@@ -10,18 +10,22 @@ import 'waveform_visualizer.dart';
 class MicrophoneButton extends StatefulWidget {
   final VoidCallback onRecordingStart;
   final VoidCallback onRecordingStop;
+  final VoidCallback? onRecordingLock;
+  final VoidCallback? onRecordingUnlock;
 
   const MicrophoneButton({
     super.key,
     required this.onRecordingStart,
     required this.onRecordingStop,
+    this.onRecordingLock,
+    this.onRecordingUnlock,
   });
 
   @override
-  State<MicrophoneButton> createState() => _MicrophoneButtonState();
+  State<MicrophoneButton> createState() => MicrophoneButtonState();
 }
 
-class _MicrophoneButtonState extends State<MicrophoneButton>
+class MicrophoneButtonState extends State<MicrophoneButton>
     with TickerProviderStateMixin {
   bool _isRecording = false;
   late AnimationController _pressController;
@@ -31,13 +35,11 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
   late AnimationController _breathingController;
   late AnimationController _glowController;
   late AnimationController _lockController;
-  late AnimationController _stopButtonController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _pulseAnimation;
   late Animation<double> _breathingAnimation;
   late Animation<double> _glowAnimation;
   late Animation<double> _lockAnimation;
-  late Animation<double> _stopButtonAnimation;
   double _currentAmplitude = 0.3;
   DateTime? _lastAmplitudeUpdate;
   
@@ -47,8 +49,8 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
   bool _isLocked = false;
   bool _isDragging = false;
   bool _isStoppingRecording = false; // Guard to prevent duplicate recordings during stop
-  static const double _lockThreshold = 150.0; // Drag 150px in local coords to lock
-  static const double _dragStartThreshold = 30.0; // Min 30px moved to start counting as drag (prevents accidents)
+  static const double _lockThreshold = 200.0; // Drag 200px in local coords to lock (increased from 150)
+  static const double _dragStartThreshold = 60.0; // Min 60px moved to start counting as drag (increased from 30 to prevent accidents)
 
   @override
   void initState() {
@@ -124,16 +126,6 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
       curve: Curves.easeOut,
     );
 
-    // Stop button animation
-    _stopButtonController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    );
-    _stopButtonAnimation = CurvedAnimation(
-      parent: _stopButtonController,
-      curve: Curves.easeOutBack,
-    );
-
     // Update amplitude from waveform (smoother updates)
     _recordingController.addListener(() {
       if (_isRecording) {
@@ -166,7 +158,6 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
     _breathingController.dispose();
     _glowController.dispose();
     _lockController.dispose();
-    _stopButtonController.dispose();
     super.dispose();
   }
 
@@ -181,6 +172,26 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
     _breathingController.stop();
     _glowController.stop();
     widget.onRecordingStart();
+  }
+
+  /// Reset the microphone button's internal state
+  /// Called when recording is stopped from external source (overlay buttons)
+  void resetRecordingState() {
+    debugPrint('🔄 Resetting microphone button state');
+    setState(() {
+      _isRecording = false;
+      _isLocked = false;
+      _isDragging = false;
+      _dragOffset = 0.0;
+      _dragStartY = 0.0;
+      _isStoppingRecording = false;
+    });
+    _recordingController.stop();
+    _recordingController.reset();
+    _pressController.reverse();
+    _breathingController.repeat(reverse: true);
+    _glowController.repeat(reverse: true);
+    _lockController.reverse();
   }
 
   void _handlePressEnd() {
@@ -238,6 +249,11 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
       _dragStartY = 0.0;
     });
     
+    // Notify parent about unlock state change
+    if (wasLocked) {
+      widget.onRecordingUnlock?.call();
+    }
+    
     if (!wasRecording || !wasLocked) {
       debugPrint('⚠️ Stop button tapped but not in valid state (recording: $wasRecording, locked: $wasLocked)');
       setState(() {
@@ -252,7 +268,6 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
     _breathingController.repeat(reverse: true);
     _glowController.repeat(reverse: true);
     _lockController.reverse();
-    _stopButtonController.reverse();
     
     // Play success animation
     _successController.forward().then((_) {
@@ -314,7 +329,9 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
         _isLocked = true;
         _isDragging = false;
       });
-      _stopButtonController.forward();
+      
+      // Notify parent about lock state change
+      widget.onRecordingLock?.call();
       
       // Haptic feedback
       // Note: You might want to add HapticService.heavyImpact() here if available
@@ -418,7 +435,6 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
               _breathingController,
               _glowController,
               _lockController,
-              _stopButtonController,
             ]),
             builder: (context, child) {
               final buttonSize = _isRecording ? 90.0 : 95.0;
@@ -432,44 +448,6 @@ class _MicrophoneButtonState extends State<MicrophoneButton>
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Stop button (when locked)
-                      if (_isLocked)
-                        Positioned(
-                          top: 20,
-                          child: ScaleTransition(
-                            scale: _stopButtonAnimation,
-                            child: FadeTransition(
-                              opacity: _stopButtonAnimation,
-                              child: GestureDetector(
-                                onTapDown: (_) {
-                                  // Handle tap immediately to prevent propagation
-                                  _handleStopButtonTap();
-                                },
-                                behavior: HitTestBehavior.opaque,
-                                child: Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.red.withOpacity(0.9),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.red.withOpacity(0.4),
-                                        blurRadius: 15,
-                                        spreadRadius: 2,
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.stop_rounded,
-                                    size: 32,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
                       
                       // Lock threshold indicator (when recording, not locked)
                       if (_isRecording && !_isLocked)

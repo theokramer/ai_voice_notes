@@ -98,7 +98,7 @@ class OpenAIService {
         languageName = langMap[detectedLanguage];
       }
       
-      final prompt = '''You are a note formatter. Your ONLY job is to format text nicely while keeping the EXACT same language.
+      final prompt = '''You are an expert note summarizer. Create a detailed, well-structured summary that improves readability while keeping the EXACT same language.
 
 INPUT TEXT:
 "$rawText"
@@ -123,31 +123,34 @@ Output PLAIN TEXT with NO markdown syntax or formatting characters.
 - NO blockquotes with >
 - NO code blocks with ``` or `
 
-Formatting instructions:
-- Use line breaks to separate paragraphs and sections
-- Use proper capitalization and punctuation
+Summary instructions:
+- Remove filler words (um, uh, ah, so, well, like, you know, etc.)
+- Fix self-corrections (keep only the corrected version)
+- Organize into clear paragraphs by topic
 - Add blank lines between different topics/sections
-- Fix any obvious transcription errors
-- Preserve all information from the original text
-- Keep it concise, clear, and easy to read
-- Structure with natural text flow
+- Use proper capitalization and punctuation
+- Make it flow naturally like written text, not spoken rambling
+- Preserve ALL important information and details
+- Structure with logical flow (introduction → main points → conclusion if applicable)
+- If the input is a list of items, organize them clearly
+- If the input is a story or explanation, make it coherent and well-structured
 
 Examples of CORRECT behavior:
-✓ Input (German): "Heute war ein guter Tag. Ich habe viel geschafft."
+✓ Input (German): "Ähm, also heute war ein guter Tag. Ich meine, ich habe viel geschafft, weißt du."
   Output (German): "Mein Tag\n\nHeute war ein guter Tag. Ich habe viel geschafft."
 
-✓ Input (English): "Today was a good day. I accomplished a lot."
-  Output (English): "My Day\n\nToday was a good day. I accomplished a lot."
+✓ Input (English): "So um, I need to buy like milk and, uh, eggs and bread, you know."
+  Output (English): "Shopping List\n\nI need to buy milk, eggs, and bread."
 
-✓ Input (English): "I need to buy milk eggs and bread"
-  Output (English): "Shopping List\n\nmilk\neggs\nbread"
+✓ Input (English): "Today I had a meeting with John. We discussed the project. Actually no, we discussed two projects. The first one is about..."
+  Output (English): "Meeting with John\n\nToday I had a meeting with John where we discussed two projects. The first one is about..."
 
 Examples of WRONG behavior:
 ✗ Output: "## My Day" ← NO! Don't use ##
 ✗ Output: "- milk" ← NO! Don't use -
 ✗ Output: "**important**" ← NO! Don't use **
 
-Return ONLY the formatted plain text in the SAME language as input. No markdown. No explanations. No translations.''';
+Return ONLY the clean, detailed summary in PLAIN TEXT in the SAME language as input. No markdown. No explanations. No translations.''';
 
       final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
       final response = await http.post(
@@ -559,7 +562,8 @@ Guidelines:
   /// 
   /// [folderName] optional parameter to avoid redundant titles
   /// (e.g., if folder is "Todo", don't generate title "Todo: Buy Milk")
-  Future<String> generateNoteTitle(String content, {String? folderName}) async {
+  /// [detectedLanguage] ensures title is in same language as content
+  Future<String> generateNoteTitle(String content, {String? folderName, String? detectedLanguage}) async {
     try {
       // Get plain text from content (might be Quill JSON)
       String plainText = content;
@@ -593,16 +597,41 @@ Guidelines:
           ? '\nFolder context: This note will be saved in the "$folderName" folder.'
           : '';
       
+      // Get language name from detected language code
+      String? languageInstruction;
+      if (detectedLanguage != null) {
+        final langMap = {
+          'en': 'English',
+          'de': 'German',
+          'es': 'Spanish',
+          'fr': 'French',
+          'it': 'Italian',
+          'pt': 'Portuguese',
+          'nl': 'Dutch',
+          'pl': 'Polish',
+          'ru': 'Russian',
+          'ja': 'Japanese',
+          'zh': 'Chinese',
+          'ko': 'Korean',
+          'ar': 'Arabic',
+        };
+        final langName = langMap[detectedLanguage];
+        if (langName != null) {
+          languageInstruction = '\n\nCRITICAL: The note content is in $langName. You MUST generate the title in $langName as well. DO NOT translate or change the language.';
+        }
+      }
+      
       final prompt = '''Generate a short, descriptive title (3-6 words) for this note.
 
 Note content:
-"$textSample"$folderContext
+"$textSample"$folderContext${languageInstruction ?? ''}
 
 Rules:
 - Maximum 6 words
 - Descriptive and specific
 - No quotes or punctuation
 - Title case (capitalize first letter of each word)${folderName != null && folderName != 'Unorganized' ? '\n- DO NOT include "$folderName" in the title (it\'s redundant with the folder name)' : ''}
+${detectedLanguage != null ? '- IMPORTANT: Generate the title in the SAME language as the note content' : ''}
 
 Return ONLY the title, nothing else.''';
 

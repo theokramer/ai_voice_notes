@@ -5,7 +5,9 @@ import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
 
 class CreateFolderDialog extends StatefulWidget {
-  const CreateFolderDialog({super.key});
+  final String? initialName;
+  
+  const CreateFolderDialog({super.key, this.initialName});
 
   @override
   State<CreateFolderDialog> createState() => _CreateFolderDialogState();
@@ -35,9 +37,11 @@ class _CreateFolderDialogState extends State<CreateFolderDialog> {
   ];
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    if (widget.initialName != null) {
+      _nameController.text = widget.initialName!;
+    }
   }
 
   void _handleCreate() {

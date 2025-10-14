@@ -30,6 +30,7 @@ class SettingsScreen extends StatelessWidget {
           body: AnimatedBackground(
             style: settingsProvider.settings.backgroundStyle,
             themeConfig: themeConfig,
+            isSimpleMode: settingsProvider.isSimpleMode,
             child: SafeArea(
               top: false, // Allow header to extend into safe area
               child: CustomScrollView(
@@ -71,6 +72,7 @@ class SettingsScreen extends StatelessWidget {
                     SettingsSection(
                       title: LocalizationService().t('appearance'),
                       children: [
+                        _buildSimpleModeToggle(context, settingsProvider.currentThemeConfig),
                         _buildThemeSelector(context, settingsProvider.currentThemeConfig),
                         _buildBackgroundStyleSelector(context, settingsProvider.currentThemeConfig),
                       ],
@@ -125,6 +127,28 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSimpleModeToggle(BuildContext context, ThemeConfig themeConfig) {
+    return Consumer<SettingsProvider>(
+      builder: (context, provider, child) {
+        return _buildTile(
+          context,
+          themeConfig,
+          icon: Icons.palette_outlined,
+          title: 'Simple Mode',
+          subtitle: 'Clean, minimal design without fancy effects (solid backgrounds, less animations)',
+          trailing: Switch(
+            value: provider.isSimpleMode,
+            activeTrackColor: themeConfig.primaryColor,
+            onChanged: (value) async {
+              await HapticService.light();
+              await provider.toggleSimpleMode(value);
+            },
           ),
         );
       },

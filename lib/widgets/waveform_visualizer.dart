@@ -191,6 +191,7 @@ class LinearWaveform extends StatefulWidget {
   final double height;
   final Color color;
   final List<double>? amplitudes;
+  final double currentAmplitude; // Real-time amplitude for voice visualization
 
   const LinearWaveform({
     super.key,
@@ -198,6 +199,7 @@ class LinearWaveform extends StatefulWidget {
     this.height = 60,
     required this.color,
     this.amplitudes,
+    this.currentAmplitude = 0.5,
   });
 
   @override
@@ -207,14 +209,14 @@ class LinearWaveform extends StatefulWidget {
 class _LinearWaveformState extends State<LinearWaveform>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  final List<double> _bars = List.generate(50, (index) => 0.1);
+  final List<double> _bars = List.generate(80, (index) => 0.1); // Increased for smoother visualization
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 50), // Faster updates for real-time feel
     )..repeat();
 
     _controller.addListener(() {
@@ -239,7 +241,13 @@ class _LinearWaveformState extends State<LinearWaveform>
         if (widget.amplitudes != null && i < widget.amplitudes!.length) {
           _bars[i] = widget.amplitudes![i];
         } else {
-          _bars[i] = _bars[i] * 0.8 + (0.1 + random.nextDouble() * 0.9) * 0.2;
+          // Use real amplitude data with smooth interpolation
+          final baseAmplitude = widget.currentAmplitude;
+          final variation = (random.nextDouble() - 0.5) * 0.3; // Add natural variation
+          final targetAmplitude = (baseAmplitude + variation).clamp(0.0, 1.0);
+          
+          // Smooth interpolation to prevent jitter
+          _bars[i] = _bars[i] * 0.7 + targetAmplitude * 0.3;
         }
       }
     });
@@ -285,25 +293,228 @@ class LinearWaveformPainter extends CustomPainter {
     final barWidth = size.width / bars.length;
     final centerY = size.height / 2;
     
+    // Create gradient for premium look
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        color.withOpacity(0.8),
+        color.withOpacity(0.4),
+        color.withOpacity(0.2),
+      ],
+      stops: const [0.0, 0.5, 1.0],
+    );
+    
     for (int i = 0; i < bars.length; i++) {
       final barHeight = bars[i] * size.height * 0.8;
       final x = i * barWidth + barWidth / 2;
       
+      // Create gradient paint
       final paint = Paint()
-        ..color = color.withOpacity(0.3 + bars[i] * 0.7)
-        ..strokeWidth = barWidth * 0.6
-        ..strokeCap = StrokeCap.round;
+        ..shader = gradient.createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+        ..strokeWidth = barWidth * 0.8
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5); // Subtle glow
       
+      // Draw main bar
       canvas.drawLine(
         Offset(x, centerY - barHeight / 2),
         Offset(x, centerY + barHeight / 2),
         paint,
       );
+      
+      // Add highlight for higher amplitudes
+      if (bars[i] > 0.6) {
+        final highlightPaint = Paint()
+          ..color = color.withOpacity(0.9)
+          ..strokeWidth = barWidth * 0.4
+          ..strokeCap = StrokeCap.round;
+        
+        canvas.drawLine(
+          Offset(x, centerY - barHeight / 3),
+          Offset(x, centerY + barHeight / 3),
+          highlightPaint,
+        );
+      }
     }
   }
 
   @override
   bool shouldRepaint(LinearWaveformPainter oldDelegate) => true;
+}
+
+// Apple Voice Memos-style scrolling waveform
+class VoiceMemoWaveform extends StatefulWidget {
+  final bool isActive;
+  final double height;
+  final Color color;
+  final double currentAmplitude;
+  final List<double> amplitudeHistory;
+
+  const VoiceMemoWaveform({
+    super.key,
+    required this.isActive,
+    this.height = 100,
+    required this.color,
+    required this.currentAmplitude,
+    required this.amplitudeHistory,
+  });
+
+  @override
+  State<VoiceMemoWaveform> createState() => _VoiceMemoWaveformState();
+}
+
+class _VoiceMemoWaveformState extends State<VoiceMemoWaveform>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 50), // Fast updates for smooth scrolling
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: widget.height,
+      child: widget.isActive
+          ? AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: VoiceMemoWaveformPainter(
+                    amplitudeHistory: widget.amplitudeHistory,
+                    currentAmplitude: widget.currentAmplitude,
+                    color: widget.color,
+                    progress: _controller.value,
+                  ),
+                );
+              },
+            )
+          : Container(
+              decoration: BoxDecoration(
+                color: widget.color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+              ),
+            ),
+    );
+  }
+}
+
+class VoiceMemoWaveformPainter extends CustomPainter {
+  final List<double> amplitudeHistory;
+  final double currentAmplitude;
+  final Color color;
+  final double progress;
+
+  VoiceMemoWaveformPainter({
+    required this.amplitudeHistory,
+    required this.currentAmplitude,
+    required this.color,
+    required this.progress,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centerY = size.height / 2;
+    final barWidth = size.width / 120; // 120 bars for smooth scrolling
+    final maxBarHeight = size.height * 0.8;
+    
+    // Create gradient for Apple-style look
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        color.withOpacity(0.9),
+        color.withOpacity(0.6),
+        color.withOpacity(0.3),
+      ],
+      stops: const [0.0, 0.5, 1.0],
+    );
+    
+    // Draw bars from right to left (newest on right)
+    for (int i = 0; i < 120; i++) {
+      double amplitude;
+      
+      if (i < amplitudeHistory.length) {
+        // Use historical data with smoothing
+        final historyIndex = amplitudeHistory.length - 1 - i;
+        amplitude = amplitudeHistory[historyIndex];
+        
+        // Apply smoothing to reduce noise
+        if (historyIndex > 0 && historyIndex < amplitudeHistory.length - 1) {
+          amplitude = (amplitudeHistory[historyIndex - 1] + 
+                      amplitudeHistory[historyIndex] + 
+                      amplitudeHistory[historyIndex + 1]) / 3;
+        }
+      } else if (i == amplitudeHistory.length) {
+        // Current amplitude
+        amplitude = currentAmplitude;
+      } else {
+        // Empty space for future bars
+        amplitude = 0.0;
+      }
+      
+      // Apply minimum threshold to reduce visual noise
+      if (amplitude < 0.1) amplitude = 0.0;
+      
+      final barHeight = amplitude * maxBarHeight;
+      final x = size.width - (i * barWidth) - barWidth / 2;
+      
+      if (x < 0) break; // Don't draw outside canvas
+      
+      // Create gradient paint
+      final paint = Paint()
+        ..shader = gradient.createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+        ..strokeWidth = barWidth * 0.8
+        ..strokeCap = StrokeCap.round;
+      
+      // Draw main bar
+      canvas.drawLine(
+        Offset(x, centerY - barHeight / 2),
+        Offset(x, centerY + barHeight / 2),
+        paint,
+      );
+      
+      // Add highlight for higher amplitudes (Apple-style)
+      if (amplitude > 0.6) {
+        final highlightPaint = Paint()
+          ..color = color.withOpacity(0.9)
+          ..strokeWidth = barWidth * 0.4
+          ..strokeCap = StrokeCap.round;
+        
+        canvas.drawLine(
+          Offset(x, centerY - barHeight / 3),
+          Offset(x, centerY + barHeight / 3),
+          highlightPaint,
+        );
+      }
+    }
+    
+    // Draw center line (subtle)
+    final centerLinePaint = Paint()
+      ..color = color.withOpacity(0.2)
+      ..strokeWidth = 1;
+    
+    canvas.drawLine(
+      Offset(0, centerY),
+      Offset(size.width, centerY),
+      centerLinePaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(VoiceMemoWaveformPainter oldDelegate) => true;
 }
 
 // Pulsing ring animation for the microphone button

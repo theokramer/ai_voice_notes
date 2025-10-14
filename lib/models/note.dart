@@ -6,6 +6,8 @@ class Note {
   final String name;
   final String icon;
   final String content; // Single plain text field - replaces headlines/entries
+  final String? rawTranscription; // Original Whisper transcription (unmodified)
+  final String? beautifiedContent; // AI-improved/summarized version
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? lastAccessedAt;
@@ -20,6 +22,8 @@ class Note {
     required this.name,
     required this.icon,
     required this.content,
+    this.rawTranscription,
+    this.beautifiedContent,
     required this.createdAt,
     required this.updatedAt,
     this.lastAccessedAt,
@@ -107,6 +111,8 @@ class Note {
     String? name,
     String? icon,
     String? content,
+    String? rawTranscription,
+    String? beautifiedContent,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? lastAccessedAt,
@@ -121,6 +127,8 @@ class Note {
       name: name ?? this.name,
       icon: icon ?? this.icon,
       content: content ?? this.content,
+      rawTranscription: rawTranscription ?? this.rawTranscription,
+      beautifiedContent: beautifiedContent ?? this.beautifiedContent,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastAccessedAt: lastAccessedAt ?? this.lastAccessedAt,
@@ -138,6 +146,8 @@ class Note {
       'name': name,
       'icon': icon,
       'content': content,
+      'rawTranscription': rawTranscription,
+      'beautifiedContent': beautifiedContent,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'lastAccessedAt': lastAccessedAt?.toIso8601String(),
@@ -166,6 +176,8 @@ class Note {
       name: json['name'],
       icon: json['icon'],
       content: content,
+      rawTranscription: json['rawTranscription'] as String?,
+      beautifiedContent: json['beautifiedContent'] as String?,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       lastAccessedAt: json['lastAccessedAt'] != null

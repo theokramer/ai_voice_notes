@@ -6,11 +6,13 @@ import '../../theme/app_theme.dart';
 class HomeEmptyState extends StatelessWidget {
   final bool hasSearchQuery;
   final String searchQuery;
+  final bool isViewingUnorganized;
 
   const HomeEmptyState({
     super.key,
     required this.hasSearchQuery,
     required this.searchQuery,
+    this.isViewingUnorganized = false,
   });
 
   @override
@@ -23,32 +25,24 @@ class HomeEmptyState extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (!hasSearchQuery) ...[
-                Container(
-                  padding: const EdgeInsets.all(AppTheme.spacing24),
-                  decoration: BoxDecoration(
-                    color: AppTheme.glassSurface.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.sticky_note_2_outlined,
-                    size: 40,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: AppTheme.spacing24),
-              ],
               Text(
-                hasSearchQuery ? 'No results found' : 'No notes yet',
+                hasSearchQuery 
+                    ? 'No results found' 
+                    : isViewingUnorganized 
+                        ? 'All Notes organized! 🎉'
+                        : 'No notes yet',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: AppTheme.textSecondary,
                     ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppTheme.spacing8),
               Text(
                 hasSearchQuery
                     ? 'Try different search terms'
-                    : 'Press and hold the microphone\nto record your first note',
+                    : isViewingUnorganized
+                        ? 'Great job! All your notes are organized into folders.'
+                        : 'Press and hold the microphone\nto record your first note',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppTheme.textTertiary,
                     ),

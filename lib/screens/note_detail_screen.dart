@@ -2,14 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import '../providers/folders_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/haptic_service.dart';
-import '../services/openai_service.dart';
-import '../services/export_service.dart';
 import '../services/localization_service.dart';
 import '../widgets/quick_move_dialog.dart';
 import '../widgets/custom_snackbar.dart';
@@ -35,7 +32,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   late TextEditingController _contentController;
   Timer? _saveTimer;
   bool _hasUnsavedChanges = false;
-  bool _isBeautifying = false;
+  bool _showingRawTranscription = false; // false = show beautified/content, true = show raw
 
   @override
   void initState() {
@@ -110,18 +107,21 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
   }
 
   void _saveNote() {
-          final provider = context.read<NotesProvider>();
+    final provider = context.read<NotesProvider>();
     final note = provider.getNoteById(widget.noteId);
     if (note == null) return;
 
-    // Save as plain text
+    // Save content to the appropriate field based on current view mode
     final content = _contentController.text;
 
-      final updatedNote = note.copyWith(
+    final updatedNote = note.copyWith(
       name: _nameController.text.trim().isEmpty ? 'Untitled' : _nameController.text.trim(),
-      content: content,
-        updatedAt: DateTime.now(),
-      );
+      content: content, // Always update main content
+      // Update the specific field being edited
+      rawTranscription: _showingRawTranscription ? content : note.rawTranscription,
+      beautifiedContent: !_showingRawTranscription ? content : note.beautifiedContent,
+      updatedAt: DateTime.now(),
+    );
 
     provider.updateNote(updatedNote);
 
@@ -130,51 +130,29 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     });
   }
 
-  Future<void> _beautifyNote() async {
-    final plainText = _contentController.text;
-    if (plainText.trim().isEmpty) return;
-    
-        HapticService.light();
-    setState(() => _isBeautifying = true);
-    
-    try {
-      final apiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
-      if (apiKey.isEmpty) {
-        throw Exception('OpenAI API key not configured');
-      }
-      
-      final openAIService = OpenAIService(apiKey: apiKey);
-      final beautified = await openAIService.beautifyTranscription(plainText);
-      
-      _contentController.text = beautified;
+  void _toggleViewMode() {
+    final note = context.read<NotesProvider>().getNoteById(widget.noteId);
+    if (note == null) return;
+
+    // Save current changes before switching
+    if (_hasUnsavedChanges) {
       _saveNote();
-      
-      HapticService.success();
-          if (mounted) {
-        final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
-            CustomSnackbar.show(
-              context,
-          message: 'Note beautified! ✨',
-              type: SnackbarType.success,
-          themeConfig: themeConfig,
-        );
-      }
-    } catch (e) {
-      debugPrint('Error beautifying note: $e');
-            if (mounted) {
-    final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
-                        CustomSnackbar.show(
-                          context,
-          message: 'Failed to beautify: $e',
-          type: SnackbarType.error,
-                    themeConfig: themeConfig,
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isBeautifying = false);
-      }
     }
+
+    HapticService.light();
+    
+    setState(() {
+      _showingRawTranscription = !_showingRawTranscription;
+      
+      // Update content controller based on view mode
+      if (_showingRawTranscription) {
+        // Show raw transcription (fallback to content if not available)
+        _contentController.text = _extractPlainText(note.rawTranscription ?? note.content);
+      } else {
+        // Show beautified content (fallback to content if not available)
+        _contentController.text = _extractPlainText(note.beautifiedContent ?? note.content);
+      }
+    });
   }
 
   Future<void> _showMoveDialog(Note note) async {
@@ -204,61 +182,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
     }
   }
 
-  // Pin and delete methods removed per user request
-
-  Future<void> _shareNote(Note note, BuildContext context) async {
-    try {
-      await HapticService.light();
-      
-      final foldersProvider = context.read<FoldersProvider>();
-      final folder = note.folderId != null 
-          ? foldersProvider.getFolderById(note.folderId!)
-          : null;
-      
-      // Export as human-readable Markdown
-      final content = await ExportService.exportNoteAsMarkdown(
-        note: note,
-        folderName: folder?.name,
-      );
-      
-      final filename = '${note.name.replaceAll(RegExp(r'[^\w\s-]'), '')}_${DateTime.now().millisecondsSinceEpoch}.md';
-      
-      // Get the render box for positioning the share dialog on iPad
-      final box = context.findRenderObject() as RenderBox?;
-      final sharePositionOrigin = box != null
-          ? box.localToGlobal(Offset.zero) & box.size
-          : null;
-      
-      await ExportService.shareExport(
-        content: content,
-        filename: filename,
-        mimeType: 'text/markdown',
-        sharePositionOrigin: sharePositionOrigin,
-      );
-      
-      await HapticService.success();
-      if (mounted) {
-        final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
-        CustomSnackbar.show(
-          context,
-          message: 'Note exported successfully',
-          type: SnackbarType.success,
-          themeConfig: themeConfig,
-        );
-      }
-    } catch (e) {
-      await HapticService.error();
-      if (mounted) {
-        final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
-        CustomSnackbar.show(
-          context,
-          message: 'Failed to export note: ${e.toString()}',
-          type: SnackbarType.error,
-          themeConfig: themeConfig,
-        );
-      }
-    }
-  }
+  // Pin, delete, and share methods removed per user request
 
   @override
   Widget build(BuildContext context) {
@@ -290,6 +214,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             body: AnimatedBackground(
               style: settingsProvider.settings.backgroundStyle,
               themeConfig: themeConfig,
+              isSimpleMode: settingsProvider.isSimpleMode,
             child: SafeArea(
               child: Column(
                 children: [
@@ -329,12 +254,47 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                               maxLines: 1,
                             ),
                           ),
-                          // Share button for exporting single note
-                          IconButton(
-                            icon: const Icon(Icons.share),
-                            onPressed: () => _shareNote(note, context),
-                            tooltip: 'Share note',
-                          ),
+                          // View mode toggle (show if either raw transcription or beautified content exists)
+                          if (note.rawTranscription != null || note.beautifiedContent != null)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Material(
+                                color: _showingRawTranscription 
+                                    ? themeConfig.accentColor.withOpacity(0.2)
+                                    : Colors.grey.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                child: InkWell(
+                                  onTap: _toggleViewMode,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          _showingRawTranscription ? Icons.article : Icons.auto_awesome,
+                                          size: 18,
+                                          color: _showingRawTranscription 
+                                              ? themeConfig.accentColor 
+                                              : Colors.white70,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _showingRawTranscription ? 'Raw' : 'Summary',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: _showingRawTranscription 
+                                                ? themeConfig.accentColor 
+                                                : Colors.white70,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -427,28 +387,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                               ),
                             ),
                           ),
-                          // Beautify button (only show when text exists)
-                          if (_contentController.text.trim().isNotEmpty)
-                            Positioned(
-                              right: 16,
-                              bottom: 16,
-                              child: FloatingActionButton.extended(
-                                onPressed: _isBeautifying ? null : _beautifyNote,
-                                icon: _isBeautifying
-                                    ? SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                        ),
-                                      )
-                                    : Icon(Icons.auto_fix_high),
-                                label: Text(_isBeautifying ? 'Beautifying...' : 'Beautify'),
-                                backgroundColor: themeConfig.primaryColor,
-                                elevation: 8,
-                              ),
-                            ),
                         ],
                 ),
               ),

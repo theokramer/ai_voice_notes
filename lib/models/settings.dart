@@ -40,6 +40,7 @@ class Settings {
   final TranscriptionMode transcriptionMode;
   final bool showOrganizationHints;
   final bool allowAICreateFolders;
+  final bool isSimpleMode; // Simple mode: no glassmorphism, minimal animations, solid backgrounds
   
   /// User preference learning: Map of folder ID -> list of note content keywords that were rejected
   /// When a user moves a note away from an AI-suggested folder, we store the note's content pattern
@@ -59,6 +60,7 @@ class Settings {
     this.transcriptionMode = TranscriptionMode.aiBeautify,
     this.showOrganizationHints = true,
     this.allowAICreateFolders = true,
+    this.isSimpleMode = false, // Default to fancy glassmorphism mode
     this.rejectedFolderSuggestions = const {},
   });
 
@@ -75,6 +77,7 @@ class Settings {
     TranscriptionMode? transcriptionMode,
     bool? showOrganizationHints,
     bool? allowAICreateFolders,
+    bool? isSimpleMode,
     Map<String, List<String>>? rejectedFolderSuggestions,
   }) {
     return Settings(
@@ -90,6 +93,7 @@ class Settings {
       transcriptionMode: transcriptionMode ?? this.transcriptionMode,
       showOrganizationHints: showOrganizationHints ?? this.showOrganizationHints,
       allowAICreateFolders: allowAICreateFolders ?? this.allowAICreateFolders,
+      isSimpleMode: isSimpleMode ?? this.isSimpleMode,
       rejectedFolderSuggestions: rejectedFolderSuggestions ?? this.rejectedFolderSuggestions,
     );
   }
@@ -108,6 +112,7 @@ class Settings {
       'transcriptionMode': transcriptionMode.name,
       'showOrganizationHints': showOrganizationHints,
       'allowAICreateFolders': allowAICreateFolders,
+      'isSimpleMode': isSimpleMode,
       'rejectedFolderSuggestions': rejectedFolderSuggestions,
     };
   }
@@ -167,6 +172,7 @@ class Settings {
       ),
       showOrganizationHints: json['showOrganizationHints'] ?? true,
       allowAICreateFolders: json['allowAICreateFolders'] ?? true,
+      isSimpleMode: json['isSimpleMode'] ?? false,
       rejectedFolderSuggestions: rejectedSuggestions,
     );
   }

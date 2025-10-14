@@ -1,9 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/folder.dart';
+import '../providers/folders_provider.dart';
 import '../services/haptic_service.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
+import 'create_folder_dialog.dart';
 
 /// Quick dialog to move a note to a different folder
 class QuickMoveDialog extends StatefulWidget {
@@ -190,6 +193,66 @@ class _QuickMoveDialogState extends State<QuickMoveDialog> {
                   ),
                 ),
               ),
+
+            // Create New Folder Button
+            InkWell(
+              onTap: () async {
+                await HapticService.light();
+                if (!context.mounted) return;
+                
+                final result = await showDialog<Map<String, String?>>(
+                  context: context,
+                  builder: (context) => const CreateFolderDialog(),
+                );
+                
+                if (result != null) {
+                  if (!context.mounted) return;
+                  
+                  // Create the folder using FoldersProvider
+                  final foldersProvider = context.read<FoldersProvider>();
+                  final newFolder = await foldersProvider.createFolder(
+                    name: result['name']!,
+                    icon: result['icon']!,
+                    colorHex: result['colorHex'],
+                  );
+                  
+                  if (!context.mounted) return;
+                  // Automatically select the newly created folder
+                  Navigator.of(context).pop(newFolder.id);
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppTheme.glassSurface.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.glassBorder,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.create_new_folder,
+                      size: 24,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      LocalizationService().t('create_new_folder'),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
             // Folder list
             ConstrainedBox(

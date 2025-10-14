@@ -13,12 +13,14 @@ class AnimatedBackground extends StatefulWidget {
   final BackgroundStyle style;
   final ThemeConfig themeConfig;
   final Widget child;
+  final bool isSimpleMode; // Simple mode: solid background, no animations
 
   const AnimatedBackground({
     super.key,
     required this.style,
     required this.themeConfig,
     required this.child,
+    this.isSimpleMode = false,
   });
 
   @override
@@ -57,6 +59,16 @@ class _AnimatedBackgroundState extends State<AnimatedBackground>
 
   @override
   Widget build(BuildContext context) {
+    // Simple mode: just solid color based on theme brightness
+    if (widget.isSimpleMode) {
+      final brightness = Theme.of(context).brightness;
+      return Container(
+        color: brightness == Brightness.dark ? Colors.black : Colors.white,
+        child: widget.child,
+      );
+    }
+    
+    // Fancy mode: animated backgrounds with glassmorphism
     return Stack(
       children: [
         // Animated background layer with smooth theme transitions

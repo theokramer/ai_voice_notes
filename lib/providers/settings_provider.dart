@@ -81,6 +81,12 @@ class SettingsProvider extends ChangeNotifier {
 
   bool get hasRequestedMicPermission => _settings.hasRequestedMicPermission;
 
+  Future<void> toggleSimpleMode(bool enabled) async {
+    await updateSettings(_settings.copyWith(isSimpleMode: enabled));
+  }
+
+  bool get isSimpleMode => _settings.isSimpleMode;
+
   Future<void> updateAutoCloseAfterEntry(bool enabled) async {
     await updateSettings(_settings.copyWith(autoCloseAfterEntry: enabled));
   }
