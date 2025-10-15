@@ -6,6 +6,7 @@ import '../models/note.dart';
 import '../models/folder.dart';
 import '../models/app_language.dart';
 import '../models/organization_suggestion.dart';
+import '../feature_updates/ai_chat_overlay.dart';
 
 /// Result from audio transcription including detected language
 class TranscriptionResult {
@@ -804,11 +805,12 @@ Return ONLY the title, nothing else.''';
     }
   }
 
-  /// Chat completion for AI assistant (existing feature)
+  /// Chat completion for AI assistant with action detection
   Future<AIChatResponse> chatCompletion({
     required String message,
     required List<Map<String, String>> history,
     required List<Note> notes,
+    List<Folder>? folders,
   }) async {
     try {
       // Format notes context with IDs for actions
@@ -816,33 +818,117 @@ Return ONLY the title, nothing else.''';
         final preview = note.content.length > 200 
             ? note.content.substring(0, 200) 
             : note.content;
-        return '[ID:${note.id}] "${note.name}": $preview';
+        return '[ID:${note.id}] "${note.name}" (folder: ${note.folderId ?? "unorganized"}): $preview';
       }).take(30).join('\n');
+
+      // Format folders context
+      final foldersContext = folders != null && folders.isNotEmpty
+          ? folders.where((f) => !f.isSystem).map((f) => '[FOLDER:${f.id}] "${f.name}" ${f.icon}').join('\n')
+          : 'No folders yet';
 
       // Build conversation history
       final messages = <Map<String, dynamic>>[
         {
           'role': 'system',
-          'content': '''You are an intelligent AI assistant with direct access to the user's personal notes.
+          'content': '''You are a personal notes assistant with EXCLUSIVE focus on the user's notes.
 
-**IMPORTANT: Always respond in the same language as the user's message. If the user writes in German, respond in German. If they write in English, respond in English. Match their language exactly.**
+**CRITICAL: Always respond in the same language as the user's message.**
 
-**PRIORITY HANDLING:**
-1. ALWAYS check the user's notes first for relevant information
-2. If notes contain relevant info → Use them prominently in your response
-3. If notes don't have the answer → Help with general knowledge
-4. When user asks vague questions, scan notes for context clues
+**YOUR CAPABILITIES:**
+1. Answer questions by searching user's notes
+2. Detect when user wants to perform actions on notes
+3. Provide actionable suggestions with buttons
 
-**YOUR NOTES DATABASE:**
+**USER'S NOTES DATABASE:**
 $notesContext
 
-**RESPONSE STYLE:**
-- Be conversational and concise (2-3 sentences)
-- When referencing notes, use this format: "In your note [NOTE:noteId]..." where noteId is from the [ID:xxx] in the notes database
-- If notes are sparse, offer to help organize or add information
-- Proactively suggest organizing scattered information
+**USER'S FOLDERS:**
+$foldersContext
 
-Focus on being a smart assistant that leverages their notes to provide better, personalized answers.'''
+**ACTION DETECTION - Detect these intents:**
+- "create note about X" / "make a note" → create_note
+- "add this to [note name]" / "append to note" → add_to_note  
+- "move [note] to [folder]" → move_note
+- "create folder for X" → create_folder
+- "summarize our conversation" / "create note from this chat" → summarize_chat
+- "pin [note name]" → pin_note
+- "delete [note name]" → delete_note
+
+**RESPONSE FORMAT:**
+You MUST respond with STRICTLY VALID JSON - NO COMMENTS ALLOWED!
+
+CORRECT format:
+{
+  "text": "Your conversational response (2-3 sentences)",
+  "noteCitations": ["noteId1", "noteId2"],
+  "action": {
+    "type": "create_note|add_to_note|move_note|create_folder|summarize_chat|pin_note|delete_note",
+    "description": "Clear description of what will happen",
+    "buttonLabel": "Short action label (2-4 words)",
+    "data": {}
+  }
+}
+
+Data field examples (choose based on action type):
+- create_note: {"noteName": "Name", "noteContent": "", "folderId": "id"}
+- add_to_note: {"noteId": "id", "contentToAdd": "text"}
+- move_note: {"noteId": "id", "targetFolderId": "id", "targetFolderName": "name"}
+- create_folder: {"folderName": "name"}
+- summarize_chat: {}
+- pin_note: {"noteId": "id"}
+- delete_note: {"noteId": "id"}
+
+**CRITICAL RULES:**
+- NO COMMENTS in JSON (no // or /* */)
+- NO trailing commas
+- MUST be valid JSON that can be parsed
+- If NO action needed, set "action": null
+- In "text", reference notes using [NOTE:noteId] format
+- Only suggest actions that are POSSIBLE with available data
+- Use IDs from the notes/folders database above
+- Keep responses concise and helpful
+
+**EXAMPLES:**
+
+User: "What did I note about the meeting?"
+Response:
+{
+  "text": "In your note [NOTE:abc123], you mentioned the Q3 project deadline is Friday.",
+  "noteCitations": ["abc123"],
+  "action": null
+}
+
+User: "Create a note about grocery shopping"
+Response:
+{
+  "text": "I'll create a new note for your grocery shopping list.",
+  "noteCitations": [],
+  "action": {
+    "type": "create_note",
+    "description": "Create a new note titled 'Grocery Shopping'",
+    "buttonLabel": "Create Note",
+    "data": {
+      "noteName": "Grocery Shopping",
+      "noteContent": ""
+    }
+  }
+}
+
+User: "Add buy milk to my shopping list"
+Response:
+{
+  "text": "I found your shopping list note. I'll add 'buy milk' to it.",
+  "noteCitations": ["xyz789"],
+  "action": {
+    "type": "add_to_note",
+    "description": "Add 'buy milk' to Shopping List",
+    "buttonLabel": "Add to Note",
+    "data": {
+      "noteId": "xyz789",
+      "contentToAdd": "buy milk"
+    }
+  }
+}'''
         },
         ...history,
         {'role': 'user', 'content': message},
@@ -859,22 +945,70 @@ Focus on being a smart assistant that leverages their notes to provide better, p
           'model': 'gpt-4o-mini',
           'messages': messages,
           'temperature': 0.7,
-          'max_tokens': 200,
+          'max_tokens': 500,
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final content = data['choices'][0]['message']['content'] as String;
+        var content = data['choices'][0]['message']['content'] as String;
+        
+        // Clean up markdown code blocks if present
+        content = content.trim();
+        if (content.startsWith('```json')) {
+          content = content.substring(7);
+        } else if (content.startsWith('```')) {
+          content = content.substring(3);
+        }
+        if (content.endsWith('```')) {
+          content = content.substring(0, content.length - 3);
+        }
+        content = content.trim();
+        
+        // Remove any JSON comments (// and /* */) that AI might have added
+        content = content.replaceAll(RegExp(r'//.*?(?=\n|$)'), ''); // Remove // comments
+        content = content.replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), ''); // Remove /* */ comments
+        content = content.trim();
+        
+        // Parse JSON response
+        dynamic jsonResponse;
+        try {
+          jsonResponse = jsonDecode(content);
+        } catch (e) {
+          debugPrint('JSON parsing error: $e');
+          debugPrint('Content that failed to parse: $content');
+          // Return fallback response without action
+          return AIChatResponse(
+            text: data['choices'][0]['message']['content'] as String,
+            noteCitations: [],
+            action: null,
+          );
+        }
+        final responseText = jsonResponse['text'] as String;
+        final noteCitationIds = (jsonResponse['noteCitations'] as List?)?.cast<String>() ?? [];
+        final actionData = jsonResponse['action'];
         
         // Parse note citations
         final noteCitationRegex = RegExp(r'\[NOTE:([^\]]+)\]');
         final citations = <NoteCitation>[];
-        final citationMatches = noteCitationRegex.allMatches(content);
         
+        // Add citations from JSON
+        for (final noteId in noteCitationIds) {
+          final note = notes.firstWhere(
+            (n) => n.id == noteId,
+            orElse: () => notes.first,
+          );
+          citations.add(NoteCitation(
+            noteId: note.id,
+            noteName: note.name,
+          ));
+        }
+        
+        // Also parse citations from text
+        final citationMatches = noteCitationRegex.allMatches(responseText);
         for (final match in citationMatches) {
           final noteId = match.group(1);
-          if (noteId != null) {
+          if (noteId != null && !noteCitationIds.contains(noteId)) {
             final note = notes.firstWhere(
               (n) => n.id == noteId,
               orElse: () => notes.first,
@@ -887,7 +1021,7 @@ Focus on being a smart assistant that leverages their notes to provide better, p
         }
         
         // Remove citation tags from response text
-        final responseText = content.replaceAllMapped(noteCitationRegex, (match) {
+        final cleanText = responseText.replaceAllMapped(noteCitationRegex, (match) {
           final noteId = match.group(1);
           final note = notes.firstWhere(
             (n) => n.id == noteId,
@@ -896,15 +1030,89 @@ Focus on being a smart assistant that leverages their notes to provide better, p
           return '"${note.name}"';
         });
 
+        // Parse action if present
+        ChatAction? action;
+        if (actionData != null && actionData is Map) {
+          action = ChatAction(
+            type: actionData['type'] as String,
+            description: actionData['description'] as String,
+            buttonLabel: actionData['buttonLabel'] as String,
+            data: Map<String, dynamic>.from(actionData['data'] as Map),
+          );
+        }
+
         return AIChatResponse(
-          text: responseText,
+          text: cleanText,
           noteCitations: citations,
+          action: action,
         );
       } else {
         throw Exception('Chat completion failed: ${response.body}');
       }
     } catch (e) {
-      throw Exception('Error in chat completion: $e');
+      debugPrint('Error in chat completion: $e');
+      // Fallback to simple response
+      return AIChatResponse(
+        text: 'I encountered an error processing your request. Please try again.',
+        noteCitations: [],
+        action: null,
+      );
+    }
+  }
+
+  /// Summarize chat history into a coherent note
+  Future<String> summarizeChatHistory(List<ChatMessage> messages) async {
+    try {
+      // Build conversation text
+      final conversationText = messages.map((m) {
+        final role = m.isUser ? 'User' : 'AI';
+        return '$role: ${m.text}';
+      }).join('\n\n');
+
+      final prompt = '''Summarize this conversation between a user and their AI notes assistant into a well-structured note.
+
+CONVERSATION:
+$conversationText
+
+Create a comprehensive summary that:
+- Captures all important points discussed
+- Includes any questions asked and answers provided
+- Lists any action items or decisions
+- Organizes information logically
+- Uses clear headings and bullet points
+
+Format as plain text with clear sections. Make it useful as a reference note.
+
+Return ONLY the summary, nothing else.''';
+
+      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o',
+          'messages': [
+            {'role': 'system', 'content': 'You are an expert at creating clear, comprehensive summaries of conversations.'},
+            {'role': 'user', 'content': prompt},
+          ],
+          'temperature': 0.3,
+          'max_tokens': 1000,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final summary = data['choices'][0]['message']['content'] as String;
+        return summary.trim();
+      } else {
+        throw Exception('Summary generation failed: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error summarizing chat: $e');
+      throw Exception('Error summarizing chat: $e');
     }
   }
 }
@@ -912,10 +1120,12 @@ Focus on being a smart assistant that leverages their notes to provide better, p
 class AIChatResponse {
   final String text;
   final List<NoteCitation> noteCitations;
+  final ChatAction? action;
 
   AIChatResponse({
     required this.text,
     this.noteCitations = const [],
+    this.action,
   });
 }
 

@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/settings.dart';
 import '../models/app_language.dart';
 import '../providers/settings_provider.dart';
 import '../providers/notes_provider.dart';
+import '../services/failed_recordings_service.dart';
 import '../theme/app_theme.dart';
 import '../services/haptic_service.dart';
 import '../services/localization_service.dart';
@@ -15,6 +17,7 @@ import '../widgets/animated_background.dart';
 import '../widgets/theme_preview_card.dart';
 import '../widgets/settings/settings_section.dart';
 import '../widgets/export_dialog.dart';
+import 'failed_recordings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -100,9 +103,18 @@ class SettingsScreen extends StatelessWidget {
                     SettingsSection(
                       title: 'Data',
                       children: [
+                        _buildFailedRecordingsButton(context, settingsProvider.currentThemeConfig),
                         _buildExportDataButton(context, settingsProvider.currentThemeConfig),
                         _buildClearCacheButton(context, settingsProvider.currentThemeConfig),
                         _buildDeleteAllNotesButton(context, settingsProvider.currentThemeConfig),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.spacing24),
+                    SettingsSection(
+                      title: 'Legal',
+                      children: [
+                        _buildPrivacyPolicyTile(context, settingsProvider.currentThemeConfig),
+                        _buildTermsOfServiceTile(context, settingsProvider.currentThemeConfig),
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
@@ -496,6 +508,49 @@ class SettingsScreen extends StatelessWidget {
 
 
 
+  Widget _buildFailedRecordingsButton(BuildContext context, ThemeConfig themeConfig) {
+    return Consumer<FailedRecordingsService>(
+      builder: (context, failedRecordingsService, child) {
+        final count = failedRecordingsService.count;
+        final subtitle = count == 0 
+            ? 'No failed recordings'
+            : '$count recording${count == 1 ? '' : 's'} need retry';
+        
+        return _buildTile(
+          context,
+          themeConfig,
+          icon: Icons.warning_amber_rounded,
+          title: 'Failed Recordings',
+          subtitle: subtitle,
+          onTap: () {
+            HapticService.light();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const FailedRecordingsScreen(),
+              ),
+            );
+          },
+          trailing: count > 0 ? Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              count.toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ) : null,
+        );
+      },
+    );
+  }
+
   Widget _buildExportDataButton(BuildContext context, ThemeConfig themeConfig) {
     final localization = LocalizationService();
     return _buildTile(
@@ -539,6 +594,34 @@ class SettingsScreen extends StatelessWidget {
       onTap: () async {
         await HapticService.light();
         await _clearCache(context);
+      },
+    );
+  }
+
+  Widget _buildPrivacyPolicyTile(BuildContext context, ThemeConfig themeConfig) {
+    return _buildTile(
+      context,
+      themeConfig,
+      icon: Icons.privacy_tip_outlined,
+      title: 'Privacy Policy',
+      subtitle: 'How we handle your data',
+      onTap: () async {
+        await HapticService.light();
+        _openPrivacyPolicy();
+      },
+    );
+  }
+
+  Widget _buildTermsOfServiceTile(BuildContext context, ThemeConfig themeConfig) {
+    return _buildTile(
+      context,
+      themeConfig,
+      icon: Icons.description_outlined,
+      title: 'Terms of Service',
+      subtitle: 'Terms and conditions',
+      onTap: () async {
+        await HapticService.light();
+        _openTermsOfService();
       },
     );
   }
@@ -1014,7 +1097,10 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _clearCache(BuildContext context) async {
     final provider = context.read<SettingsProvider>();
+    final failedRecordingsService = context.read<FailedRecordingsService>();
+    
     await provider.clearCache();
+    await failedRecordingsService.cleanupStorage();
 
     if (context.mounted) {
       await HapticService.success();
@@ -1268,6 +1354,34 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Open Privacy Policy
+  void _openPrivacyPolicy() async {
+    const url = 'https://sites.google.com/view/notieai/privacy-policy';
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+    } else {
+      debugPrint('Could not launch $url');
+    }
+  }
+
+  // Open Terms of Service
+  void _openTermsOfService() async {
+    const url = 'https://sites.google.com/view/notieai/terms-of-service';
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+    } else {
+      debugPrint('Could not launch $url');
+    }
   }
 }
 

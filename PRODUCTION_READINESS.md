@@ -1,6 +1,6 @@
 # Production Readiness Summary
 
-This document outlines all changes made to prepare Nota AI for iOS App Store submission and production deployment.
+This document outlines all changes made to prepare Notie AI for iOS App Store submission and production deployment.
 
 **Date:** December 2024  
 **App Version:** 1.0.0  
@@ -19,10 +19,10 @@ This document outlines all changes made to prepare Nota AI for iOS App Store sub
 - `README.md`
 
 **Changes:**
-- ✅ Updated `CFBundleDisplayName` to "Nota AI - Voice Notes" (shown in most places)
-- ✅ Updated `CFBundleName` to "Nota AI" (short name for Home Screen)
-- ✅ Updated MaterialApp title to "Nota AI"
-- ✅ Updated splash screen text to "Nota AI"
+- ✅ Updated `CFBundleDisplayName` to "Notie AI" (shown everywhere)
+- ✅ Updated `CFBundleName` to "Notie AI" (short name for Home Screen)
+- ✅ Updated MaterialApp title to "Notie AI"
+- ✅ Updated splash screen text to "Notie AI"
 - ✅ Updated README with correct app name
 
 ### 2. iOS Compliance & Permissions
@@ -30,7 +30,7 @@ This document outlines all changes made to prepare Nota AI for iOS App Store sub
 **File:** `ios/Runner/Info.plist`
 
 **Changes:**
-- ✅ Enhanced `NSMicrophoneUsageDescription`: "Nota AI needs microphone access to record your voice notes and transform them into organized, searchable text."
+- ✅ Enhanced `NSMicrophoneUsageDescription`: "Notie AI needs microphone access to record your voice notes and transform them into organized, searchable text."
 - ✅ Added `NSUserTrackingUsageDescription` for ATT compliance: "This helps us provide you with a better experience and improve our app."
 - ✅ Locked orientation to portrait-only for better UX (`UISupportedInterfaceOrientations`)
 - ✅ Kept iPad multi-orientation support
@@ -140,8 +140,7 @@ This document outlines all changes made to prepare Nota AI for iOS App Store sub
   - Verify all sizes are present and correct
 
 - [ ] **App Store Metadata**
-  - App name: "Nota AI"
-  - Subtitle: "Voice Notes"
+  - App name: "Notie AI"
   - Description (compelling, keyword-rich)
   - Keywords (up to 100 characters)
   - Support URL
@@ -327,7 +326,7 @@ flutter build ios --release --build-name=1.0.0 --build-number=1
 **Production Ready:** Yes, with checklist completion
 
 **Major Improvements:**
-1. ✅ Professional app branding (Nota AI)
+1. ✅ Professional app branding (Notie AI)
 2. ✅ Enhanced rating system for better reviews
 3. ✅ iOS compliance (permissions, orientation)
 4. ✅ Debug code optimized for production

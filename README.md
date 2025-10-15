@@ -1,9 +1,8 @@
-# 🎙️ Nota AI - Voice Notes
+# 🎙️ Notie AI
 
 A beautiful, modern AI-powered voice notes app that intelligently organizes your thoughts. Built with Flutter.
 
-**App Name:** Nota AI  
-**Full Name:** Nota AI - Voice Notes  
+**App Name:** Notie AI  
 **Version:** 1.0.0
 
 ## ✨ Features
@@ -143,8 +142,8 @@ Example: 100 voice notes (average 30 seconds each) = ~$0.50/month
 ### iOS
 
 1. App configuration (already set):
-   - ✅ `CFBundleDisplayName`: "Nota AI - Voice Notes"
-   - ✅ `CFBundleName`: "Nota AI"
+   - ✅ `CFBundleDisplayName`: "Notie AI"
+   - ✅ `CFBundleName`: "Notie AI"
    - ✅ Microphone permission with description
    - ✅ Orientation locked to portrait
    - Update bundle identifier to your own

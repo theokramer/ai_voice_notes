@@ -35,7 +35,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
       // Sort folders alphabetically
       final sorted = List<Folder>.from(widget.folders)
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      return sorted.take(7).toList();
+      return sorted;
     }
     
     final query = _searchQuery.toLowerCase();
@@ -210,7 +210,7 @@ class _FolderPickerDialogState extends State<FolderPickerDialog> {
                         subtitle: Text('${folder.noteCount} notes'),
                         onTap: () => Navigator.of(context).pop({
                           'folderId': folder.id,
-                          'folderName': null,
+                          'folderName': folder.name,
                         }),
                       )),
                       

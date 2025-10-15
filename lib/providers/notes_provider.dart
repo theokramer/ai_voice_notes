@@ -244,10 +244,12 @@ class NotesProvider extends ChangeNotifier {
         notifyListeners();
       }
       
-      // Save to storage in background (fire-and-forget)
-      _storageService.saveNotes(_notes).catchError((e) {
+      // Save to storage and wait for completion
+      try {
+        await _storageService.saveNotes(_notes);
+      } catch (e) {
         debugPrint('Error saving notes: $e');
-      });
+      }
     }
   }
 

@@ -1,5 +1,5 @@
 name: ai_voice_notes_2
-description: "AI-powered voice notes app with intelligent organization"
+description: "Notie AI - Intelligent voice recording and organization"
 publish_to: 'none'
 version: 1.0.0
 
@@ -50,6 +50,9 @@ dependencies:
   
   # Share functionality for data export
   share_plus: ^10.1.2
+  
+  # URL launcher for opening links
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
@@ -67,15 +70,15 @@ flutter:
     - assets/onboarding/videos/
   
   fonts:
-    - family: EBGaramond
+    - family: Inter
       fonts:
-        - asset: assets/EB_Garamond,Poppins/EB_Garamond/static/EBGaramond-Regular.ttf
+        - asset: assets/Inter/extras/ttf/Inter-Regular.ttf
           weight: 400
-        - asset: assets/EB_Garamond,Poppins/EB_Garamond/static/EBGaramond-Medium.ttf
+        - asset: assets/Inter/extras/ttf/Inter-Medium.ttf
           weight: 500
-        - asset: assets/EB_Garamond,Poppins/EB_Garamond/static/EBGaramond-SemiBold.ttf
+        - asset: assets/Inter/extras/ttf/Inter-SemiBold.ttf
           weight: 600
-        - asset: assets/EB_Garamond,Poppins/EB_Garamond/static/EBGaramond-Bold.ttf
+        - asset: assets/Inter/extras/ttf/Inter-Bold.ttf
           weight: 700
-        - asset: assets/EB_Garamond,Poppins/EB_Garamond/static/EBGaramond-ExtraBold.ttf
+        - asset: assets/Inter/extras/ttf/Inter-ExtraBold.ttf
           weight: 800

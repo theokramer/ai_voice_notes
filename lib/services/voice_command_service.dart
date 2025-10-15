@@ -5,9 +5,8 @@ import '../services/openai_service.dart';
 
 /// Types of voice commands that can be detected
 enum VoiceCommandType {
-  folder, // Save to specific folder
+  folder, // Save to specific folder (will create if doesn't exist)
   append, // Append to last created note
-  createFolder, // Create new folder and save note there
   setTitle, // Set custom title for note
 }
 
@@ -17,7 +16,6 @@ class VoiceCommand {
   final String originalKeyword; // The actual keyword detected
   final String? folderId; // For folder commands
   final String? folderName; // For folder commands (existing or to be created)
-  final String? newFolderName; // For createFolder commands - the name to create
   final String? noteTitle; // For setTitle commands
   final double confidence; // Confidence score (0.0-1.0)
   final String? remainingContent; // Content after command extraction
@@ -27,7 +25,6 @@ class VoiceCommand {
     required this.originalKeyword,
     this.folderId,
     this.folderName,
-    this.newFolderName,
     this.noteTitle,
     this.confidence = 1.0,
     this.remainingContent,
@@ -35,7 +32,7 @@ class VoiceCommand {
   
   @override
   String toString() {
-    return 'VoiceCommand(type: $type, keyword: "$originalKeyword", folder: $folderName, newFolder: $newFolderName, title: $noteTitle, confidence: $confidence)';
+    return 'VoiceCommand(type: $type, keyword: "$originalKeyword", folder: $folderName, title: $noteTitle, confidence: $confidence)';
   }
 }
 
@@ -147,19 +144,13 @@ COMMAND TYPES TO DETECT:
    French: "ajouter à la dernière note", "ajout"
    Spanish: "agregar a la última nota", "añadir a la última", "adición"
 
-2. CREATE_FOLDER - Create a new folder and save note there
-   English: "new folder [name]", "new [name]", "create folder [name]"
-   German: "neuer ordner [name]", "neu [name]", "neue [name]"
-   French: "nouveau dossier [name]", "nouvelle [name]"
-   Spanish: "nueva carpeta [name]", "nuevo [name]"
-   
-3. FOLDER - Save to an existing folder (or create if doesn't exist)
-   English: "folder [name]", "in folder [name]", "to folder [name]"
-   German: "ordner [name]", "in ordner [name]"
-   French: "dossier [name]", "dans dossier [name]"
-   Spanish: "carpeta [name]", "en carpeta [name]"
+2. FOLDER - Save to an existing folder (will create if doesn't exist)
+   English: "folder [name]", "in folder [name]", "to folder [name]", "new [name]", "new folder [name]"
+   German: "ordner [name]", "in ordner [name]", "neu [name]", "neue [name]", "neuer ordner [name]"
+   French: "dossier [name]", "dans dossier [name]", "nouvelle [name]", "nouveau dossier [name]"
+   Spanish: "carpeta [name]", "en carpeta [name]", "nuevo [name]", "nueva carpeta [name]"
 
-4. SET_TITLE - Set custom title for the note
+3. SET_TITLE - Set custom title for the note
    English: "note with title [title]", "title [title]", "with title [title]"
    German: "notiz mit titel [title]", "titel [title]", "mit titel [title]"
    French: "note avec titre [title]", "titre [title]", "avec titre [title]"
@@ -173,18 +164,18 @@ CRITICAL RULES:
 5. Extract remaining content after ALL commands
 6. If text doesn't clearly match patterns, return NO commands (avoid false positives)
 7. Be smart: "get together" is NOT "new", but "neue Tagebuch" or "new Journaling" IS a command
-8. For "new [name]" without "folder" keyword, still treat as CREATE_FOLDER if context makes sense
+8. **FOLDER AUTO-CREATION**: All folder commands will automatically create the folder if it doesn't exist
 9. **TITLE EXTRACTION**: When detecting title command, extract ONLY the title text (not the whole sentence). Remove the title AND the command keyword from remainingContent. The title should be the phrase immediately after "title" keyword, NOT the entire transcription.
 
 COMBINED COMMAND EXAMPLES:
 - "New note with title Meeting Notes in folder Work and here are my notes..."
-  → Commands: [CREATE_FOLDER("Work"), SET_TITLE("Meeting Notes")], Content: "and here are my notes..."
+  → Commands: [FOLDER("Work"), SET_TITLE("Meeting Notes")], Content: "and here are my notes..."
   
 - "Titel Morgengedanken in Ordner Tagebuch heute war ein guter Tag"
   → Commands: [SET_TITLE("Morgengedanken"), FOLDER("Tagebuch")], Content: "heute war ein guter Tag"
 
 - "Neu Journaling ich bin heute sehr glücklich"
-  → Commands: [CREATE_FOLDER("Journaling")], Content: "ich bin heute sehr glücklich"
+  → Commands: [FOLDER("Journaling")], Content: "ich bin heute sehr glücklich"
 
 - "Title I love potatoes and today I went shopping"
   → Commands: [SET_TITLE("I love potatoes")], Content: "and today I went shopping"
@@ -199,9 +190,9 @@ Return JSON ONLY (no markdown):
 {
   "commands": [
     {
-      "type": "append|createFolder|folder|setTitle",
+      "type": "append|folder|setTitle",
       "confidence": 0.95,
-      "folderName": "name of folder (for folder/createFolder types)",
+      "folderName": "name of folder (for folder type)",
       "noteTitle": "title text (for setTitle type)"
     }
   ],
@@ -290,36 +281,17 @@ TRANSCRIPTION TO ANALYZE:
             }
             break;
             
-          case 'createFolder':
           case 'folder':
             final folderName = cmdData['folderName'] as String?;
             if (folderName != null && folderName.isNotEmpty) {
-              // Check if folder exists
-              final existingFolder = folders.firstWhere(
-                (f) => f.name.toLowerCase() == folderName.toLowerCase() && !f.isSystem,
-                orElse: () => Folder(id: '', name: '', icon: '', isSystem: false, createdAt: DateTime.now(), updatedAt: DateTime.now()),
+              // Always use folder command type - backend will handle creation if needed
+              commandType = VoiceCommandType.folder;
+              command = VoiceCommand(
+                type: commandType,
+                originalKeyword: 'folder',
+                folderName: folderName, // Pass folder name directly
+                confidence: confidence,
               );
-              
-              if (existingFolder.id.isNotEmpty) {
-                // Use existing folder
-                commandType = VoiceCommandType.folder;
-                command = VoiceCommand(
-                  type: commandType,
-                  originalKeyword: 'folder',
-                  folderId: existingFolder.id,
-                  folderName: existingFolder.name,
-                  confidence: confidence,
-                );
-              } else {
-                // Create new folder
-                commandType = VoiceCommandType.createFolder;
-                command = VoiceCommand(
-                  type: commandType,
-                  originalKeyword: 'new',
-                  newFolderName: folderName,
-                  confidence: confidence,
-                );
-              }
             }
             break;
         }
@@ -425,35 +397,20 @@ TRANSCRIPTION TO ANALYZE:
       }
     }
     
-    // Check for new folder commands
+    // Check for folder commands (including "new" keywords)
     for (final langKeywords in _newFolderKeywords.values) {
       for (final keyword in langKeywords) {
         if (normalized.startsWith(keyword.toLowerCase())) {
           final folderName = extractNameAfterKeyword(transcription, keyword);
           
           if (folderName != null && folderName.isNotEmpty && folderName.toLowerCase() != 'folder') {
-            // Check if folder exists
-            final existingFolder = folders.firstWhere(
-              (f) => f.name.toLowerCase() == folderName.toLowerCase() && !f.isSystem,
-              orElse: () => Folder(id: '', name: '', icon: '', isSystem: false, createdAt: DateTime.now(), updatedAt: DateTime.now()),
-            );
-            
-            if (existingFolder.id.isNotEmpty) {
-              commands.add(VoiceCommand(
-                type: VoiceCommandType.folder,
-                originalKeyword: keyword,
-                folderId: existingFolder.id,
-                folderName: existingFolder.name,
-                confidence: 0.9,
-              ));
-            } else {
-              commands.add(VoiceCommand(
-                type: VoiceCommandType.createFolder,
-                originalKeyword: keyword,
-                newFolderName: folderName,
-                confidence: 0.85,
-              ));
-            }
+            // Always use folder command type - backend will handle creation if needed
+            commands.add(VoiceCommand(
+              type: VoiceCommandType.folder,
+              originalKeyword: keyword,
+              folderName: folderName,
+              confidence: 0.9,
+            ));
             break;
           }
         }
@@ -468,28 +425,13 @@ TRANSCRIPTION TO ANALYZE:
             final folderName = extractNameAfterKeyword(transcription, keyword);
             
             if (folderName != null && folderName.isNotEmpty) {
-              // Check if folder exists
-              final existingFolder = folders.firstWhere(
-                (f) => f.name.toLowerCase() == folderName.toLowerCase() && !f.isSystem,
-                orElse: () => Folder(id: '', name: '', icon: '', isSystem: false, createdAt: DateTime.now(), updatedAt: DateTime.now()),
-              );
-              
-              if (existingFolder.id.isNotEmpty) {
-                commands.add(VoiceCommand(
-                  type: VoiceCommandType.folder,
-                  originalKeyword: keyword,
-                  folderId: existingFolder.id,
-                  folderName: existingFolder.name,
-                  confidence: 0.9,
-                ));
-              } else {
-                commands.add(VoiceCommand(
-                  type: VoiceCommandType.createFolder,
-                  originalKeyword: keyword,
-                  newFolderName: folderName,
-                  confidence: 0.8,
-                ));
-              }
+              // Always use folder command type - backend will handle creation if needed
+              commands.add(VoiceCommand(
+                type: VoiceCommandType.folder,
+                originalKeyword: keyword,
+                folderName: folderName,
+                confidence: 0.9,
+              ));
               break;
             }
           }
@@ -506,8 +448,8 @@ TRANSCRIPTION TO ANALYZE:
       } else {
         // Remove first command's keywords and extracted names
         final firstCmd = commands.first;
-        if (firstCmd.type == VoiceCommandType.createFolder || firstCmd.type == VoiceCommandType.folder) {
-          final folderNameToRemove = firstCmd.folderName ?? firstCmd.newFolderName ?? '';
+        if (firstCmd.type == VoiceCommandType.folder) {
+          final folderNameToRemove = firstCmd.folderName ?? '';
           // Try to find and remove the folder name from the start
           final pattern = RegExp('${RegExp.escape(firstCmd.originalKeyword)}\\s+${RegExp.escape(folderNameToRemove)}', caseSensitive: false);
           remainingContent = transcription.replaceFirst(pattern, '').trim();
@@ -528,8 +470,6 @@ TRANSCRIPTION TO ANALYZE:
         return 'Saved to ${command.folderName}';
       case VoiceCommandType.append:
         return 'Added to previous note';
-      case VoiceCommandType.createFolder:
-        return 'Created folder "${command.newFolderName}"';
       case VoiceCommandType.setTitle:
         return 'Title set to "${command.noteTitle}"';
     }

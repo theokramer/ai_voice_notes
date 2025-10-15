@@ -10,6 +10,7 @@ import '../providers/folders_provider.dart';
 import '../providers/settings_provider.dart';
 import 'openai_service.dart';
 import 'voice_command_service.dart';
+import 'failed_recordings_service.dart';
 
 /// Format a custom title from voice command
 /// Removes trailing punctuation and ensures proper capitalization
@@ -242,6 +243,7 @@ class RecordingQueueService extends ChangeNotifier {
   String addRecording({
     required String audioPath,
     String? folderContext,
+    Duration? recordingDuration, // Optional recording duration for validation
     required OpenAIService openAIService,
     required NotesProvider notesProvider,
     required FoldersProvider foldersProvider,
@@ -267,6 +269,7 @@ class RecordingQueueService extends ChangeNotifier {
     // Start processing immediately
     _processRecording(
       id: id,
+      recordingDuration: recordingDuration, // Pass duration for validation
       openAIService: openAIService,
       notesProvider: notesProvider,
       foldersProvider: foldersProvider,
@@ -279,6 +282,7 @@ class RecordingQueueService extends ChangeNotifier {
   /// Process a recording: transcribe, beautify, organize, and create note
   Future<void> _processRecording({
     required String id,
+    Duration? recordingDuration, // Optional recording duration for validation
     required OpenAIService openAIService,
     required NotesProvider notesProvider,
     required FoldersProvider foldersProvider,
@@ -288,6 +292,25 @@ class RecordingQueueService extends ChangeNotifier {
       final item = _queue.firstWhere((i) => i.id == id);
       if (item.audioPath == null) {
         throw Exception('No audio path provided');
+      }
+
+      // EARLY VALIDATION: Check recording duration if available
+      if (recordingDuration != null) {
+        // Only reject if duration is extremely short (less than 1 second) - likely accidental tap
+        if (recordingDuration.inMilliseconds < 1000) {
+          debugPrint('⚠️ Rejecting recording: extremely short (${recordingDuration.inMilliseconds}ms)');
+          throw Exception('Recording was too short. Please speak for at least a few seconds.');
+        }
+        
+        // Reject recordings longer than 10 minutes - likely accidental long recording
+        if (recordingDuration.inMinutes > 10) {
+          debugPrint('⚠️ Rejecting recording: too long (${recordingDuration.inMinutes}m)');
+          throw Exception('Recording was too long. Please keep recordings under 10 minutes.');
+        }
+        
+        debugPrint('✅ Recording duration validated: ${recordingDuration.inSeconds}s');
+      } else {
+        debugPrint('ℹ️ No recording duration provided, proceeding with content validation');
       }
 
       final settings = settingsProvider.settings;
@@ -309,43 +332,238 @@ class RecordingQueueService extends ChangeNotifier {
       
       debugPrint('🌍 Detected language: $detectedLanguage');
       
-      // Validate transcription
+      // Validate transcription - STRICT validation to prevent empty/invalid recordings
       if (transcription.trim().isEmpty) {
         throw Exception('Recording was too quiet or unclear. Please try again in a quieter environment.');
       }
       
-      // Check for minimum length - RELAXED (was 15, now 10 for better UX)
-      if (transcription.trim().length < 10) {
+      final lowerTranscription = transcription.toLowerCase().trim();
+      final wordCount = lowerTranscription.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+      
+      // STRICT minimum length requirements
+      if (transcription.trim().length < 15) {
         throw Exception('Recording was too short. Please speak for at least a few words.');
       }
       
-      // Check for common silence/noise patterns from Whisper - RELAXED validation
-      final lowerTranscription = transcription.toLowerCase().trim();
-      final wordCount = lowerTranscription.split(RegExp(r'\s+')).length;
+      // STRICT minimum word count - must have at least 3 meaningful words
+      if (wordCount < 3) {
+        throw Exception('Recording was too short. Please speak for at least a few words.');
+      }
       
-      // Only reject if it's EXACTLY one of these common noise patterns
-      final exactNoisePatterns = [
+      // Enhanced noise pattern detection - reject common meaningless transcriptions
+      final noisePatterns = [
+        // Basic noise patterns
         'thank you',
         'thanks for watching',
         'subtitle',
         'subtitles',
-        '...',
         'music',
         'applause',
+        '...',
+        'uh',
+        'um',
+        'ah',
+        'oh',
+        'hmm',
+        'mm',
+        'yeah',
+        'yes',
+        'no',
+        'ok',
+        'okay',
+        'hello',
+        'hi',
+        'hey',
+        'test',
+        'testing',
+        'one two three',
+        'one two',
+        'test test',
+        'mic test',
+        'microphone test',
+        'can you hear me',
+        'is this working',
+        'check check',
+        'sound check',
+        
+        // Subtitle/Credits patterns (common background audio from videos)
+        // English
+        'www.mooji.org',
+        
+        // Dutch
+        'ondertitels ingediend door de amara.org gemeenschap',
+        'ondertiteld door de amara.org gemeenschap',
+        'ondertiteling door de amara.org gemeenschap',
+        
+        // German
+        'untertitelung aufgrund der amara.org-community',
+        'untertitel im auftrag des zdf für funk',
+        'untertitel von stephanie geiges',
+        'untertitel der amara.org-community',
+        'untertitel im auftrag des zdf',
+        'untertitelung im auftrag des zdf',
+        'copyright wdr',
+        'swr',
+        
+        // French
+        'sous-titres réalisés para la communauté d\'amara.org',
+        'sous-titres réalisés par la communauté d\'amara.org',
+        'sous-titres fait par sous-titres par amara.org',
+        'sous-titres réalisés par les soustitres d\'amara.org',
+        'sous-titres par amara.org',
+        'sous-titres par la communauté d\'amara.org',
+        'sous-titres réalisés pour la communauté d\'amara.org',
+        'sous-titres réalisés par la communauté de l\'amara.org',
+        'sous-titres faits par la communauté d\'amara.org',
+        'sous-titres par l\'amara.org',
+        'sous-titres fait par la communauté d\'amara.org',
+        'sous-titrage st\' 501',
+        'sous-titrage st\'501',
+        'cliquez-vous sur les sous-titres et abonnez-vous à la chaîne d\'amara.org',
+        'par soustitreur.com',
+        
+        // Italian
+        'sottotitoli creati dalla comunità amara.org',
+        'sottotitoli di sottotitoli di amara.org',
+        'sottotitoli e revisione al canale di amara.org',
+        'sottotitoli e revisione a cura di amara.org',
+        'sottotitoli e revisione a cura di qtss',
+        'sottotitoli a cura di qtss',
+        
+        // Spanish
+        'subtítulos realizados por la comunidad de amara.org',
+        'subtitulado por la comunidad de amara.org',
+        'subtítulos por la comunidad de amara.org',
+        'subtítulos creados por la comunidad de amara.org',
+        'subtítulos en español de amara.org',
+        'subtítulos hechos por la comunidad de amara.org',
+        'subtitulos por la comunidad de amara.org',
+        'más información www.alimmenta.com',
+        
+        // Galician
+        'subtítulos realizados por la comunidad de amara.org',
+        
+        // Portuguese
+        'legendas pela comunidade amara.org',
+        'legendas pela comunidade de amara.org',
+        'legendas pela comunidade do amara.org',
+        'legendas pela comunidade das amara.org',
+        'transcrição e legendas pela comunidade de amara.org',
+        
+        // Latin
+        'sottotitoli creati dalla comunità amara.org',
+        'sous-titres réalisés para la communauté d\'amara.org',
+        
+        // Lingala
+        'sous-titres réalisés para la communauté d\'amara.org',
+        
+        // Polish
+        'napisy stworzone przez społeczność amara.org',
+        'napisy wykonane przez społeczność amara.org',
+        'zdjęcia i napisy stworzone przez społeczność amara.org',
+        'napisy stworzone przez społeczność amara.org',
+        'tłumaczenie i napisy stworzone przez społeczność amara.org',
+        'napisy stworzone przez społeczności amara.org',
+        'tłumaczenie stworzone przez społeczność amara.org',
+        'napisy robione przez społeczność amara.org',
+        'www.multi-moto.eu',
+        
+        // Russian
+        'редактор субтитров а.синецкая корректор а.егорова',
+        
+        // Turkish
+        'yorumlarınızıza abone olmayı unutmayın',
+        
+        // Sundanese
+        'sottotitoli creati dalla comunità amara.org',
+        
+        // Chinese
+        '字幕由amara.org社区提供',
+        '小编字幕由amara.org社区提供',
+        
+        // Common patterns that appear in subtitles
+        'amara.org',
+        'community',
+        'subtitles',
+        'sous-titres',
+        'sottotitoli',
+        'subtítulos',
+        'legendas',
+        'napisy',
+        'copyright',
+        'zdf',
+        'wdr',
+        'swr',
+        'qtss',
+        'www.',
+        '.org',
+        '.com',
+        '.eu',
       ];
       
-      // Only reject if transcription is EXACTLY one of these patterns AND very short
-      if (exactNoisePatterns.contains(lowerTranscription) && wordCount <= 2) {
-        debugPrint('⚠️ Rejecting transcription as noise: "$transcription"');
+      // Clean transcription by removing subtitle/credits content instead of rejecting
+      String cleanedTranscription = _cleanSubtitleContent(transcription);
+      
+      // Update word count based on cleaned content
+      final cleanedLowerTranscription = cleanedTranscription.toLowerCase().trim();
+      final cleanedWordCount = cleanedLowerTranscription.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+      
+      debugPrint('🧹 Content cleaning: "${transcription.length}" → "${cleanedTranscription.length}" chars, $wordCount → $cleanedWordCount words');
+      
+      // Use cleaned transcription for further processing
+      final finalTranscription = cleanedTranscription;
+      final finalWordCount = cleanedWordCount;
+      
+      // Only reject if cleaned content is too short
+      if (finalTranscription.trim().isEmpty) {
+        debugPrint('⚠️ Rejecting: no content after cleaning');
         throw Exception('Recording was unclear. Please speak clearly.');
       }
       
-      debugPrint('✅ Transcription validated: ${transcription.length} chars, $wordCount words');
+      // STRICT minimum length requirements (on cleaned content)
+      if (finalTranscription.trim().length < 15) {
+        debugPrint('⚠️ Rejecting: cleaned content too short (${finalTranscription.length} chars)');
+        throw Exception('Recording was too short. Please speak for at least a few words.');
+      }
       
-      // 2. DETECT VOICE COMMAND (before beautification)
+      // STRICT minimum word count - must have at least 3 meaningful words (on cleaned content)
+      if (finalWordCount < 3) {
+        debugPrint('⚠️ Rejecting: cleaned content too few words ($finalWordCount words)');
+        throw Exception('Recording was too short. Please speak for at least a few words.');
+      }
+      
+      // Reject if cleaned transcription matches noise patterns exactly
+      if (noisePatterns.contains(cleanedLowerTranscription)) {
+        debugPrint('⚠️ Rejecting cleaned transcription as noise pattern: "$finalTranscription"');
+        throw Exception('Recording was unclear. Please speak clearly.');
+      }
+      
+      // Reject if cleaned transcription is mostly single repeated words or very repetitive
+      final cleanedWords = cleanedLowerTranscription.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+      if (cleanedWords.length >= 2) {
+        final uniqueWords = cleanedWords.toSet().length;
+        final repetitionRatio = uniqueWords / cleanedWords.length;
+        
+        // If more than 60% of words are repeated, likely noise/meaningless
+        if (repetitionRatio < 0.4) {
+          debugPrint('⚠️ Rejecting cleaned transcription as repetitive: "$finalTranscription" (ratio: $repetitionRatio)');
+          throw Exception('Recording was unclear. Please speak clearly.');
+        }
+      }
+      
+      // Reject if cleaned transcription contains mostly punctuation or special characters
+      final cleanedAlphaChars = finalTranscription.replaceAll(RegExp(r'[^a-zA-Z\s]'), '').trim();
+      if (cleanedAlphaChars.length < finalTranscription.trim().length * 0.5) {
+        debugPrint('⚠️ Rejecting cleaned transcription as mostly non-alphabetic: "$finalTranscription"');
+        throw Exception('Recording was unclear. Please speak clearly.');
+      }
+      
+      debugPrint('✅ Cleaned transcription validated: ${finalTranscription.length} chars, $finalWordCount words');
+      
+      // 2. DETECT VOICE COMMAND (before beautification) - use cleaned transcription
       final apiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
       final voiceCommandResult = await VoiceCommandService.detectCommand(
-        transcription,
+        finalTranscription, // Use cleaned transcription
         foldersProvider.folders,
         apiKey: apiKey.isNotEmpty ? apiKey : null,
       );
@@ -368,26 +586,20 @@ class RecordingQueueService extends ChangeNotifier {
           
           switch (command.type) {
             case VoiceCommandType.folder:
-              // Override folder assignment with voice command folder
-              voiceCommandFolderId = command.folderId;
-              debugPrint('📁 Voice command folder override: ${command.folderName} (${command.folderId})');
-              break;
-              
-            case VoiceCommandType.createFolder:
-              // Create new folder with the specified name
-              if (command.newFolderName != null) {
-                debugPrint('📁 Voice command: creating new folder "${command.newFolderName}"');
+              // Handle folder assignment - create if doesn't exist
+              if (command.folderName != null) {
+                debugPrint('📁 Voice command folder: ${command.folderName}');
                 // Check if folder already exists (case-insensitive)
-                final existingFolder = foldersProvider.getFolderByName(command.newFolderName!);
+                final existingFolder = foldersProvider.getFolderByName(command.folderName!);
                 if (existingFolder != null) {
                   // Folder already exists, use it
                   voiceCommandFolderId = existingFolder.id;
-                  debugPrint('📁 Folder "${command.newFolderName}" already exists, using it (${existingFolder.id})');
+                  debugPrint('📁 Folder "${command.folderName}" already exists, using it (${existingFolder.id})');
                 } else {
                   // Create new folder
                   final newFolder = await foldersProvider.createFolder(
-                    name: command.newFolderName!,
-                    icon: getSmartEmojiForFolder(command.newFolderName!),
+                    name: command.folderName!,
+                    icon: getSmartEmojiForFolder(command.folderName!),
                   );
                   voiceCommandFolderId = newFolder.id;
                   debugPrint('✨ Created new folder: ${newFolder.name} (${newFolder.id})');
@@ -512,10 +724,10 @@ class RecordingQueueService extends ChangeNotifier {
           // Update the note with dual-mode support
           final updatedNote = lastNote.copyWith(
             content: updatedContent,
-            // Append to raw transcription if it exists
+            // Append to raw transcription if it exists (use cleaned transcription)
             rawTranscription: lastNote.rawTranscription != null 
-                ? '${lastNote.rawTranscription}\n\n$transcription'
-                : transcription,
+                ? '${lastNote.rawTranscription}\n\n$finalTranscription'
+                : finalTranscription,
             // Append to beautified content if it exists and new content is beautified
             beautifiedContent: lastNote.beautifiedContent != null && beautified
                 ? '${lastNote.beautifiedContent}\n\n$content'
@@ -530,7 +742,7 @@ class RecordingQueueService extends ChangeNotifier {
           updateRecording(
             id,
             status: RecordingStatus.complete,
-            transcription: transcription,
+            transcription: finalTranscription, // Use cleaned transcription
             noteId: lastNote.id,
             assignedFolderId: lastNote.folderId,
             folderName: lastNote.folderId != null 
@@ -635,6 +847,17 @@ class RecordingQueueService extends ChangeNotifier {
         throw Exception('Content processing failed - please try recording again');
       }
       
+      // Additional validation: Check if final content is meaningful
+      if (content.trim().isNotEmpty) {
+        final lowerContent = content.toLowerCase().trim();
+        
+        // Check if content matches any noise patterns exactly
+        if (noisePatterns.contains(lowerContent)) {
+          debugPrint('⚠️ Rejecting note creation - content matches noise pattern: "$content"');
+          throw Exception('Recording was unclear. Please speak clearly.');
+        }
+      }
+      
       // Use custom title if provided by voice command, otherwise generate one
       String noteTitle;
       if (customNoteTitle != null) {
@@ -677,7 +900,7 @@ class RecordingQueueService extends ChangeNotifier {
         name: noteTitle, // Use AI-generated title
         icon: '🎤',
         content: content, // Active content (beautified by default, or raw if not beautified)
-        rawTranscription: transcription, // Always save original Whisper transcription
+        rawTranscription: finalTranscription, // Use cleaned transcription instead of original
         beautifiedContent: beautified ? content : null, // Save beautified version if AI processed it
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -693,7 +916,7 @@ class RecordingQueueService extends ChangeNotifier {
       // 7. GENERATE SUMMARY IN BACKGROUND (don't block UI)
       _generateSummaryInBackground(
         noteId: note.id,
-        transcription: transcription,
+        transcription: finalTranscription, // Use cleaned transcription
         detectedLanguage: detectedLanguage,
         notesProvider: notesProvider,
         openAIService: openAIService,
@@ -703,7 +926,7 @@ class RecordingQueueService extends ChangeNotifier {
       updateRecording(
         id,
         status: RecordingStatus.complete,
-        transcription: transcription,
+        transcription: finalTranscription, // Use cleaned transcription
         noteId: note.id,
         assignedFolderId: folderId,
         folderName: folderName,
@@ -737,6 +960,22 @@ class RecordingQueueService extends ChangeNotifier {
         errorMessage = 'Could not process audio file. Please try recording again.';
       } else {
         errorMessage = 'Failed to process recording. Please try again.';
+      }
+      
+      // Backup failed recording for retry
+      try {
+        final item = _queue.firstWhere((i) => i.id == id);
+        if (item.audioPath != null) {
+          await FailedRecordingsService().addFailedRecording(
+            tempAudioPath: item.audioPath!,
+            errorMessage: errorMessage,
+            folderContext: item.folderContext,
+            recordingDuration: recordingDuration,
+          );
+          debugPrint('💾 Backed up failed recording for retry: $id');
+        }
+      } catch (backupError) {
+        debugPrint('❌ Failed to backup recording $id: $backupError');
       }
       
       updateRecording(
@@ -853,6 +1092,175 @@ class RecordingQueueService extends ChangeNotifier {
         // Summary will be null, user can regenerate it later if needed
       }
     });
+  }
+
+  /// Clean subtitle/credits content from transcription while preserving legitimate content
+  String _cleanSubtitleContent(String transcription) {
+    if (transcription.trim().isEmpty) return transcription;
+    
+    // Define subtitle patterns to remove (exact matches)
+    final subtitlePatterns = [
+      // English
+      'www.mooji.org',
+      
+      // Dutch
+      'ondertitels ingediend door de amara.org gemeenschap',
+      'ondertiteld door de amara.org gemeenschap',
+      'ondertiteling door de amara.org gemeenschap',
+      
+      // German
+      'untertitelung aufgrund der amara.org-community',
+      'untertitel im auftrag des zdf für funk',
+      'untertitel von stephanie geiges',
+      'untertitel der amara.org-community',
+      'untertitel im auftrag des zdf',
+      'untertitelung im auftrag des zdf',
+      'copyright wdr',
+      'swr',
+      
+      // French
+      'sous-titres réalisés para la communauté d\'amara.org',
+      'sous-titres réalisés par la communauté d\'amara.org',
+      'sous-titres fait par sous-titres par amara.org',
+      'sous-titres réalisés par les soustitres d\'amara.org',
+      'sous-titres par amara.org',
+      'sous-titres par la communauté d\'amara.org',
+      'sous-titres réalisés pour la communauté d\'amara.org',
+      'sous-titres réalisés par la communauté de l\'amara.org',
+      'sous-titres faits par la communauté d\'amara.org',
+      'sous-titres par l\'amara.org',
+      'sous-titres fait par la communauté d\'amara.org',
+      'sous-titrage st\' 501',
+      'sous-titrage st\'501',
+      'cliquez-vous sur les sous-titres et abonnez-vous à la chaîne d\'amara.org',
+      'par soustitreur.com',
+      
+      // Italian
+      'sottotitoli creati dalla comunità amara.org',
+      'sottotitoli di sottotitoli di amara.org',
+      'sottotitoli e revisione al canale di amara.org',
+      'sottotitoli e revisione a cura di amara.org',
+      'sottotitoli e revisione a cura di qtss',
+      'sottotitoli a cura di qtss',
+      
+      // Spanish
+      'subtítulos realizados por la comunidad de amara.org',
+      'subtitulado por la comunidad de amara.org',
+      'subtítulos por la comunidad de amara.org',
+      'subtítulos creados por la comunidad de amara.org',
+      'subtítulos en español de amara.org',
+      'subtítulos hechos por la comunidad de amara.org',
+      'subtitulos por la comunidad de amara.org',
+      'más información www.alimmenta.com',
+      
+      // Galician
+      'subtítulos realizados por la comunidad de amara.org',
+      
+      // Portuguese
+      'legendas pela comunidade amara.org',
+      'legendas pela comunidade de amara.org',
+      'legendas pela comunidade do amara.org',
+      'legendas pela comunidade das amara.org',
+      'transcrição e legendas pela comunidade de amara.org',
+      
+      // Latin
+      'sottotitoli creati dalla comunità amara.org',
+      'sous-titres réalisés para la communauté d\'amara.org',
+      
+      // Lingala
+      'sous-titres réalisés para la communauté d\'amara.org',
+      
+      // Polish
+      'napisy stworzone przez społeczność amara.org',
+      'napisy wykonane przez społeczność amara.org',
+      'zdjęcia i napisy stworzone przez społeczność amara.org',
+      'napisy stworzone przez społeczność amara.org',
+      'tłumaczenie i napisy stworzone przez społeczność amara.org',
+      'napisy stworzone przez społeczności amara.org',
+      'tłumaczenie stworzone przez społeczność amara.org',
+      'napisy robione przez społeczność amara.org',
+      'www.multi-moto.eu',
+      
+      // Russian
+      'редактор субтитров а.синецкая корректор а.егорова',
+      
+      // Turkish
+      'yorumlarınızıza abone olmayı unutmayın',
+      
+      // Sundanese
+      'sottotitoli creati dalla comunità amara.org',
+      
+      // Chinese
+      '字幕由amara.org社区提供',
+      '小编字幕由amara.org社区提供',
+    ];
+    
+    String cleaned = transcription;
+    final lowerTranscription = transcription.toLowerCase();
+    
+    // Remove exact pattern matches
+    for (final pattern in subtitlePatterns) {
+      final lowerPattern = pattern.toLowerCase();
+      if (lowerTranscription.contains(lowerPattern)) {
+        // Remove the pattern and clean up extra spaces
+        cleaned = cleaned.replaceAll(RegExp(pattern, caseSensitive: false), '');
+        debugPrint('🧹 Removed subtitle pattern: "$pattern"');
+      }
+    }
+    
+    // Remove common subtitle keywords and phrases
+    final subtitleKeywords = [
+      'amara.org',
+      'community',
+      'subtitles',
+      'sous-titres',
+      'sottotitoli',
+      'subtítulos',
+      'legendas',
+      'napisy',
+      'copyright',
+      'zdf',
+      'wdr',
+      'swr',
+      'qtss',
+      'ondertitels',
+      'untertitel',
+      '字幕',
+      '社区',
+      '提供',
+    ];
+    
+    // Remove sentences/phrases containing subtitle keywords
+    final sentences = cleaned.split(RegExp(r'[.!?]'));
+    final cleanedSentences = <String>[];
+    
+    for (final sentence in sentences) {
+      final lowerSentence = sentence.toLowerCase().trim();
+      bool containsSubtitleKeyword = false;
+      
+      for (final keyword in subtitleKeywords) {
+        if (lowerSentence.contains(keyword.toLowerCase())) {
+          containsSubtitleKeyword = true;
+          debugPrint('🧹 Removing sentence with subtitle keyword "$keyword": "$sentence"');
+          break;
+        }
+      }
+      
+      if (!containsSubtitleKeyword && sentence.trim().isNotEmpty) {
+        cleanedSentences.add(sentence.trim());
+      }
+    }
+    
+    // Rejoin sentences
+    cleaned = cleanedSentences.join('. ').trim();
+    
+    // Clean up extra whitespace and punctuation
+    cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+    cleaned = cleaned.replaceAll(RegExp(r'[.]{2,}'), '.').trim();
+    cleaned = cleaned.replaceAll(RegExp(r'^[.,;:!?]+'), '').trim();
+    cleaned = cleaned.replaceAll(RegExp(r'[.,;:!?]+\s*$'), '').trim();
+    
+    return cleaned;
   }
 
   /// Get smart emoji for folder based on name keywords

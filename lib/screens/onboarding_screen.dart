@@ -21,9 +21,9 @@ import '../widgets/onboarding_interstitial.dart';
 import '../widgets/customization_loading.dart';
 
 /// Professional onboarding flow optimized for maximum conversion
-/// Flow: Video + Language → 3 Explanation Pages with Screenshots → Theme Selector →
-///       4 Questions (Source, Use Case, Audio Quality, AI Autonomy) → Privacy Interstitial →
-///       Rating → Loading + Mic Permission → Completion → Paywall
+/// Flow: Video + Language → Record+Voice Commands → Beautify → Organize → Theme Selector →
+///       Question 1 (Source) → Question 2 (Use Case) → Personalized Time Savings → 
+///       Privacy Interstitial → Benefits → Rating → Loading + Mic Permission → Completion → Paywall
 /// 
 /// Philosophy: "Tap. Speak. Done. AI handles the rest."
 class OnboardingScreen extends StatefulWidget {
@@ -42,13 +42,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
   bool _videoHasFlownOut = false;
+  bool _isNavigating = false; // Prevents button spam
 
   // Page indices (only those used for logic are defined as constants)
   static const int videoPageIndex = 0;
-  static const int question1Index = 5;  // Where did you hear about us
+  static const int recordVoiceIndex = 1;  // MERGED: Record + Voice Commands
+  static const int beautifyIndex = 2;
+  static const int organizeIndex = 3;
+  static const int themeSelectorIndex = 4;
+  static const int question1Index = 5;  // Where heard (no AI response after)
   static const int question2Index = 6;  // Use case
-  static const int question3Index = 7;  // Audio quality
-  static const int question4Index = 8;  // AI Autonomy Level
+  static const int aiHelpsIndex = 7;  // NEW - Personalized "How You'll Save Time" page
+  static const int privacyIndex = 8;
+  static const int benefitsIndex = 9;  // "What You'll Get"
   static const int ratingIndex = 10;  // Rating prompt
   static const int loadingIndex = 11;  // Loading + mic permission
   static const int completionIndex = 12;  // Completion screen
@@ -155,13 +161,33 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _nextPage() async {
+    // Prevent spam clicking
+    if (_isNavigating) return;
+    
+    debugPrint('🔍 ONBOARDING DEBUG: _nextPage() called');
+    debugPrint('🔍 Current page: $_currentPage');
+    debugPrint('🔍 Total pages: $totalPages');
+    debugPrint('🔍 Can advance: ${_currentPage < totalPages - 1}');
+    
+    setState(() => _isNavigating = true);
     await HapticService.medium();
     
     if (_currentPage < totalPages - 1) {
+      debugPrint('🔍 Advancing from page $_currentPage to ${_currentPage + 1}');
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
       );
+      
+      // Re-enable navigation after animation completes
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) {
+          setState(() => _isNavigating = false);
+        }
+      });
+    } else {
+      debugPrint('🔍 Already at last page, not advancing');
+      setState(() => _isNavigating = false);
     }
   }
 
@@ -174,9 +200,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       // Apply settings
       final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
       
-      if (_onboardingData.audioQuality != null) {
-        await settingsProvider.updateAudioQuality(_onboardingData.audioQuality!);
-      }
+      // Default to medium audio quality if not set
+      await settingsProvider.updateAudioQuality(
+        _onboardingData.audioQuality ?? AudioQuality.medium
+      );
       
       // Apply AI Autonomy setting
       if (_onboardingData.aiAutopilot != null) {
@@ -217,10 +244,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         return _onboardingData.hearAboutUs != null;
       case question2Index:
         return _onboardingData.useCase != null;
-      case question3Index:
-        return _onboardingData.audioQuality != null;
-      case question4Index:
-        return _onboardingData.aiAutopilot != null;
       default:
         return true;
     }
@@ -247,19 +270,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       controller: _pageController,
                       physics: const NeverScrollableScrollPhysics(),
                       onPageChanged: (index) {
+                        debugPrint('🔍 ONBOARDING DEBUG: Page changed to $index');
                         setState(() => _currentPage = index);
                       },
                       children: [
                         _buildVideoPage(),
-                        _buildRecordExplainPage(),
+                        _buildRecordVoiceExplainPage(), // MERGED: Record + Voice Commands
                         _buildBeautifyExplainPage(),
                         _buildOrganizeExplainPage(),
                         _buildThemeSelectorPage(),
                         _buildQuestion1(), // Where heard about us
                         _buildQuestion2(), // Use case
-                        _buildQuestion3(), // Audio quality
-                        _buildQuestion4(), // AI Autonomy
+                        _buildAIHelpsPage(), // NEW: Personalized time-saving page
                         _buildInterstitial1(), // Privacy
+                        _buildBenefitsScreen(), // "What You'll Get"
                         _buildRatingScreen(),
                         _buildLoadingScreen(),
                         _buildCompletionScreen(),
@@ -268,7 +292,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   ),
                   
                   // Bottom button (hidden on loading and completion screens)
-                  if (_currentPage != loadingIndex && _currentPage != completionIndex)
+                  if (_currentPage != loadingIndex && 
+                      _currentPage != completionIndex)
                     _buildBottomButton(settingsProvider),
                 ],
               ),
@@ -296,9 +321,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
     
     // Show progress indicator for question pages
-    if (_currentPage >= question1Index && _currentPage <= question4Index) {
+    if (_currentPage >= question1Index && _currentPage <= question2Index) {
       final questionNumber = _getQuestionNumber(_currentPage);
-      final totalQuestions = 4;
+      final totalQuestions = 2;
       
       return Padding(
         padding: const EdgeInsets.all(AppTheme.spacing16),
@@ -335,8 +360,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   int _getQuestionNumber(int pageIndex) {
     if (pageIndex == question1Index) return 1;
     if (pageIndex == question2Index) return 2;
-    if (pageIndex == question3Index) return 3;
-    if (pageIndex == question4Index) return 4;
     return 0;
   }
 
@@ -353,9 +376,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return Padding(
       padding: const EdgeInsets.all(AppTheme.spacing24),
       child: GestureDetector(
-        onTap: _canProceed() ? _nextPage : null,
+        onTap: (_canProceed() && !_isNavigating) ? () {
+          debugPrint('🔍 ONBOARDING DEBUG: Bottom button tapped on page $_currentPage');
+          _nextPage();
+        } : null,
         child: AnimatedOpacity(
-          opacity: _canProceed() ? 1.0 : 0.4,
+          opacity: (_canProceed() && !_isNavigating) ? 1.0 : 0.4,
           duration: const Duration(milliseconds: 200),
           child: Container(
             width: double.infinity,
@@ -371,7 +397,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 ],
               ),
               borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-              boxShadow: _canProceed()
+              boxShadow: (_canProceed() && !_isNavigating)
                   ? [
                       BoxShadow(
                         color: settingsProvider.currentThemeConfig.primary
@@ -571,15 +597,222 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return spans;
   }
 
-  // Record Explanation Page - "Just Tap & Speak"
-  Widget _buildRecordExplainPage() {
-    return _buildExplanationPageWithScreenshot(
+  // MERGED: Record + Voice Commands Explanation Page
+  Widget _buildRecordVoiceExplainPage() {
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        final availableHeight = MediaQuery.of(context).size.height;
+        final isSmallScreen = availableHeight < 700;
+        final theme = settingsProvider.currentThemeConfig;
+        final localization = LocalizationService();
+        
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              SizedBox(height: isSmallScreen ? availableHeight * 0.03 : availableHeight * 0.06),
+              
+              // Screenshot (smaller than original)
+              OnboardingScreenshot(
       screenshotPath: 'assets/onboarding/screenshots/recording_active.png',
-      title: LocalizationService().t('onboarding_record_title'),
-      benefits: [
-        LocalizationService().t('onboarding_record_benefit_1'),
-        LocalizationService().t('onboarding_record_benefit_2'),
-        LocalizationService().t('onboarding_record_benefit_3'),
+                animationDelay: 200,
+              ),
+              
+              SizedBox(height: isSmallScreen ? availableHeight * 0.03 : availableHeight * 0.04),
+              
+              // Title
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
+                child: Text(
+                  localization.t('onboarding_record_voice_title'),
+                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                        fontSize: isSmallScreen ? 22 : 28,
+                        height: 1.15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                )
+                    .animate()
+                    .fadeIn(delay: 600.ms, duration: 600.ms)
+                    .slideY(begin: 0.2, end: 0),
+              ),
+              
+              SizedBox(height: isSmallScreen ? availableHeight * 0.02 : availableHeight * 0.03),
+              
+              // Main benefits (2 bullets)
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? AppTheme.spacing24 : AppTheme.spacing32,
+                ),
+                child: Column(
+                  children: [
+                    _buildBenefitRow(
+                      context,
+                      localization.t('onboarding_record_voice_benefit_1'),
+                      theme.primary,
+                      0,
+                      isSmallScreen,
+                    ),
+                    SizedBox(height: isSmallScreen ? 10 : 12),
+                    _buildBenefitRow(
+                      context,
+                      localization.t('onboarding_record_voice_benefit_2'),
+                      theme.primary,
+                      1,
+                      isSmallScreen,
+                    ),
+                  ],
+                ),
+              ),
+              
+              SizedBox(height: isSmallScreen ? availableHeight * 0.03 : availableHeight * 0.04),
+              
+              // Voice Commands Section - Simplified
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
+                child: Column(
+                  children: [
+                    // Section title
+                    Text(
+                      localization.t('onboarding_voice_section_title'),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontSize: isSmallScreen ? 16 : 18,
+                            fontWeight: FontWeight.w600,
+                            color: theme.primary,
+                          ),
+                      textAlign: TextAlign.center,
+                    )
+                        .animate()
+                        .fadeIn(delay: 1000.ms, duration: 600.ms),
+                    
+                    SizedBox(height: isSmallScreen ? 8 : 12),
+                    
+                    // Simple voice command examples
+                    Container(
+                      padding: EdgeInsets.all(isSmallScreen ? AppTheme.spacing12 : AppTheme.spacing16),
+                      decoration: BoxDecoration(
+                        color: theme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                        border: Border.all(
+                          color: theme.primary.withValues(alpha: 0.2),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildSimpleVoiceCommand(
+                            context,
+                            '"New Work"',
+                            'Creates Work folder',
+                            isSmallScreen,
+                          ),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
+                          _buildSimpleVoiceCommand(
+                            context,
+                            '"Add to last note"',
+                            'Continues previous note',
+                            isSmallScreen,
+                          ),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
+                          _buildSimpleVoiceCommand(
+                            context,
+                            '"Title: Meeting"',
+                            'Sets note title',
+                            isSmallScreen,
+                          ),
+                        ],
+                      ),
+                    )
+                        .animate()
+                        .fadeIn(delay: 1100.ms, duration: 600.ms)
+                        .slideY(begin: 0.1, end: 0),
+                  ],
+                ),
+              ),
+              
+              SizedBox(height: isSmallScreen ? 12 : 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBenefitRow(
+    BuildContext context,
+    String benefit,
+    Color primaryColor,
+    int index,
+    bool isSmallScreen,
+  ) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: const EdgeInsets.only(top: 6),
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: primaryColor,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            benefit,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppTheme.textSecondary,
+                  height: 1.5,
+                  fontSize: isSmallScreen ? 15 : 17,
+                ),
+          ),
+        ),
+      ],
+    )
+        .animate()
+        .fadeIn(
+          delay: Duration(milliseconds: 800 + (index * 150)),
+          duration: 600.ms,
+        )
+        .slideX(begin: -0.2, end: 0);
+  }
+
+  Widget _buildSimpleVoiceCommand(
+    BuildContext context,
+    String command,
+    String description,
+    bool isSmallScreen,
+  ) {
+    return Row(
+      children: [
+        Text(
+          command,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: isSmallScreen ? 13 : 14,
+              ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '→',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: isSmallScreen ? 13 : 14,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            description,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.textSecondary,
+                  fontSize: isSmallScreen ? 12 : 13,
+                ),
+          ),
+        ),
       ],
     );
   }
@@ -943,70 +1176,468 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           subtitle: localization.t('onboarding_question_5_option_4_sub'),
           value: 'creative',
         ),
+        (
+          emoji: '✨',
+          title: localization.t('onboarding_question_5_option_5'),
+          subtitle: localization.t('onboarding_question_5_option_5_sub'),
+          value: 'other',
+        ),
       ],
       selectedValue: _onboardingData.useCase,
-      onSelect: (value) => setState(() => _onboardingData.useCase = value as String),
+      onSelect: (value) {
+        debugPrint('🔍 ONBOARDING DEBUG: Question 2 answered with: $value');
+        setState(() => _onboardingData.useCase = value as String);
+      },
     );
   }
 
-  // Question 3: Audio quality
-  Widget _buildQuestion3() {
+  // Stunning personalized time savings page with chart
+  Widget _buildAIHelpsPage() {
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
     final localization = LocalizationService();
-    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+        final screenSize = MediaQuery.of(context).size;
+        final availableHeight = screenSize.height;
+        final isSmallScreen = availableHeight < 700;
+        final theme = settingsProvider.currentThemeConfig;
+        
+        // Get personalized content based on user's use case
+        final useCase = _onboardingData.useCase ?? 'default';
+        final title = localization.t('time_savings_${useCase}_title');
+        final subtitle = localization.t('time_savings_${useCase}_subtitle');
+        final statLabel = localization.t('time_savings_${useCase}_stat');
+        
+        return Container(
+          width: screenSize.width,
+          height: screenSize.height,
+          padding: EdgeInsets.symmetric(
+            horizontal: AppTheme.spacing24,
+            vertical: isSmallScreen ? availableHeight * 0.06 : availableHeight * 0.08,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(flex: 1),
+              
+              // Title - Reduced size
+              Text(
+                title,
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      fontSize: isSmallScreen ? 28 : 34,
+                      fontWeight: FontWeight.w800,
+                      height: 1.1,
+                      letterSpacing: -0.5,
+                    ),
+                textAlign: TextAlign.center,
+              )
+                  .animate()
+                  .fadeIn(duration: 600.ms)
+                  .slideY(begin: 0.3, end: 0, curve: Curves.easeOutCubic),
+              
+              SizedBox(height: isSmallScreen ? 8 : 12),
+              
+              // Subtitle - Reduced size
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      color: AppTheme.textSecondary,
+                      height: 1.3,
+                    ),
+                textAlign: TextAlign.center,
+              )
+                  .animate()
+                  .fadeIn(delay: 300.ms, duration: 600.ms),
+              
+              const Spacer(flex: 2),
+              
+              // Time comparison chart
+              _buildTimeComparisonChart(
+                context,
+                theme,
+                statLabel,
+                isSmallScreen,
+              ),
+              
+              const Spacer(flex: 2),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildTimeComparisonChart(
+    BuildContext context,
+    dynamic theme,
+    String statLabel,
+    bool isSmallScreen,
+  ) {
+    return Container(
+      padding: EdgeInsets.all(isSmallScreen ? AppTheme.spacing16 : AppTheme.spacing20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.primary.withValues(alpha: 0.08),
+            theme.primary.withValues(alpha: 0.03),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(
+          color: theme.primary.withValues(alpha: 0.2),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        children: [
+          // Chart title - Smaller
+          Text(
+            'Time spent on $statLabel',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontSize: isSmallScreen ? 12 : 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary,
+                ),
+          ),
+          
+          SizedBox(height: isSmallScreen ? 16 : 20),
+          
+          // Bars
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Before - Tall bar
+              _buildTimeBar(
+                context,
+                'Without\nNotie AI',
+                1.0,
+                '45 min',
+                AppTheme.textSecondary.withValues(alpha: 0.4),
+                theme,
+                isSmallScreen,
+                600,
+              ),
+              
+              // After - Short bar
+              _buildTimeBar(
+                context,
+                'With\nNotie AI',
+                0.25,
+                '10 min',
+                theme.primary,
+                theme,
+                isSmallScreen,
+                900,
+              ),
+            ],
+          ),
+          
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          
+          // Savings highlight - Smaller
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSmallScreen ? AppTheme.spacing12 : AppTheme.spacing16,
+              vertical: isSmallScreen ? 6 : 8,
+            ),
+            decoration: BoxDecoration(
+              color: theme.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.bolt,
+                  color: theme.primary,
+                  size: isSmallScreen ? 16 : 18,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Save 35+ min daily',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontSize: isSmallScreen ? 12 : 13,
+                        fontWeight: FontWeight.w700,
+                        color: theme.primary,
+                      ),
+                ),
+              ],
+            ),
+          )
+              .animate()
+              .fadeIn(delay: 1200.ms, duration: 600.ms)
+              .scale(begin: const Offset(0.8, 0.8), curve: Curves.easeOutBack),
+        ],
+      ),
+    )
+        .animate()
+        .fadeIn(delay: 500.ms, duration: 600.ms)
+        .slideY(begin: 0.2, end: 0);
+  }
+  
+  Widget _buildTimeBar(
+    BuildContext context,
+    String label,
+    double heightFactor,
+    String timeText,
+    Color barColor,
+    dynamic theme,
+    bool isSmallScreen,
+    int delay,
+  ) {
+    final maxHeight = isSmallScreen ? 100.0 : 120.0;
+    final barHeight = maxHeight * heightFactor;
     
-    return _buildQuestionPage(
-      title: localization.t('onboarding_question_6_title'),
-      subtitle: localization.t('onboarding_question_6_subtitle', {
-        'language': settingsProvider.preferredLanguage.name,
-      }),
-      options: [
-        (
-          emoji: '⚡',
-          title: localization.t('onboarding_question_6_option_1'),
-          subtitle: localization.t('onboarding_question_6_option_1_sub'),
-          value: AudioQuality.low,
-        ),
-        (
-          emoji: '🎯',
-          title: localization.t('onboarding_question_6_option_2'),
-          subtitle: localization.t('onboarding_question_6_option_2_sub'),
-          value: AudioQuality.medium,
-        ),
-        (
-          emoji: '💎',
-          title: localization.t('onboarding_question_6_option_3'),
-          subtitle: localization.t('onboarding_question_6_option_3_sub'),
-          value: AudioQuality.high,
-        ),
+    return Column(
+      children: [
+        // Time label - Smaller
+        Text(
+          timeText,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontSize: isSmallScreen ? 14 : 16,
+                fontWeight: FontWeight.w700,
+                color: barColor,
+              ),
+        )
+            .animate()
+            .fadeIn(delay: (delay + 200).ms, duration: 400.ms),
+        
+        const SizedBox(height: 6),
+        
+        // Bar - Shorter
+        Container(
+          width: isSmallScreen ? 60 : 75,
+          height: barHeight,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                barColor,
+                barColor.withValues(alpha: 0.7),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            boxShadow: [
+              BoxShadow(
+                color: barColor.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+        )
+            .animate()
+            .fadeIn(delay: delay.ms, duration: 600.ms)
+            .scaleY(
+              begin: 0.0,
+              end: 1.0,
+              alignment: Alignment.bottomCenter,
+              curve: Curves.easeOutCubic,
+            ),
+        
+        const SizedBox(height: 8),
+        
+        // Label - Smaller
+        SizedBox(
+          width: isSmallScreen ? 60 : 75,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: isSmallScreen ? 10 : 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary,
+                  height: 1.2,
+                ),
+            textAlign: TextAlign.center,
+          ),
+        )
+            .animate()
+            .fadeIn(delay: (delay + 300).ms, duration: 400.ms),
       ],
-      selectedValue: _onboardingData.audioQuality,
-      onSelect: (value) => setState(() => _onboardingData.audioQuality = value as AudioQuality),
     );
   }
-
-  // Question 4: AI Autonomy Level
-  Widget _buildQuestion4() {
+  
+  // Benefits Screen: "What You'll Get"
+  Widget _buildBenefitsScreen() {
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
     final localization = LocalizationService();
-    return _buildQuestionPage(
-      title: localization.t('onboarding_question_7_title'),
-      subtitle: localization.t('onboarding_question_7_subtitle'),
-      options: [
-        (
-          emoji: '🚀',
-          title: localization.t('onboarding_question_7_option_1'),
-          subtitle: localization.t('onboarding_question_7_option_1_sub'),
-          value: true, // true = autopilot
-        ),
-        (
-          emoji: '🎯',
-          title: localization.t('onboarding_question_7_option_2'),
-          subtitle: localization.t('onboarding_question_7_option_2_sub'),
-          value: false, // false = hybrid/assisted
-        ),
-      ],
-      selectedValue: _onboardingData.aiAutopilot,
-      onSelect: (value) => setState(() => _onboardingData.aiAutopilot = value as bool),
+        final availableHeight = MediaQuery.of(context).size.height;
+        final isSmallScreen = availableHeight < 700;
+        final theme = settingsProvider.currentThemeConfig;
+        
+        final benefits = [
+          (
+            emoji: '⚡',
+            title: localization.t('benefit_1_title'),
+            subtitle: localization.t('benefit_1_subtitle'),
+          ),
+          (
+            emoji: '🧠',
+            title: localization.t('benefit_2_title'),
+            subtitle: localization.t('benefit_2_subtitle'),
+          ),
+          (
+            emoji: '🔍',
+            title: localization.t('benefit_3_title'),
+            subtitle: localization.t('benefit_3_subtitle'),
+          ),
+          (
+            emoji: '✨',
+            title: localization.t('benefit_4_title'),
+            subtitle: localization.t('benefit_4_subtitle'),
+          ),
+          (
+            emoji: '🔒',
+            title: localization.t('benefit_5_title'),
+            subtitle: localization.t('benefit_5_subtitle'),
+          ),
+        ];
+        
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              SizedBox(height: isSmallScreen ? availableHeight * 0.06 : availableHeight * 0.08),
+              
+              // Title
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
+                child: Text(
+                  localization.t('benefits_screen_title'),
+                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                        fontSize: isSmallScreen ? 28 : 34,
+                        fontWeight: FontWeight.w700,
+                      ),
+                  textAlign: TextAlign.center,
+                )
+                    .animate()
+                    .fadeIn(duration: 600.ms)
+                    .slideY(begin: 0.2, end: 0),
+              ),
+              
+              SizedBox(height: isSmallScreen ? availableHeight * 0.04 : availableHeight * 0.06),
+              
+              // Benefits list
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
+                child: Column(
+                  children: benefits.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final benefit = entry.value;
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+                      child: _buildBenefitCard(
+                        context,
+                        benefit.emoji,
+                        benefit.title,
+                        benefit.subtitle,
+                        theme.primary,
+                        index,
+                        isSmallScreen,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              
+              SizedBox(height: isSmallScreen ? 12 : 24),
+            ],
+          ),
+        );
+      },
     );
+  }
+  
+  Widget _buildBenefitCard(
+    BuildContext context,
+    String emoji,
+    String title,
+    String subtitle,
+    Color primaryColor,
+    int index,
+    bool isSmallScreen,
+  ) {
+    return Container(
+      padding: EdgeInsets.all(isSmallScreen ? AppTheme.spacing16 : AppTheme.spacing20),
+      decoration: BoxDecoration(
+        color: AppTheme.glassStrongSurface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        border: Border.all(
+          color: primaryColor.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Emoji container
+          Container(
+            width: isSmallScreen ? 48 : 56,
+            height: isSmallScreen ? 48 : 56,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  primaryColor.withValues(alpha: 0.2),
+                  primaryColor.withValues(alpha: 0.1),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            ),
+            child: Center(
+              child: Text(
+                emoji,
+                style: TextStyle(fontSize: isSmallScreen ? 24 : 28),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Text content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: isSmallScreen ? 16 : 18,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                        fontSize: isSmallScreen ? 13 : 14,
+                        height: 1.4,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    )
+        .animate()
+        .fadeIn(
+          delay: Duration(milliseconds: 400 + (index * 100)),
+          duration: 600.ms,
+        )
+        .slideX(begin: 0.2, end: 0);
   }
 
   // Interstitial 1: Privacy & Security
@@ -1021,6 +1652,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         localization.t('interstitial_privacy_feature_2'),
         localization.t('interstitial_privacy_feature_3'),
       ],
+      showLegalFooter: true, // Show Privacy Policy & Terms links
     );
   }
 
@@ -1089,8 +1721,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       fontWeight: FontWeight.w700,
                     ),
                 textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               )
                   .animate()
                   .fadeIn(delay: 400.ms, duration: 600.ms)
@@ -1109,8 +1739,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       fontSize: isSmallScreen ? 14 : 16,
                     ),
                 textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
               )
                   .animate()
                   .fadeIn(delay: 600.ms, duration: 600.ms),
@@ -1290,9 +1918,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             Padding(
               padding: EdgeInsets.all(isSmallScreen ? AppTheme.spacing16 : AppTheme.spacing24),
               child: GestureDetector(
-                onTap: () async {
+                onTap: _isNavigating ? null : () async {
+                  if (_isNavigating) return;
+                  setState(() => _isNavigating = true);
                   await HapticService.success();
                   await _completeOnboarding();
+                  // No need to reset _isNavigating as we're leaving the screen
                 },
                 child: Container(
                   width: double.infinity,

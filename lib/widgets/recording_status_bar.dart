@@ -489,7 +489,7 @@ class _FolderPickerDialogState extends State<_FolderPickerDialog> {
       // Sort folders alphabetically
       final sorted = List<Folder>.from(widget.folders)
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      return sorted.take(7).toList();
+      return sorted;
     }
     
     // Search in all folders

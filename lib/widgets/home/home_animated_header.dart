@@ -12,6 +12,13 @@ class HomeAnimatedHeader extends StatelessWidget {
   final String greeting;
   final VoidCallback onSearchTap;
   final VoidCallback onOrganizeTap;
+  final TextEditingController? searchController;
+  final FocusNode? searchFocusNode;
+  final ValueChanged<String>? onSearchChanged;
+  final ValueChanged<String>? onSearchSubmitted;
+  final VoidCallback? onAskAI;
+  final bool hasSearchQuery;
+  final bool isInChatMode;
 
   const HomeAnimatedHeader({
     super.key,
@@ -19,6 +26,13 @@ class HomeAnimatedHeader extends StatelessWidget {
     required this.greeting,
     required this.onSearchTap,
     required this.onOrganizeTap,
+    this.searchController,
+    this.searchFocusNode,
+    this.onSearchChanged,
+    this.onSearchSubmitted,
+    this.onAskAI,
+    this.hasSearchQuery = false,
+    this.isInChatMode = false,
   });
 
   @override
@@ -89,66 +103,225 @@ class HomeAnimatedHeader extends StatelessWidget {
                               maxLines: 1,
                             ),
                           ),
-                          // Search bar with ellipsis - shrinks during scroll
+                          // Modern search bar with glassmorphism design
                           Row(
                             children: [
                               // Search bar - fills available width
                               Expanded(
-                                child: GestureDetector(
-                                  onTap: onSearchTap,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                                   child: Container(
-                                    height: searchBarHeight.clamp(25.0, 40.0),
+                                      height: searchBarHeight.clamp(32.0, 44.0),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.glassSurface.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(14),
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            isInChatMode
+                                                ? Theme.of(context).primaryColor.withValues(alpha: 0.2)
+                                                : Colors.white.withValues(alpha: 0.1),
+                                            isInChatMode
+                                                ? Theme.of(context).primaryColor.withValues(alpha: 0.1)
+                                                : Colors.white.withValues(alpha: 0.05),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
-                                        color: AppTheme.glassBorder.withOpacity(0.25),
-                                        width: 1,
+                                          color: isInChatMode
+                                              ? Theme.of(context).primaryColor.withValues(alpha: 0.3)
+                                              : Colors.white.withValues(alpha: 0.2),
+                                          width: 1.5,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: isInChatMode
+                                                ? Theme.of(context).primaryColor.withValues(alpha: 0.15)
+                                                : Colors.black.withValues(alpha: 0.1),
+                                            blurRadius: 20,
+                                            spreadRadius: 0,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      child: searchController != null
+                                          ? Row(
+                                              children: [
+                                                // Search icon
+                                                Padding(
+                                                  padding: const EdgeInsets.only(
+                                                    left: 14,
+                                                    right: 8,
+                                                  ),
+                                                  child: Icon(
+                                                    isInChatMode ? Icons.auto_awesome_rounded : Icons.search_rounded,
+                                                    color: isInChatMode
+                                                        ? Theme.of(context).primaryColor.withValues(alpha: 0.8)
+                                                        : Colors.white.withValues(alpha: 0.8),
+                                                    size: 18,
+                                                  ),
+                                                ),
+                                                
+                                                // Text field
+                                                Expanded(
+                                                  child: Align(
+                                                    alignment: Alignment.centerLeft,
+                                                    child: TextField(
+                                                      controller: searchController,
+                                                      focusNode: searchFocusNode,
+                                                      textAlignVertical: TextAlignVertical.center,
+                                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                                        color: Colors.white,
+                                                        fontWeight: FontWeight.w500,
+                                                        fontSize: 15,
+                                                        height: 1.0,
+                                                      ),
+                                                      decoration: InputDecoration(
+                                                        hintText: isInChatMode
+                                                            ? 'Mit AI über Notizen sprechen...'
+                                                            : 'Notizen durchsuchen',
+                                                        hintStyle: Theme.of(context)
+                                                            .textTheme
+                                                            .bodyMedium
+                                                            ?.copyWith(
+                                                              color: Colors.white.withValues(alpha: 0.5),
+                                                              fontWeight: FontWeight.w400,
+                                                              fontSize: 15,
+                                                            ),
+                                                        border: InputBorder.none,
+                                                        contentPadding: EdgeInsets.zero,
+                                                        isDense: true,
+                                                      ),
+                                                      onChanged: onSearchChanged,
+                                                      onSubmitted: onSearchSubmitted,
+                                                      onTap: onSearchTap,
+                                                    ),
+                                                  ),
+                                                ),
+                                                
+                                                // Chat button (compact, integrated)
+                                                if (!isInChatMode && hasSearchQuery && onAskAI != null)
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(right: 8, left: 4),
+                                                    child: Material(
+                                                      color: Colors.transparent,
+                                                      child: InkWell(
+                                                        onTap: onAskAI,
+                                                        borderRadius: BorderRadius.circular(10),
+                                                        child: Container(
+                                                          padding: const EdgeInsets.symmetric(
+                                                            horizontal: 12,
+                                                            vertical: 8,
+                                                          ),
+                                                          decoration: BoxDecoration(
+                                                            color: Theme.of(context).primaryColor,
+                                                            borderRadius: BorderRadius.circular(10),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: Theme.of(context).primaryColor.withValues(alpha: 0.4),
+                                                                blurRadius: 8,
+                                                                spreadRadius: 0,
+                                                                offset: const Offset(0, 2),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          child: Row(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              Icon(
+                                                                Icons.auto_awesome_rounded,
+                                                                size: 14,
+                                                                color: Colors.black87,
+                                                              ),
+                                                              const SizedBox(width: 5),
+                                                              Text(
+                                                                LocalizationService().t('notes_chat'),
+                                                                style: TextStyle(
+                                                                  color: Colors.black87,
+                                                                  fontSize: 13,
+                                                                  fontWeight: FontWeight.w600,
+                                                                  letterSpacing: 0.2,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            )
+                                          : GestureDetector(
+                                              onTap: onSearchTap,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 16),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(
-                                          Icons.auto_awesome,
-                                          size: 16,
-                                          color: AppTheme.textSecondary.withOpacity(0.7),
+                                                      Icons.auto_awesome_rounded,
+                                                      size: 20,
+                                                      color: Colors.white.withValues(alpha: 0.8),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
                                           LocalizationService().t('ask_ai'),
                                           style: TextStyle(
-                                            color: AppTheme.textSecondary.withOpacity(0.7),
-                                            fontSize: 14,
+                                                        color: Colors.white.withValues(alpha: 0.8),
+                                                        fontSize: 15,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                       ],
+                                                ),
+                                              ),
+                                            ),
                                     ),
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              // Ellipsis button - matches search bar height
-                              GestureDetector(
+                              // Ellipsis button - matches search bar design
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                                  child: GestureDetector(
                                 onTap: onOrganizeTap,
                                 child: Container(
-                                  width: searchBarHeight.clamp(25.0, 40.0),
-                                  height: searchBarHeight.clamp(25.0, 40.0),
+                                      width: searchBarHeight.clamp(32.0, 44.0),
+                                      height: searchBarHeight.clamp(32.0, 44.0),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.glassSurface.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(14),
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Colors.white.withValues(alpha: 0.1),
+                                            Colors.white.withValues(alpha: 0.05),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: AppTheme.glassBorder.withOpacity(0.25),
-                                      width: 1,
-                                    ),
+                                          color: Colors.white.withValues(alpha: 0.2),
+                                          width: 1.5,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.1),
+                                            blurRadius: 20,
+                                            spreadRadius: 0,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
                                   ),
                                   child: Center(
                                     child: Icon(
                                       Icons.more_horiz,
-                                      size: 18,
-                                      color: AppTheme.textPrimary.withOpacity(0.7),
+                                          size: 20,
+                                          color: Colors.white.withValues(alpha: 0.8),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -180,7 +353,7 @@ class HomeAnimatedHeader extends StatelessWidget {
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               child: Icon(
-                                Icons.search,
+                                isInChatMode ? Icons.auto_awesome : Icons.search,
                                 size: 22,
                                 color: AppTheme.textPrimary.withOpacity(iconOpacity),
                               ),

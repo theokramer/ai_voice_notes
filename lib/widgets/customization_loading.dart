@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../models/app_language.dart';
 import '../providers/settings_provider.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
@@ -38,7 +39,7 @@ class _CustomizationLoadingState extends State<CustomizationLoading> {
       localization.t('loading_task_2', {
         'language': Provider.of<SettingsProvider>(context, listen: false)
             .preferredLanguage
-            .name,
+            .nativeName,
       }),
       localization.t('loading_task_3'),
       localization.t('loading_task_4'),
@@ -95,7 +96,7 @@ class _CustomizationLoadingState extends State<CustomizationLoading> {
         
         final tasks = [
           localization.t('loading_task_1'),
-          localization.t('loading_task_2', {'language': language.name}),
+          localization.t('loading_task_2', {'language': language.nativeName}),
           localization.t('loading_task_3'),
           localization.t('loading_task_4'),
           localization.t('loading_task_5'),

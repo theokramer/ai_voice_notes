@@ -80,8 +80,6 @@ class NoteOrganizationCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                Text(note.icon, style: const TextStyle(fontSize: 20)),
-                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

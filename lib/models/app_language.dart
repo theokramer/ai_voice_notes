@@ -38,6 +38,20 @@ extension AppLanguageExtension on AppLanguage {
     }
   }
 
+  /// Localized display name (translated into the language itself)
+  String get displayName {
+    switch (this) {
+      case AppLanguage.english:
+        return 'English';
+      case AppLanguage.spanish:
+        return 'Español';
+      case AppLanguage.french:
+        return 'Français';
+      case AppLanguage.german:
+        return 'Deutsch';
+    }
+  }
+
   /// Language code (ISO 639-1)
   String get code {
     switch (this) {

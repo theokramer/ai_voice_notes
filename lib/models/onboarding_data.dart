@@ -19,7 +19,6 @@ class OnboardingData {
   bool get isComplete =>
       hearAboutUs != null &&
       useCase != null &&
-      audioQuality != null &&
       aiAutopilot != null;
 
   /// Save onboarding data to SharedPreferences

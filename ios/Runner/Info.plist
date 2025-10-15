@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Nota AI - Voice Notes</string>
+	<string>Notie AI</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Nota AI</string>
+	<string>Notie AI</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -27,7 +27,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Nota AI needs microphone access to record your voice notes and transform them into organized, searchable text.</string>
+	<string>Notie AI needs microphone access to record your voice notes and transform them into organized, searchable text.</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This helps us provide you with a better experience and improve our app.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

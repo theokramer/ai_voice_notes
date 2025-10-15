@@ -30,7 +30,7 @@ class ExportService {
     required List<Folder> folders,
   }) async {
     final buffer = StringBuffer();
-    buffer.writeln('# Nota AI - Notes Export');
+    buffer.writeln('# Notie AI - Notes Export');
     buffer.writeln('');
     buffer.writeln('Export Date: ${DateTime.now().toString()}');
     buffer.writeln('');
@@ -71,11 +71,11 @@ class ExportService {
               updatedAt: DateTime.now(),
             );
 
-      buffer.writeln('## ${folder.icon} ${folder.name}');
+      buffer.writeln('## ${folder.name}');
       buffer.writeln('');
 
       for (final note in folderNotes) {
-        buffer.writeln('### ${note.icon} ${note.name}');
+        buffer.writeln('### ${note.name}');
         buffer.writeln('');
         buffer.writeln('**Created:** ${note.createdAt.toString()}');
         buffer.writeln('**Updated:** ${note.updatedAt.toString()}');
@@ -99,7 +99,7 @@ class ExportService {
     final buffer = StringBuffer();
     
     // Header
-    buffer.writeln('ID,Name,Icon,Folder,Content Preview,Created,Modified');
+    buffer.writeln('ID,Name,Folder,Content Preview,Created,Modified');
 
     // Rows
     for (final note in notes) {
@@ -122,7 +122,6 @@ class ExportService {
       final row = [
         note.id,
         _escapeCSV(note.name),
-        note.icon,
         folder?.name ?? 'Unorganized',
         _escapeCSV(contentPreview.substring(
             0, contentPreview.length > 200 ? 200 : contentPreview.length)),
@@ -186,8 +185,8 @@ class ExportService {
       // Share the file with proper positioning for iPad
       await Share.shareXFiles(
         [XFile(file.path, mimeType: mimeType)],
-        subject: 'Nota AI - Data Export',
-        text: 'Exported from Nota AI',
+        subject: 'Notie AI - Data Export',
+        text: 'Exported from Notie AI',
         sharePositionOrigin: sharePositionOrigin,
       );
     } catch (e) {
@@ -206,7 +205,7 @@ class ExportService {
     final buffer = StringBuffer();
     
     // Title
-    buffer.writeln('# ${note.icon} ${note.name}');
+    buffer.writeln('# ${note.name}');
     buffer.writeln('');
     
     // Metadata

@@ -99,7 +99,6 @@ class NoteActionsService {
       context: context,
       folders: allFolders,
       currentFolderId: note.folderId,
-      noteIcon: note.icon,
       noteName: note.name,
       unorganizedFolderId: foldersProvider.unorganizedFolderId,
     );

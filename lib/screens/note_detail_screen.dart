@@ -204,7 +204,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       context: context,
       folders: foldersProvider.folders,
       currentFolderId: note.folderId,
-      noteIcon: note.icon,
       noteName: note.name,
     );
 
@@ -272,12 +271,6 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
                               Navigator.pop(context);
                             },
                           ),
-                          // Note icon
-                          Text(
-                            note.icon,
-                            style: const TextStyle(fontSize: 24),
-                          ),
-                          const SizedBox(width: 12),
                           // Note name editor
                           Expanded(
                             child: TextField(

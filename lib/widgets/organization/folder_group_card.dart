@@ -83,7 +83,7 @@ class _FolderGroupCardState extends State<FolderGroupCard> {
         }
         
         if (targetFolderId != null) {
-          await notesProvider.moveNoteToFolder(suggestion.noteId, targetFolderId);
+          await notesProvider.moveNoteToFolder(suggestion.noteId, targetFolderId, foldersProvider: foldersProvider);
         }
       } catch (e) {
         debugPrint('Error processing suggestion: $e');

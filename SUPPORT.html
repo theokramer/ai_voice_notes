@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Support & Help Center - Notie AI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background-color: #fff;
+        }
+        h1 {
+            color: #000;
+            border-bottom: 3px solid #000;
+            padding-bottom: 15px;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #000;
+            margin-top: 40px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #eee;
+        }
+        h3 {
+            color: #333;
+            margin-top: 25px;
+        }
+        h4 {
+            color: #555;
+            margin-top: 20px;
+        }
+        .quick-links {
+            background-color: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        .quick-links h3 {
+            margin-top: 0;
+            color: #000;
+        }
+        .quick-links ul {
+            columns: 2;
+            -webkit-columns: 2;
+            -moz-columns: 2;
+            list-style: none;
+            padding-left: 0;
+        }
+        .quick-links li {
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .quick-links li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #000;
+        }
+        .faq-item {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #0066cc;
+            border-radius: 4px;
+        }
+        .faq-question {
+            font-weight: 600;
+            color: #000;
+            margin-bottom: 8px;
+        }
+        .faq-answer {
+            color: #555;
+        }
+        .troubleshooting-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .tips-box {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .feature-box {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .contact-box {
+            background-color: #f9f9f9;
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .contact-box h2 {
+            margin-top: 0;
+            border: none;
+        }
+        ul {
+            padding-left: 25px;
+        }
+        li {
+            margin: 10px 0;
+        }
+        ol {
+            padding-left: 25px;
+        }
+        ol li {
+            margin: 10px 0;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #000;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #333;
+            text-decoration: none;
+        }
+        .section-divider {
+            margin: 50px 0;
+            border: none;
+            border-top: 2px solid #ddd;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: #000;
+            color: #fff;
+            border-radius: 3px;
+            font-size: 0.85em;
+            margin-left: 5px;
+        }
+        .premium-badge {
+            background-color: #ffc107;
+            color: #000;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .step-number {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            background-color: #000;
+            color: #fff;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            margin-right: 8px;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .quick-links ul {
+                columns: 1;
+                -webkit-columns: 1;
+                -moz-columns: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<h1>🎙️ Notie AI Support & Help Center</h1>
+<p class="subtitle">Welcome to Notie AI Support! We're here to help you get the most out of your intelligent voice notes app.</p>
+
+<div class="quick-links">
+    <h3>Quick Links</h3>
+    <ul>
+        <li><a href="#getting-started">Getting Started</a></li>
+        <li><a href="#faq">Frequently Asked Questions</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+        <li><a href="#features">Features Guide</a></li>
+        <li><a href="#tips">Tips & Tricks</a></li>
+        <li><a href="#privacy">Privacy & Security</a></li>
+        <li><a href="#subscription">Subscription & Billing</a></li>
+        <li><a href="#contact">Contact Us</a></li>
+    </ul>
+</div>
+
+<hr class="section-divider">
+
+<h2 id="getting-started">Getting Started</h2>
+
+<h3>First Time Using Notie AI?</h3>
+
+<div class="feature-box">
+    <h4><span class="step-number">1</span> Grant Microphone Permission</h4>
+    <ul>
+        <li>When prompted, tap "Allow" to enable voice recording</li>
+        <li>Without this permission, you won't be able to record notes</li>
+        <li>You can change this later in iOS Settings → Notie AI → Microphone</li>
+    </ul>
+
+    <h4><span class="step-number">2</span> Record Your First Note</h4>
+    <ul>
+        <li>Tap and <strong>hold</strong> the microphone button at the bottom</li>
+        <li>Speak clearly while holding the button</li>
+        <li>Release when finished</li>
+        <li>The app will automatically transcribe your audio</li>
+    </ul>
+
+    <h4><span class="step-number">3</span> Organize Your Notes</h4>
+    <ul>
+        <li>After recording, your note will be auto-organized into a relevant folder</li>
+        <li>You can move notes between folders anytime</li>
+        <li>Create custom folders to organize your thoughts</li>
+    </ul>
+
+    <h4><span class="step-number">4</span> Explore AI Features</h4>
+    <ul>
+        <li>Use the AI chat to ask questions about your notes</li>
+        <li>Get automatic summaries of long notes</li>
+        <li>Let AI suggest better organization</li>
+    </ul>
+</div>
+
+<hr class="section-divider">
+
+<h2 id="faq">Frequently Asked Questions</h2>
+
+<h3>General Questions</h3>
+
+<div class="faq-item">
+    <div class="faq-question">Q: Is Notie AI free?</div>
+    <div class="faq-answer">A: Notie AI offers both free and premium versions. The free version includes basic voice recording and transcription. Premium unlocks unlimited recordings, advanced AI features, and priority support.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-question">Q: What languages does Notie AI support?</div>
+    <div class="faq-answer">A: Notie AI supports 50+ languages including English, Spanish, French, German, Italian, Portuguese, Dutch, Polish, Russian, Japanese, Chinese, Korean, Arabic, and many more. The app automatically detects your language.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-question">Q: Do I need an internet connection?</div>
+    <div class="faq-answer">A: Yes, you need an internet connection for voice transcription and AI features (summaries, organization, chat). Your notes are stored locally, so you can view them offline.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-question">Q: Where are my notes stored?</div>
+    <div class="faq-answer">A: All your notes are stored <strong>locally on your device</strong>. We do not store your notes on our servers. This means your notes are private and secure, but you should export them regularly as a backup.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-question">Q: Can I use Notie AI on multiple devices?</div>
+    <div class="faq-answer">A: Currently, Notie AI stores notes locally on each device. We're working on cloud sync for future updates. For now, use the export feature to transfer notes between devices.</div>
+</div>
+
+<h3>Recording & Transcription</h3>
+
+<div class="faq-item">
+    <div class="faq-question">Q: How do I record a note?</div>
+    <div class="faq-answer">A: Tap and <strong>hold</strong> the microphone button, speak your note, then release. Do not just tap—you must hold the button while speaking.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-question">Q: Why isn't my voice being recorded?</div>
+    <div class="faq-answer">A: Check these:
+        <ol>
+            <li>Microphone permission is enabled (Settings → Notie AI → Microphone)</li>
+            <li>You're holding the button (not just tapping)</li>
+            <li>Your microphone isn't blocked or covered</li>
+            <li>Try restarting the app</li>
+        </ol>
+    </div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-question">Q: Why is the transcription inaccurate?</div>
+    <div class="faq-answer">A: To improve transcription accuracy: speak clearly at a moderate pace, minimize background noise, hold the phone closer to your mouth, check your internet connection, and try recording in shorter segments.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-question">Q: Can I edit transcriptions?</div>
+    <div class="faq-answer">A: Yes! Tap any note to open it, then tap the edit button to modify the transcribed text.</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-question">Q: What happens to my audio recordings?</div>
+    <div class="faq-answer">A: Audio files are temporarily stored on your device during transcription, then automatically deleted. We do not keep copies of your audio.</div>
+</div>
+
+<h3>AI Features</h3>
+
+<div class="faq-item">
+    <div class="faq-question">Q: What AI features are available?</div>
+    <div class="faq-answer">A: Notie AI offers:
+        <ul>
+            <li><strong>Auto-transcription:</strong> Convert speech to text</li>
+            <li><strong>Smart Summaries:</strong> Get concise summaries of long notes</li>
+            <li><strong>Auto-organization:</strong> Automatic folder suggestions</li>
+            <li><strong>AI Chat:</strong> Ask questions about your notes</li>
+            <li><strong>Title Generation:</strong> Automatic note titles</li>
+            <li><strong>Organization Suggestions:</strong> Batch organize multiple notes</li>
+        </ul>
+    </div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-question">Q: How do I use the AI chat?</div>
+    <div class="faq-answer">A: Tap the "Ask AI" button on the home screen. Ask questions like: "What did I note about the meeting?", "Create a shopping list note", or "Summarize my notes from this week".</div>
+</div>
+
+<div class="faq-item">
+    <div class="faq-question">Q: Is my data used to train AI models?</div>
+    <div class="faq-answer">A: No. According to OpenAI's policy, data sent through their API is not used to train models. Your data is retained for 30 days for abuse monitoring, then deleted.</div>
+</div>
+
+<hr class="section-divider">
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<h3>App Crashes or Freezes</h3>
+<div class="troubleshooting-box">
+    <strong>Issue:</strong> App crashes when opening or using features
+    <br><br>
+    <strong>Solutions:</strong>
+    <ol>
+        <li>Force quit and restart the app</li>
+        <li>Restart your device</li>
+        <li>Check for app updates in the App Store</li>
+        <li>Free up device storage (Settings → General → iPhone Storage)</li>
+        <li>Reinstall the app (note: this will delete local notes)</li>
+    </ol>
+</div>
+
+<h3>Recording Issues</h3>
+<div class="troubleshooting-box">
+    <strong>Issue:</strong> Microphone button doesn't work
+    <br><br>
+    <strong>Solutions:</strong>
+    <ol>
+        <li>Check microphone permission: Settings → Notie AI → Microphone → Allow</li>
+        <li>Check if another app is using the microphone</li>
+        <li>Test your microphone in another app (Voice Memos)</li>
+        <li>Restart your device</li>
+        <li>Make sure you're <strong>holding</strong> the button, not just tapping</li>
+    </ol>
+</div>
+
+<h3>Transcription Issues</h3>
+<div class="troubleshooting-box">
+    <strong>Issue:</strong> Transcription fails or shows error
+    <br><br>
+    <strong>Solutions:</strong>
+    <ol>
+        <li>Check your internet connection</li>
+        <li>Try again in a few minutes (OpenAI service may be busy)</li>
+        <li>Record shorter segments (under 2 minutes)</li>
+        <li>Check if you have sufficient storage space</li>
+        <li>Restart the app</li>
+    </ol>
+</div>
+
+<h3>Subscription Issues</h3>
+<div class="troubleshooting-box">
+    <strong>Issue:</strong> Premium features not working after purchase
+    <br><br>
+    <strong>Solutions:</strong>
+    <ol>
+        <li>Restart the app to refresh subscription status</li>
+        <li>Check your purchase in Settings → [Your Name] → Subscriptions</li>
+        <li>Make sure you're signed into the same Apple ID used for purchase</li>
+        <li>Wait a few minutes for verification to complete</li>
+        <li>Contact Apple Support if payment was processed but features locked</li>
+    </ol>
+</div>
+
+<hr class="section-divider">
+
+<h2 id="features">Features Guide</h2>
+
+<h3>Voice Recording</h3>
+<p><strong>How to record:</strong></p>
+<ol>
+    <li>Tap and <strong>hold</strong> the microphone button</li>
+    <li>Speak your note clearly</li>
+    <li>Release to stop recording</li>
+    <li>Wait for transcription to complete</li>
+</ol>
+
+<div class="tips-box">
+    <strong>Tips for best results:</strong>
+    <ul>
+        <li>Hold phone 6-12 inches from your mouth</li>
+        <li>Speak at normal conversational pace</li>
+        <li>Minimize background noise</li>
+        <li>Record in segments for long notes</li>
+    </ul>
+</div>
+
+<h3>Note Editing</h3>
+<p><strong>Basic editing:</strong></p>
+<ul>
+    <li>Tap any note to open it</li>
+    <li>Tap the edit icon (pencil) to modify text</li>
+    <li>Use the formatting toolbar for bold, italic, lists</li>
+    <li>Tap outside to save changes</li>
+</ul>
+
+<h3>Organization</h3>
+<p><strong>Auto-organization:</strong></p>
+<ul>
+    <li>Enabled by default for new notes</li>
+    <li>AI suggests the best folder automatically</li>
+    <li>You can accept or change the suggestion</li>
+</ul>
+
+<h3>AI Chat Assistant</h3>
+<div class="feature-box">
+    <strong>What you can ask:</strong>
+    <ul>
+        <li>"What did I note about [topic]?"</li>
+        <li>"Create a note about [subject]"</li>
+        <li>"Summarize my recent notes"</li>
+        <li>"Move [note] to [folder]"</li>
+        <li>"What are my action items?"</li>
+    </ul>
+</div>
+
+<h3>Export & Sharing</h3>
+<p><strong>Export formats:</strong></p>
+<ul>
+    <li><strong>Text:</strong> Plain text, compatible everywhere</li>
+    <li><strong>Markdown:</strong> Formatted text for apps like Obsidian, Notion</li>
+    <li><strong>JSON:</strong> Complete data backup</li>
+</ul>
+
+<hr class="section-divider">
+
+<h2 id="tips">Tips & Tricks</h2>
+
+<h3>Productivity Tips</h3>
+<div class="tips-box">
+    <ol>
+        <li><strong>Use Voice Commands:</strong> Say "Create note about..." to quickly organize as you record</li>
+        <li><strong>Batch Organization:</strong> Use the organization screen to organize multiple notes at once</li>
+        <li><strong>Regular Exports:</strong> Export weekly to avoid data loss</li>
+        <li><strong>Folder Strategy:</strong> Use 5-7 broad categories rather than many specific folders</li>
+        <li><strong>Quick Capture:</strong> Add Notie AI widget for faster access</li>
+    </ol>
+</div>
+
+<h3>Recording Tips</h3>
+<div class="tips-box">
+    <ol>
+        <li><strong>Quiet Environment:</strong> Find a quiet space for best transcription</li>
+        <li><strong>Punctuation:</strong> Pause briefly for commas, longer for periods</li>
+        <li><strong>Clear Speech:</strong> Speak clearly but naturally</li>
+        <li><strong>Shorter Segments:</strong> Record in 30-60 second bursts for easier editing</li>
+        <li><strong>Retry if Needed:</strong> Re-record if transcription isn't accurate</li>
+    </ol>
+</div>
+
+<h3>Organization Tips</h3>
+<div class="tips-box">
+    <ol>
+        <li><strong>Generic Names:</strong> Use "Work" instead of "Work Meeting Notes March 2025"</li>
+        <li><strong>Let AI Help:</strong> Trust the auto-organization, it learns patterns</li>
+        <li><strong>Review Suggestions:</strong> Check organization suggestions weekly</li>
+        <li><strong>Pin Important:</strong> Pin frequently accessed notes to the top</li>
+        <li><strong>Archive Old:</strong> Export and delete very old notes to improve performance</li>
+    </ol>
+</div>
+
+<hr class="section-divider">
+
+<h2 id="privacy">Privacy & Security</h2>
+
+<h3>Your Data</h3>
+<ul>
+    <li><strong>Local Storage:</strong> All notes stored on your device only</li>
+    <li><strong>No Cloud:</strong> We don't store your notes on our servers</li>
+    <li><strong>Encryption:</strong> Local data protected by iOS encryption</li>
+    <li><strong>Audio Deletion:</strong> Audio files deleted after transcription</li>
+    <li><strong>Export Control:</strong> You control all your data</li>
+</ul>
+
+<h3>Third-Party Services</h3>
+<p><strong>OpenAI:</strong></p>
+<ul>
+    <li>Audio sent for transcription</li>
+    <li>Note content sent for AI features</li>
+    <li>Data retained 30 days, then deleted</li>
+    <li>Not used for model training</li>
+</ul>
+
+<p>For full details, see our <a href="PRIVACY_POLICY.html">Privacy Policy</a>.</p>
+
+<hr class="section-divider">
+
+<h2 id="subscription">Subscription & Billing</h2>
+
+<h3>Premium Features <span class="badge premium-badge">PREMIUM</span></h3>
+<div class="feature-box">
+    <strong>Premium includes:</strong>
+    <ul>
+        <li>✨ Unlimited voice recordings</li>
+        <li>🤖 Advanced AI features</li>
+        <li>📊 Enhanced organization suggestions</li>
+        <li>💬 Extended AI chat capabilities</li>
+        <li>🎯 Priority support</li>
+        <li>🎨 Custom themes (coming soon)</li>
+        <li>☁️ Cloud sync (coming soon)</li>
+    </ul>
+</div>
+
+<h3>Subscription Management</h3>
+<p><strong>How to subscribe:</strong></p>
+<ol>
+    <li>Tap on any premium feature</li>
+    <li>View pricing options</li>
+    <li>Choose your plan (monthly or yearly)</li>
+    <li>Confirm with Face ID/Touch ID</li>
+</ol>
+
+<p><strong>How to cancel:</strong></p>
+<ol>
+    <li>Open Settings app on your iPhone</li>
+    <li>Tap your name at the top</li>
+    <li>Tap "Subscriptions"</li>
+    <li>Select Notie AI</li>
+    <li>Tap "Cancel Subscription"</li>
+</ol>
+
+<h3>Refunds</h3>
+<p>Refund requests are handled by Apple. We (Notie AI developers) cannot process refunds directly. Contact Apple Support for refund requests.</p>
+
+<hr class="section-divider">
+
+<div class="contact-box" id="contact">
+    <h2>📧 Contact Us</h2>
+    <p>We're here to help! Reach out for technical issues, feature requests, bug reports, or feedback.</p>
+    
+    <p>
+        <strong>Email:</strong> [Your Email Address]<br>
+        <strong>Response Time:</strong> Within 24-48 hours
+    </p>
+    
+    <p><strong>Website:</strong> [Your Website]</p>
+    
+    <div style="margin-top: 20px;">
+        <a href="mailto:[Your Email Address]" class="btn">Send Email</a>
+        <a href="PRIVACY_POLICY.html" class="btn">Privacy Policy</a>
+        <a href="TERMS_OF_SERVICE.html" class="btn">Terms of Service</a>
+    </div>
+</div>
+
+<hr class="section-divider">
+
+<h2>System Requirements</h2>
+<table>
+    <tr>
+        <th>Component</th>
+        <th>Minimum</th>
+        <th>Recommended</th>
+    </tr>
+    <tr>
+        <td>iOS Version</td>
+        <td>iOS 14.0 or later</td>
+        <td>iOS 15.0 or later</td>
+    </tr>
+    <tr>
+        <td>Device</td>
+        <td>iPhone 6s or newer</td>
+        <td>iPhone 8 or newer</td>
+    </tr>
+    <tr>
+        <td>Storage</td>
+        <td>100 MB free</td>
+        <td>500 MB free</td>
+    </tr>
+    <tr>
+        <td>Connection</td>
+        <td>Internet connection</td>
+        <td>Stable Wi-Fi or 4G/5G</td>
+    </tr>
+</table>
+
+<hr class="section-divider">
+
+<h2>Additional Resources</h2>
+<ul>
+    <li><a href="PRIVACY_POLICY.html">Privacy Policy</a></li>
+    <li><a href="TERMS_OF_SERVICE.html">Terms of Service</a></li>
+    <li><a href="#">App Store Page</a></li>
+    <li><a href="#">Tutorial Videos</a> (coming soon)</li>
+</ul>
+
+<hr class="section-divider">
+
+<div style="text-align: center; color: #666; font-size: 14px; margin-top: 40px;">
+    <p><strong>Still need help?</strong> Contact us at <a href="mailto:[Your Email Address]">[Your Email Address]</a></p>
+    <p><strong>Notie AI</strong> - Your intelligent voice notes companion<br>
+    Version 1.0.0</p>
+    <p style="font-size: 0.9em;"><em>Last Updated: October 15, 2025</em></p>
+</div>
+
+</body>
+</html>
+

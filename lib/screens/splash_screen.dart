@@ -65,6 +65,9 @@ class _SplashScreenState extends State<SplashScreen> {
         );
       }
 
+      // Recalculate folder note counts to ensure accurate display
+      foldersProvider.recalculateFolderCounts(notesProvider.allNotes);
+
       // Initialize subscription service
       final subscriptionService = SubscriptionService();
       await subscriptionService.initialize();
@@ -86,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen> {
             builder: (context) => const OnboardingScreen(),
           ),
         );
-      } else if (!subscriptionService.isSubscribed) {
+      } else if (subscriptionService.isSubscribed) {
         // User completed onboarding and is subscribed → go to home
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
@@ -189,7 +192,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       ],
                     ).createShader(bounds),
                     child: const Text(
-                      'Nota AI',
+                      'Notie AI',
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,

@@ -360,7 +360,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
         }
         
         if (targetFolderId != null) {
-          await notesProvider.moveNoteToFolder(suggestion.noteId, targetFolderId);
+          await notesProvider.moveNoteToFolder(suggestion.noteId, targetFolderId, foldersProvider: foldersProvider);
           if (!mounted) return;
           setState(() {
             _processedNoteIds.add(suggestion.noteId);
@@ -433,7 +433,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
       }
       
       if (targetFolderId != null) {
-        await notesProvider.moveNoteToFolder(suggestion.noteId, targetFolderId);
+        await notesProvider.moveNoteToFolder(suggestion.noteId, targetFolderId, foldersProvider: foldersProvider);
         if (!mounted) return;
         setState(() {
           _processedNoteIds.add(suggestion.noteId);

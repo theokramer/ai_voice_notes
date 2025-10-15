@@ -1,4 +1,4 @@
-# Security Guidelines for Nota AI
+# Security Guidelines for Notie AI
 
 ## ⚠️ Critical Security Information
 

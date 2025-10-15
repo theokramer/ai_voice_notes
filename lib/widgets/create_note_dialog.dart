@@ -8,12 +8,10 @@ import '../services/localization_service.dart';
 
 class CreateNoteDialog extends StatefulWidget {
   final String? initialName;
-  final String? initialIcon;
   
   const CreateNoteDialog({
     super.key,
     this.initialName,
-    this.initialIcon,
   });
 
   @override
@@ -39,7 +37,6 @@ class _CreateNoteDialogState extends State<CreateNoteDialog> {
     if (_nameController.text.trim().isEmpty) return;
     Navigator.pop(context, {
       'name': _nameController.text.trim(),
-      'icon': '📝', // Default icon
     });
   }
 

@@ -62,17 +62,17 @@ class RecordingOverlay extends StatelessWidget {
                       // Status with timer and save indicator (top)
                       _buildCompactStatusBar(context, themeConfig, durationText),
                       
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 28),
                       
                       // Voice Commands Available (persistent, no fade out)
                       _buildVoiceCommands(context, themeConfig, examples),
                       
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 28),
                       
                       // Action buttons (ONLY when locked)
                       if (isLocked) ...[
                         _buildActionButtons(context, themeConfig),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 28),
                       ],
                       
                       const Spacer(),
@@ -154,127 +154,191 @@ class RecordingOverlay extends StatelessWidget {
     
     return Column(
       children: [
-        // Header
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.mic,
-              color: themeConfig.accentLight,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Voice Commands',
-              style: TextStyle(
-                color: AppTheme.textPrimary.withOpacity(0.9),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        
-        // Tip banner
-        if (commands.isNotEmpty && commands.first.isTip)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: themeConfig.accentLight.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: themeConfig.accentLight.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '💡',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    commands.first.text,
-                    style: TextStyle(
-                      color: themeConfig.accentLight,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ],
+        // Compact Header with instruction
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: themeConfig.accentLight.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            border: Border.all(
+              color: themeConfig.accentLight.withOpacity(0.3),
+              width: 1,
             ),
           ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.mic_rounded,
+                    color: themeConfig.accentLight,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+              Text(
+                'Voice Commands',
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Say commands after recording starts',
+            style: TextStyle(
+              color: AppTheme.textSecondary.withOpacity(0.8),
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+            ],
+          ),
+        )
+            .animate()
+            .fadeIn(duration: 600.ms, curve: Curves.easeOutCubic)
+            .slideY(begin: -0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
         
-        // Command cards in a grid
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: WrapAlignment.center,
-          children: commands
-            .where((cmd) => !cmd.isTip)
-            .map((cmd) => _buildCommandCard(themeConfig, cmd))
-            .toList(),
-        ),
+        // Compact Command Cards in rows
+        _buildCompactCommandCards(themeConfig, commands),
       ],
     );
   }
-  
-  Widget _buildCommandCard(ThemeConfig themeConfig, _VoiceCommandDisplay cmd) {
+
+  Widget _buildCompactCommandCards(ThemeConfig themeConfig, List<_VoiceCommandDisplay> commands) {
+    final nonTipCommands = commands.where((cmd) => !cmd.isTip).toList();
+    
+    return Column(
+      children: [
+        // All three commands in a single row with equal heights
+        IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildCompactCommandCard(themeConfig, nonTipCommands[0])
+                    .animate(delay: 0.ms)
+                    .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
+                    .slideX(begin: -0.2, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildCompactCommandCard(themeConfig, nonTipCommands[1])
+                    .animate(delay: 80.ms)
+                    .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
+                    .slideY(begin: -0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildCompactCommandCard(themeConfig, nonTipCommands[2])
+                    .animate(delay: 160.ms)
+                    .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
+                    .slideX(begin: 0.2, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Combination note
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: themeConfig.accentLight.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+            border: Border.all(
+              color: themeConfig.accentLight.withOpacity(0.15),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline,
+                    color: themeConfig.accentLight.withOpacity(0.7),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'You can combine commands:',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary.withOpacity(0.8),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '"title Meeting in folder Work"',
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        )
+            .animate(delay: 240.ms)
+            .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
+            .slideY(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+      ],
+    );
+  }
+
+  Widget _buildCompactCommandCard(ThemeConfig themeConfig, _VoiceCommandDisplay cmd) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
-        color: AppTheme.glassSurface.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(10),
+        color: themeConfig.accentDark.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
         border: Border.all(
-          color: AppTheme.glassBorder.withOpacity(0.3),
+          color: themeConfig.accentLight.withOpacity(0.2),
           width: 1,
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Icon
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: themeConfig.accentLight.withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              cmd.icon,
-              color: themeConfig.accentLight,
-              size: 16,
-            ),
-          ),
-          const SizedBox(height: 6),
-          // Command text
+          // Command text - reasonable size
           Text(
             cmd.command,
             style: TextStyle(
-              color: AppTheme.textPrimary.withOpacity(0.95),
-              fontSize: 11,
+              color: AppTheme.textPrimary,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
+              letterSpacing: 0.1,
+              height: 1.2,
             ),
-            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
-          // Description
+          const SizedBox(height: 8),
+          
+          // Description - reasonable size
           Text(
             cmd.description,
             style: TextStyle(
-              color: AppTheme.textSecondary.withOpacity(0.7),
-              fontSize: 10,
+              color: AppTheme.textSecondary.withOpacity(0.85),
+              fontSize: 13,
               fontWeight: FontWeight.w500,
+              letterSpacing: 0.05,
+              height: 1.3,
             ),
-            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -474,43 +538,27 @@ class RecordingOverlay extends StatelessWidget {
     switch (language) {
       case AppLanguage.german:
         return [
-          '💡 Kurzform empfohlen, längere Varianten funktionieren auch',
-          '',
-          '"neu [Name]" → Ordner erstellen',
-          '"ergänzung" / "zur letzten notiz" → Anhängen',
-          '"titel [Titel]" → Titel setzen',
+          '"ergänzung" / "zur letzten notiz" → An die letzte Notiz anhängen',
+          '"titel [Titel]" → Titel für diese Notiz setzen',
           '"ordner [Name]" → In Ordner speichern',
-          '"neue notiz mit titel [X] in ordner [Y]" → Alles kombinieren',
         ];
       case AppLanguage.spanish:
         return [
-          '💡 Forma corta recomendada, variaciones largas también funcionan',
-          '',
-          '"nuevo [nombre]" → Crear carpeta',
-          '"adición" / "añadir a la última" → Añadir',
-          '"título [título]" → Establecer título',
+          '"adición" / "añadir a la última" → Añadir a la última nota',
+          '"título [título]" → Establecer título para esta nota',
           '"carpeta [nombre]" → Guardar en carpeta',
-          '"nueva nota con título [X] en carpeta [Y]" → Combinar todo',
         ];
       case AppLanguage.french:
         return [
-          '💡 Forme courte recommandée, variantes longues fonctionnent aussi',
-          '',
-          '"nouvelle [nom]" → Créer dossier',
-          '"ajout" / "ajouter à dernière note" → Ajouter',
-          '"titre [titre]" → Définir titre',
+          '"ajout" / "ajouter à dernière note" → Ajouter à la dernière note',
+          '"titre [titre]" → Définir titre pour cette note',
           '"dossier [nom]" → Sauvegarder dans dossier',
-          '"nouvelle note avec titre [X] dans dossier [Y]" → Tout combiner',
         ];
       case AppLanguage.english:
         return [
-          '💡 Short form recommended, longer variations also work',
-          '',
-          '"new [name]" → Create folder',
-          '"addition" / "add to last note" → Append',
-          '"title [title]" → Set title',
+          '"addition" / "add to last note" → Append to the last note',
+          '"title [title]" → Set title for this note',
           '"folder [name]" → Save to folder',
-          '"new note with title [X] in folder [Y]" → Combine all',
         ];
     }
   }

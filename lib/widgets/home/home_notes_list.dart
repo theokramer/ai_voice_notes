@@ -13,7 +13,6 @@ class HomeNotesList extends StatelessWidget {
   final List<Note> notes;
   final NotesProvider provider;
   final String searchQuery;
-  final VoidCallback onHideSearchOverlay;
   final Function(Note) onShowNoteOptions;
 
   const HomeNotesList({
@@ -21,7 +20,6 @@ class HomeNotesList extends StatelessWidget {
     required this.notes,
     required this.provider,
     required this.searchQuery,
-    required this.onHideSearchOverlay,
     required this.onShowNoteOptions,
   });
 
@@ -78,7 +76,8 @@ class HomeNotesList extends StatelessWidget {
                   await HapticService.light();
                   provider.markNoteAsAccessed(note.id);
                   if (searchQuery.isNotEmpty) {
-                    onHideSearchOverlay();
+                    // Clear search when navigating to note
+                    provider.setSearchQuery('');
                   }
                   await context.pushHero(
                     NoteDetailScreen(noteId: note.id),
@@ -106,7 +105,8 @@ class HomeNotesList extends StatelessWidget {
                   await HapticService.light();
                   provider.markNoteAsAccessed(note.id);
                   if (searchQuery.isNotEmpty) {
-                    onHideSearchOverlay();
+                    // Clear search when navigating to note
+                    provider.setSearchQuery('');
                   }
                   await context.pushHero(
                     NoteDetailScreen(noteId: note.id),
@@ -132,7 +132,8 @@ class HomeNotesList extends StatelessWidget {
                   await HapticService.light();
                   provider.markNoteAsAccessed(note.id);
                   if (searchQuery.isNotEmpty) {
-                    onHideSearchOverlay();
+                    // Clear search when navigating to note
+                    provider.setSearchQuery('');
                   }
                   await context.pushHero(
                     NoteDetailScreen(noteId: note.id),
@@ -158,7 +159,8 @@ class HomeNotesList extends StatelessWidget {
                   await HapticService.light();
                   provider.markNoteAsAccessed(note.id);
                   if (searchQuery.isNotEmpty) {
-                    onHideSearchOverlay();
+                    // Clear search when navigating to note
+                    provider.setSearchQuery('');
                   }
                   await context.pushHero(
                     NoteDetailScreen(noteId: note.id),

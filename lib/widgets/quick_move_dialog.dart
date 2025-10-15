@@ -12,7 +12,6 @@ import 'create_folder_dialog.dart';
 class QuickMoveDialog extends StatefulWidget {
   final List<Folder> folders;
   final String? currentFolderId;
-  final String noteIcon;
   final String noteName;
   final String? unorganizedFolderId;
 
@@ -20,7 +19,6 @@ class QuickMoveDialog extends StatefulWidget {
     super.key,
     required this.folders,
     required this.currentFolderId,
-    required this.noteIcon,
     required this.noteName,
     this.unorganizedFolderId,
   });
@@ -33,7 +31,6 @@ class QuickMoveDialog extends StatefulWidget {
     required BuildContext context,
     required List<Folder> folders,
     required String? currentFolderId,
-    required String noteIcon,
     required String noteName,
     String? unorganizedFolderId,
   }) async {
@@ -42,7 +39,6 @@ class QuickMoveDialog extends StatefulWidget {
       builder: (context) => QuickMoveDialog(
         folders: folders,
         currentFolderId: currentFolderId,
-        noteIcon: noteIcon,
         noteName: noteName,
         unorganizedFolderId: unorganizedFolderId,
       ),
@@ -65,7 +61,7 @@ class _QuickMoveDialogState extends State<QuickMoveDialog> {
       // Sort folders alphabetically
       final sorted = List<Folder>.from(widget.folders)
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      return sorted.take(7).toList();
+      return sorted;
     }
     
     // Search in all folders
@@ -108,8 +104,6 @@ class _QuickMoveDialogState extends State<QuickMoveDialog> {
             // Header
             Row(
               children: [
-                Text(widget.noteIcon, style: const TextStyle(fontSize: 28)),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

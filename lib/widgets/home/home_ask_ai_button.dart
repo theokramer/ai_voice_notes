@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
@@ -40,82 +39,69 @@ class HomeAskAIButton extends StatelessWidget {
         ),
         child: GestureDetector(
           onTap: onTap,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: AnimatedContainer(
-                duration: AppTheme.animationNormal,
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.all(AppTheme.spacing16),
-                decoration: BoxDecoration(
-                  gradient: hasQuery
-                      ? LinearGradient(
-                          colors: [
-                            primaryColor.withValues(alpha: 0.25),
-                            primaryColor.withValues(alpha: 0.15),
-                          ],
-                        )
-                      : null,
-                  color: hasQuery ? null : AppTheme.glassSurface,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                  border: Border.all(
-                    color: hasQuery
-                        ? primaryColor.withValues(alpha: 0.5)
-                        : AppTheme.glassBorder,
-                    width: hasQuery ? 2 : 1.5,
-                  ),
-                  boxShadow: hasQuery
-                      ? [
-                          BoxShadow(
-                            color: primaryColor.withValues(alpha: 0.2),
-                            blurRadius: 12,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AnimatedSwitcher(
-                      duration: AppTheme.animationNormal,
-                      child: Icon(
-                        Icons.psychology,
-                        key: ValueKey(hasQuery),
-                        size: 20,
-                        color: hasQuery ? AppTheme.textPrimary : AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: AppTheme.spacing8),
-                    Flexible(
-                      child: AnimatedDefaultTextStyle(
-                        duration: AppTheme.animationNormal,
-                        curve: Curves.easeOutCubic,
-                        style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                              color: hasQuery ? AppTheme.textPrimary : AppTheme.textSecondary,
-                              fontWeight: hasQuery ? FontWeight.w600 : FontWeight.w500,
-                            ),
-                        child: Text(
-                          buttonText,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+          child: AnimatedContainer(
+            duration: AppTheme.animationNormal,
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.all(AppTheme.spacing16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  primaryColor,
+                  primaryColor.withValues(alpha: 0.85),
+                ],
               ),
+              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              border: Border.all(
+                color: primaryColor,
+                width: 2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: primaryColor.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ),
-        )
-            .animate(
-              onPlay: (controller) => controller.repeat(reverse: true),
-            )
-            .shimmer(
-              duration: noResults ? 1500.ms : 3000.ms,
-              delay: noResults ? 0.ms : 5000.ms,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedSwitcher(
+                  duration: AppTheme.animationNormal,
+                  child: Icon(
+                    Icons.psychology,
+                    key: ValueKey(hasQuery),
+                    size: 20,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacing8),
+                Flexible(
+                  child: AnimatedDefaultTextStyle(
+                    duration: AppTheme.animationNormal,
+                    curve: Curves.easeOutCubic,
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w600,
+                        ),
+                    child: Text(
+                      buttonText,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
             ),
+          )
+              .animate(
+                onPlay: (controller) => controller.repeat(reverse: true),
+              )
+              .shimmer(
+                duration: noResults ? 1500.ms : 3000.ms,
+                delay: noResults ? 0.ms : 5000.ms,
+              ),
+        ),
       ),
     );
   }

@@ -14,7 +14,6 @@ class HomeNotesGrid extends StatelessWidget {
   final List<Note> notes;
   final NotesProvider provider;
   final String searchQuery;
-  final VoidCallback onHideSearchOverlay;
   final Function(Note) onShowNoteOptions;
   final Function(Note, String) extractSnippets;
 
@@ -23,7 +22,6 @@ class HomeNotesGrid extends StatelessWidget {
     required this.notes,
     required this.provider,
     required this.searchQuery,
-    required this.onHideSearchOverlay,
     required this.onShowNoteOptions,
     required this.extractSnippets,
   });
@@ -204,7 +202,10 @@ class HomeNotesGrid extends StatelessWidget {
                                 await HapticService.light();
                                 provider.markNoteAsAccessed(note.id);
                                 final sq = searchQuery.isNotEmpty ? searchQuery : null;
-                                if (sq != null) onHideSearchOverlay();
+                                if (sq != null) {
+                                  // Clear search when navigating to note
+                                  provider.setSearchQuery('');
+                                }
                                 await context.pushHero(
                                   NoteDetailScreen(noteId: note.id, searchQuery: sq),
                                 );
@@ -265,7 +266,10 @@ class HomeNotesGrid extends StatelessWidget {
                               await HapticService.light();
                               provider.markNoteAsAccessed(note.id);
                               final sq = searchQuery.isNotEmpty ? searchQuery : null;
-                              if (sq != null) onHideSearchOverlay();
+                              if (sq != null) {
+                                // Clear search when navigating to note
+                                provider.setSearchQuery('');
+                              }
                               await context.pushHero(
                                 NoteDetailScreen(noteId: note.id, searchQuery: sq),
                               );

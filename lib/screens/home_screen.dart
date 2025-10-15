@@ -29,7 +29,6 @@ import '../widgets/folder_selector.dart';
 import '../widgets/recording_overlay.dart';
 import '../widgets/recording_status_bar.dart';
 import '../widgets/folder_management_dialog.dart';
-import '../widgets/home/home_search_overlay.dart';
 import '../widgets/home/home_animated_header.dart';
 import '../widgets/home/home_empty_state.dart';
 import '../widgets/home/home_notes_list.dart';
@@ -44,14 +43,12 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   AudioRecorder _audioRecorder = AudioRecorder();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<MicrophoneButtonState> _microphoneKey = GlobalKey<MicrophoneButtonState>();
-  bool _showSearchOverlay = false;
-  late AnimationController _searchAnimationController;
-  late Animation<double> _searchAnimation;
+  final FocusNode _searchFocusNode = FocusNode();
   
   // Chat mode state
   bool _isInChatMode = false;
@@ -151,14 +148,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _searchAnimationController = AnimationController(
-      vsync: this,
-      duration: AppTheme.animationNormal,
-    );
-    _searchAnimation = CurvedAnimation(
-      parent: _searchAnimationController,
-      curve: Curves.easeOutCubic,
-    );
     _scrollController.addListener(_handleScroll);
     
     // Request microphone permission on first launch
@@ -195,34 +184,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _audioRecorder.dispose();
     _searchController.dispose();
     _scrollController.dispose();
-    _searchAnimationController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
   void _handleScroll() {
     if (_scrollController.hasClients) {
-      // Detect overscroll at the top for pull-to-search
-      if (_scrollController.offset < -50 && !_showSearchOverlay) {
-        setState(() {
-          _showSearchOverlay = true;
-        });
-        _searchAnimationController.forward();
+      // Detect overscroll at the top for pull-down-to-focus
+      if (_scrollController.offset < -50 && !_searchFocusNode.hasFocus) {
+        _searchFocusNode.requestFocus();
         HapticService.light();
       }
     }
   }
 
-  void _hideSearchOverlay() {
-    if (_showSearchOverlay) {
-      setState(() {
-        _showSearchOverlay = false;
-        _searchController.clear();
-        context.read<NotesProvider>().setSearchQuery('');
-      });
-      _searchAnimationController.reverse();
-      HapticService.light();
-    }
-  }
 
   /// Apply folder filtering to notes list
   List<Note> _getFilteredNotes(List<Note> allNotes) {
@@ -239,9 +214,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _chatContext = query.isNotEmpty ? query : null;
       _searchController.clear();
     });
-    
-    // Hide search overlay when entering chat
-    _hideSearchOverlay();
     
     // Only send to AI if there's a query
     if (query.trim().isNotEmpty) {
@@ -273,7 +245,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     });
 
     try {
-      final provider = context.read<NotesProvider>();
+      final notesProvider = context.read<NotesProvider>();
+      final foldersProvider = context.read<FoldersProvider>();
       final openAIService = OpenAIService(apiKey: dotenv.env['OPENAI_API_KEY'] ?? '');
       
       // Build conversation history
@@ -285,51 +258,95 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final response = await openAIService.chatCompletion(
         message: message,
         history: history,
-        notes: provider.allNotes,
+        notes: notesProvider.allNotes,
+        folders: foldersProvider.folders,
       );
 
-      // Add AI response with citations
+      // Add AI response with citations and action
       final aiMessage = ChatMessage(
         text: response.text,
         isUser: false,
         timestamp: DateTime.now(),
         noteCitations: response.noteCitations,
+        action: response.action,
       );
 
-      setState(() {
-        _chatMessages.add(aiMessage);
-        _isAIProcessing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _chatMessages.add(aiMessage);
+          _isAIProcessing = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _chatMessages.add(ChatMessage(
-          text: 'Sorry, I encountered an error: ${e.toString()}',
-          isUser: false,
-          timestamp: DateTime.now(),
-        ));
-        _isAIProcessing = false;
-      });
+      debugPrint('Error in _sendToAI: $e');
+      if (mounted) {
+        setState(() {
+          _chatMessages.add(ChatMessage(
+            text: 'Sorry, I encountered an error. Please try again.',
+            isUser: false,
+            timestamp: DateTime.now(),
+          ));
+          _isAIProcessing = false;
+        });
+      }
     }
   }
 
   void _undoLastAction() async {
     if (_lastAction == null) return;
     
-    final provider = context.read<NotesProvider>();
+    final notesProvider = context.read<NotesProvider>();
+    final foldersProvider = context.read<FoldersProvider>();
     
     try {
       switch (_lastAction!['type']) {
         case 'create_note':
           final noteId = _undoData as String;
-          await provider.deleteNote(noteId);
+          await notesProvider.deleteNote(noteId, foldersProvider: foldersProvider);
           break;
+          
+        case 'add_to_note':
+          final noteId = _lastAction!['noteId'] as String;
+          final oldContent = _undoData as String;
+          final note = notesProvider.getNoteById(noteId);
+          if (note != null) {
+            final restoredNote = note.copyWith(content: oldContent);
+            await notesProvider.updateNote(restoredNote);
+          }
+          break;
+          
+        case 'move_note':
+          final noteId = _lastAction!['noteId'] as String;
+          final oldFolderId = _undoData as String?;
+          await notesProvider.moveNoteToFolder(
+            noteId,
+            oldFolderId,
+            foldersProvider: foldersProvider,
+          );
+          break;
+          
+        case 'create_folder':
+          final folderId = _undoData as String;
+          await foldersProvider.deleteFolder(folderId);
+          break;
+          
+        case 'pin_note':
+          final noteId = _lastAction!['noteId'] as String;
+          final wasPinned = _undoData as bool;
+          final note = notesProvider.getNoteById(noteId);
+          if (note != null) {
+            final restoredNote = note.copyWith(isPinned: wasPinned);
+            await notesProvider.updateNote(restoredNote);
+          }
+          break;
+          
         case 'consolidate':
           final data = _undoData as Map<String, dynamic>;
           // Delete consolidated note
-          await provider.deleteNote(data['consolidatedId']);
+          await notesProvider.deleteNote(data['consolidatedId'], foldersProvider: foldersProvider);
           // Restore original notes
           for (final note in data['originalNotes'] as List<Note>) {
-            provider.addNote(note);
+            await notesProvider.addNote(note, foldersProvider: foldersProvider);
           }
           break;
       }
@@ -361,32 +378,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   
   void _handleChatAction(ChatAction action) async {
-    final provider = context.read<NotesProvider>();
+    final notesProvider = context.read<NotesProvider>();
+    final foldersProvider = context.read<FoldersProvider>();
+    final settingsProvider = context.read<SettingsProvider>();
     
     try {
       switch (action.type) {
         case 'create_note':
-        final noteName = action.data['noteName'] as String;
-        
-        final result = await showDialog<Map<String, String>>(
-          context: context,
-          builder: (context) => CreateNoteDialog(
-            initialName: noteName,
-          ),
-        );
-
-        if (result != null && mounted) {
+          final noteName = action.data['noteName'] as String;
+          final noteContent = action.data['noteContent'] as String? ?? '';
+          final folderId = action.data['folderId'] as String?;
+          
           HapticService.success();
           final newNote = Note(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
-            name: result['name']!,
-            icon: result['icon']!,
-            content: '',
+            name: noteName,
+            icon: '📝',
+            content: noteContent,
+            rawTranscription: noteContent, // Set rawTranscription to keep plain text format
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
+            folderId: folderId,
           );
 
-          provider.addNote(newNote);
+          await notesProvider.addNote(newNote, foldersProvider: foldersProvider);
           
           // Save undo data
           _lastAction = {'type': 'create_note'};
@@ -394,7 +409,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           
           setState(() {
             _chatMessages.add(ChatMessage(
-              text: '✅ Created note "${result['name']}"!',
+              text: '✅ Created note "$noteName"!',
               isUser: false,
               timestamp: DateTime.now(),
             ));
@@ -402,19 +417,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           
           // Show undo snackbar
           if (mounted) {
-            final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
             CustomSnackbar.show(
               context,
-              message: LocalizationService().t('created_note', {'name': result['name'] ?? ''}),
+              message: LocalizationService().t('created_note', {'name': noteName}),
               type: SnackbarType.success,
               actionLabel: 'UNDO',
               onAction: _undoLastAction,
               duration: const Duration(seconds: 4),
-              themeConfig: themeConfig,
+              themeConfig: settingsProvider.currentThemeConfig,
             );
           }
           
-          // Navigate to the newly created note so user can see it
+          // Navigate to the newly created note
           if (mounted) {
             await Navigator.push(
               context,
@@ -422,16 +436,365 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 builder: (context) => NoteDetailScreen(noteId: newNote.id),
               ),
             );
+            // Ensure UI is refreshed after returning from note detail
+            if (mounted) {
+              setState(() {});
+            }
           }
-        }
-        break;
+          break;
+        
+        case 'add_to_note':
+          final noteId = action.data['noteId'] as String;
+          final contentToAdd = action.data['contentToAdd'] as String;
+          
+          final note = notesProvider.getNoteById(noteId);
+          if (note == null) {
+            setState(() {
+              _chatMessages.add(ChatMessage(
+                text: '❌ Could not find that note.',
+                isUser: false,
+                timestamp: DateTime.now(),
+              ));
+            });
+            return;
+          }
+          
+          HapticService.success();
+          
+          // Save old content for undo
+          final oldContent = note.content;
+          
+          // Append new content
+          final newContent = note.content.isEmpty 
+              ? contentToAdd 
+              : '${note.content}\n\n$contentToAdd';
+          
+          final updatedNote = note.copyWith(content: newContent);
+          await notesProvider.updateNote(updatedNote);
+          
+          // Save undo data
+          _lastAction = {'type': 'add_to_note', 'noteId': noteId};
+          _undoData = oldContent;
+          
+          setState(() {
+            _chatMessages.add(ChatMessage(
+              text: '✅ Added content to "${note.name}"!',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ));
+          });
+          
+          if (mounted) {
+            CustomSnackbar.show(
+              context,
+              message: 'Added content to "${note.name}"',
+              type: SnackbarType.success,
+              actionLabel: 'UNDO',
+              onAction: _undoLastAction,
+              duration: const Duration(seconds: 4),
+              themeConfig: settingsProvider.currentThemeConfig,
+            );
+          }
+          break;
+        
+        case 'move_note':
+          final noteId = action.data['noteId'] as String;
+          final targetFolderId = action.data['targetFolderId'] as String?;
+          final targetFolderName = action.data['targetFolderName'] as String?;
+          
+          final note = notesProvider.getNoteById(noteId);
+          if (note == null) {
+            setState(() {
+              _chatMessages.add(ChatMessage(
+                text: '❌ Could not find that note.',
+                isUser: false,
+                timestamp: DateTime.now(),
+              ));
+            });
+            return;
+          }
+          
+          HapticService.success();
+          
+          // Save old folder for undo
+          final oldFolderId = note.folderId;
+          
+          await notesProvider.moveNoteToFolder(
+            noteId, 
+            targetFolderId,
+            foldersProvider: foldersProvider,
+          );
+          
+          // Save undo data
+          _lastAction = {'type': 'move_note', 'noteId': noteId};
+          _undoData = oldFolderId;
+          
+          setState(() {
+            _chatMessages.add(ChatMessage(
+              text: '✅ Moved "${note.name}" to $targetFolderName!',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ));
+          });
+          
+          if (mounted) {
+            CustomSnackbar.show(
+              context,
+              message: 'Moved to $targetFolderName',
+              type: SnackbarType.success,
+              actionLabel: 'UNDO',
+              onAction: _undoLastAction,
+              duration: const Duration(seconds: 4),
+              themeConfig: settingsProvider.currentThemeConfig,
+            );
+          }
+          break;
+        
+        case 'create_folder':
+          final folderName = action.data['folderName'] as String;
+          
+          // Check if folder already exists
+          final existingFolder = foldersProvider.getFolderByName(folderName);
+          if (existingFolder != null) {
+            setState(() {
+              _chatMessages.add(ChatMessage(
+                text: '✅ Folder "$folderName" already exists!',
+                isUser: false,
+                timestamp: DateTime.now(),
+              ));
+            });
+            return;
+          }
+          
+          HapticService.success();
+          
+          // Use smart emoji selection
+          final smartIcon = getSmartEmojiForFolder(folderName);
+          final newFolder = await foldersProvider.createFolder(
+            name: folderName,
+            icon: smartIcon,
+            aiCreated: true,
+          );
+          
+          // Save undo data
+          _lastAction = {'type': 'create_folder'};
+          _undoData = newFolder.id;
+          
+          setState(() {
+            _chatMessages.add(ChatMessage(
+              text: '✅ Created folder "$folderName" $smartIcon!',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ));
+          });
+          
+          if (mounted) {
+            CustomSnackbar.show(
+              context,
+              message: 'Created folder "$folderName"',
+              type: SnackbarType.success,
+              actionLabel: 'UNDO',
+              onAction: _undoLastAction,
+              duration: const Duration(seconds: 4),
+              themeConfig: settingsProvider.currentThemeConfig,
+            );
+          }
+          break;
+        
+        case 'summarize_chat':
+          HapticService.medium();
+          
+          setState(() {
+            _chatMessages.add(ChatMessage(
+              text: '🤔 Creating summary...',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ));
+          });
+          
+          try {
+            final openAIService = OpenAIService(apiKey: dotenv.env['OPENAI_API_KEY'] ?? '');
+            final summary = await openAIService.summarizeChatHistory(_chatMessages);
+            
+            // Generate title for the summary note
+            final summaryTitle = 'Chat Summary - ${DateTime.now().toString().substring(0, 16)}';
+            
+            final summaryNote = Note(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              name: summaryTitle,
+              icon: '💬',
+              content: summary,
+              rawTranscription: summary, // Set rawTranscription to keep plain text format
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            );
+            
+            await notesProvider.addNote(summaryNote, foldersProvider: foldersProvider);
+            
+            // Save undo data
+            _lastAction = {'type': 'create_note'};
+            _undoData = summaryNote.id;
+            
+            setState(() {
+              // Remove the "Creating summary..." message
+              _chatMessages.removeLast();
+              _chatMessages.add(ChatMessage(
+                text: '✅ Created chat summary note!',
+                isUser: false,
+                timestamp: DateTime.now(),
+              ));
+            });
+            
+            if (mounted) {
+              CustomSnackbar.show(
+                context,
+                message: 'Created chat summary',
+                type: SnackbarType.success,
+                actionLabel: 'VIEW',
+                onAction: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => NoteDetailScreen(noteId: summaryNote.id),
+                    ),
+                  );
+                },
+                duration: const Duration(seconds: 4),
+                themeConfig: settingsProvider.currentThemeConfig,
+              );
+            }
+          } catch (e) {
+            setState(() {
+              // Remove the "Creating summary..." message
+              _chatMessages.removeLast();
+              _chatMessages.add(ChatMessage(
+                text: '❌ Failed to create summary: ${e.toString()}',
+                isUser: false,
+                timestamp: DateTime.now(),
+              ));
+            });
+          }
+          break;
+        
+        case 'pin_note':
+          final noteId = action.data['noteId'] as String;
+          
+          final note = notesProvider.getNoteById(noteId);
+          if (note == null) {
+            setState(() {
+              _chatMessages.add(ChatMessage(
+                text: '❌ Could not find that note.',
+                isUser: false,
+                timestamp: DateTime.now(),
+              ));
+            });
+            return;
+          }
+          
+          HapticService.success();
+          
+          final wasPinned = note.isPinned;
+          final updatedNote = note.copyWith(isPinned: !note.isPinned);
+          await notesProvider.updateNote(updatedNote);
+          
+          // Save undo data
+          _lastAction = {'type': 'pin_note', 'noteId': noteId};
+          _undoData = wasPinned;
+          
+          setState(() {
+            _chatMessages.add(ChatMessage(
+              text: wasPinned 
+                  ? '✅ Unpinned "${note.name}"!' 
+                  : '✅ Pinned "${note.name}"!',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ));
+          });
+          
+          if (mounted) {
+            CustomSnackbar.show(
+              context,
+              message: wasPinned ? 'Note unpinned' : 'Note pinned',
+              type: SnackbarType.success,
+              actionLabel: 'UNDO',
+              onAction: _undoLastAction,
+              duration: const Duration(seconds: 4),
+              themeConfig: settingsProvider.currentThemeConfig,
+            );
+          }
+          break;
+        
+        case 'delete_note':
+          final noteId = action.data['noteId'] as String;
+          
+          final note = notesProvider.getNoteById(noteId);
+          if (note == null) {
+            setState(() {
+              _chatMessages.add(ChatMessage(
+                text: '❌ Could not find that note.',
+                isUser: false,
+                timestamp: DateTime.now(),
+              ));
+            });
+            return;
+          }
+          
+          // Show confirmation for destructive action
+          final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(LocalizationService().t('delete_note_confirm_title')),
+              content: Text('Are you sure you want to delete "${note.name}"?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text(LocalizationService().t('cancel')),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  child: Text(LocalizationService().t('delete')),
+                ),
+              ],
+            ),
+          );
+          
+          if (confirmed != true) return;
+          
+          HapticService.success();
+          await notesProvider.deleteNote(noteId, foldersProvider: foldersProvider);
+          
+          // No need for special undo - note deletion already has built-in undo
+          
+          setState(() {
+            _chatMessages.add(ChatMessage(
+              text: '✅ Deleted "${note.name}".',
+              isUser: false,
+              timestamp: DateTime.now(),
+            ));
+          });
+          
+          if (mounted) {
+            CustomSnackbar.show(
+              context,
+              message: 'Note deleted',
+              type: SnackbarType.success,
+              actionLabel: 'UNDO',
+              onAction: () async {
+                await notesProvider.undoDelete(foldersProvider: foldersProvider);
+              },
+              duration: const Duration(seconds: 4),
+              themeConfig: settingsProvider.currentThemeConfig,
+            );
+          }
+          break;
         
       case 'consolidate':
         final targetName = action.data['targetName'] as String;
         final noteIds = (action.data['noteIds'] as List).cast<String>();
         
         // Get all notes to consolidate
-        final notesToConsolidate = provider.allNotes
+        final notesToConsolidate = notesProvider.allNotes
             .where((n) => noteIds.contains(n.id))
             .toList();
         
@@ -463,11 +826,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         };
         
         // Add new note
-        provider.addNote(consolidatedNote);
+        await notesProvider.addNote(consolidatedNote, foldersProvider: foldersProvider);
         
         // Delete old notes
         for (final note in notesToConsolidate) {
-          await provider.deleteNote(note.id);
+          await notesProvider.deleteNote(note.id, foldersProvider: foldersProvider);
         }
         
         HapticService.success();
@@ -645,6 +1008,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Fire haptic feedback immediately (don't await)
     HapticService.medium();
     
+    // Capture the final recording duration before resetting
+    final finalRecordingDuration = _recordingDuration;
+    debugPrint('📊 Final recording duration: ${finalRecordingDuration.inSeconds}s');
+    
     // Clean up timer and amplitude subscription
     _recordingTimer?.cancel();
     _amplitudeSubscription?.cancel();
@@ -698,6 +1065,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       queueService.addRecording(
         audioPath: stoppedPath,
         folderContext: _currentFolderContext,
+        recordingDuration: finalRecordingDuration, // Pass captured recording duration for validation
         openAIService: openAIService,
         notesProvider: context.read<NotesProvider>(),
         foldersProvider: context.read<FoldersProvider>(),
@@ -787,7 +1155,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       context: context,
       builder: (context) => CreateNoteDialog(
         initialName: note.name,
-        initialIcon: note.icon,
       ),
     );
 
@@ -795,7 +1162,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final provider = context.read<NotesProvider>();
       final updatedNote = note.copyWith(
         name: result['name'],
-        icon: result['icon'],
       );
       provider.updateNote(updatedNote); // Non-blocking
       HapticService.success(); // Fire-and-forget
@@ -1113,22 +1479,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
         final themeConfig = settingsProvider.currentThemeConfig;
-        return Scaffold(
-          body: GestureDetector(
-            onTap: () {
-              // Unfocus when tapping background
-              FocusScope.of(context).unfocus();
-              // Hide search overlay when tapping background
-              _hideSearchOverlay();
-            },
-            child: AnimatedBackground(
+        return GestureDetector(
+          onTap: () {
+            // Unfocus search bar when tapping background
+            FocusScope.of(context).unfocus();
+          },
+          child: Scaffold(
+            body: AnimatedBackground(
             style: settingsProvider.settings.backgroundStyle,
             themeConfig: settingsProvider.currentThemeConfig,
             isSimpleMode: settingsProvider.isSimpleMode,
             child: SafeArea(
               top: false, // Allow header to extend into safe area
-          child: Stack(
-            children: [
+              child: Stack(
+                children: [
               // Main scrollable content with CustomScrollView
               Consumer<NotesProvider>(
                 builder: (context, provider, child) {
@@ -1164,10 +1528,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             greeting: _getGreeting(),
                             onSearchTap: () {
                               HapticService.light();
-                              setState(() => _showSearchOverlay = true);
-                              _searchAnimationController.forward();
+                              // Focus the search field when tapped
+                              _searchFocusNode.requestFocus();
                             },
                             onOrganizeTap: _showOrganizeBottomSheet,
+                            searchController: _searchController,
+                            searchFocusNode: _searchFocusNode,
+                            onSearchChanged: (value) {
+                              if (!_isInChatMode) {
+                                context.read<NotesProvider>().setSearchQuery(value);
+                              }
+                              setState(() {});
+                            },
+                            onSearchSubmitted: (value) async {
+                              if (value.trim().isEmpty) return;
+                              if (_isInChatMode) {
+                                await _sendToAI(value);
+                                _searchController.clear();
+                              }
+                            },
+                            onAskAI: () {
+                              _enterChatMode(_searchController.text);
+                            },
+                            hasSearchQuery: _searchController.text.isNotEmpty,
+                            isInChatMode: _isInChatMode,
                           ),
                           expandedHeight: 140.0 + MediaQuery.of(context).padding.top,
                           collapsedHeight: 56.0 + MediaQuery.of(context).padding.top,
@@ -1201,11 +1585,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           );
                         },
                       ),
-                      // Add top padding when search is active
-                      if (_showSearchOverlay)
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: 30),
-                        ),
                       // Empty state when no notes
                       if (filteredNotes.isEmpty)
                         Consumer<FoldersProvider>(
@@ -1230,7 +1609,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 notes: filteredNotes,
                                 provider: provider,
                                 searchQuery: _searchController.text,
-                                onHideSearchOverlay: _hideSearchOverlay,
                                 onShowNoteOptions: _showNoteOptions,
                               );
                             }
@@ -1239,8 +1617,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               return HomeNotesGrid(
                                 notes: filteredNotes,
                                 provider: provider,
-                                                  searchQuery: _searchController.text,
-                                onHideSearchOverlay: _hideSearchOverlay,
+                                searchQuery: _searchController.text,
                                 onShowNoteOptions: _showNoteOptions,
                                 extractSnippets: _extractSnippets,
                               );
@@ -1406,7 +1783,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   
                                   // Clear search bar when navigating to note
                                   if (searchQuery != null) {
-                                    _hideSearchOverlay();
+                                    _searchController.clear();
+                                    context.read<NotesProvider>().setSearchQuery('');
                                   }
                                   
                                   await context.pushHero(
@@ -1451,92 +1829,44 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
               
               // Microphone button - centered (or Organize button when viewing Unorganized)
-              // Hide when search overlay is visible
-              if (!_showSearchOverlay)
-                Positioned(
-                  bottom: 24,
-                  left: 0,
-                  right: 0,
-                  child: AnimatedOpacity(
-                    opacity: _showSearchOverlay ? 0.0 : 1.0,
-                    duration: const Duration(milliseconds: 200),
-                    child: AnimatedSlide(
-                      offset: _showSearchOverlay ? const Offset(0, 1) : Offset.zero,
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeInOut,
-                      child: Center(
-                        child: Consumer<FoldersProvider>(
-                          builder: (context, foldersProvider, child) {
-                            final isViewingUnorganized = _currentFolderContext == foldersProvider.unorganizedFolderId;
-                            
-                            if (isViewingUnorganized) {
-                              // Show Organize button when viewing unorganized folder
-                              return FloatingActionButton.extended(
-                                onPressed: () {
-                                  HapticService.medium();
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const OrganizationScreen()),
-                                  );
-                                },
-                                icon: const Icon(Icons.auto_fix_high),
-                                label: Text(LocalizationService().t('organize')),
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                              );
-                            } else {
-                              // Show microphone button for all other views
-                              return MicrophoneButton(
-                                key: _microphoneKey,
-                                onRecordingStart: _startRecording,
-                                onRecordingStop: _stopRecording,
-                                onRecordingLock: _onRecordingLock,
-                                onRecordingUnlock: _onRecordingUnlock,
-                              );
-                            }
+              Positioned(
+                bottom: 24,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Consumer<FoldersProvider>(
+                    builder: (context, foldersProvider, child) {
+                      final isViewingUnorganized = _currentFolderContext == foldersProvider.unorganizedFolderId;
+                      
+                      if (isViewingUnorganized) {
+                        // Show Organize button when viewing unorganized folder
+                        return FloatingActionButton.extended(
+                          onPressed: () {
+                            HapticService.medium();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const OrganizationScreen()),
+                            );
                           },
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-          
-              // Pull-to-search overlay
-              if (_showSearchOverlay)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: HomeSearchOverlay(
-                    animation: _searchAnimation,
-                    searchController: _searchController,
-                    isInChatMode: _isInChatMode,
-                    primaryColor: themeConfig.primaryColor,
-                    onClose: () {
-                      if (_isInChatMode) {
-                        _exitChatMode();
+                          icon: const Icon(Icons.auto_fix_high),
+                          label: Text(LocalizationService().t('organize')),
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                        );
                       } else {
-                        _hideSearchOverlay();
+                        // Show microphone button for all other views
+                        return MicrophoneButton(
+                          key: _microphoneKey,
+                          onRecordingStart: _startRecording,
+                          onRecordingStop: _stopRecording,
+                          onRecordingLock: _onRecordingLock,
+                          onRecordingUnlock: _onRecordingUnlock,
+                        );
                       }
                     },
-                    onChanged: (value) {
-                      if (!_isInChatMode) {
-                        context.read<NotesProvider>().setSearchQuery(value);
-                      }
-                      setState(() {});
-                    },
-                    onSubmitted: (value) async {
-                      if (value.trim().isEmpty) return;
-                      if (_isInChatMode) {
-                        await _sendToAI(value);
-                        _searchController.clear();
-                      }
-                    },
-                    onAskAI: () {
-                      _enterChatMode(_searchController.text);
-                    },
-                    hasSearchQuery: _searchController.text.isNotEmpty,
                   ),
                 ),
+              ),
+          
               // Chat overlay
               if (_isInChatMode)
                 Positioned.fill(
@@ -1584,12 +1914,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 },
               ),
               
-            ],
+                ],
               ),
+            ),
           ),
         ),
-      ),
-        );
+          );
       },
     );
   }
@@ -1607,9 +1937,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final now = DateTime.now();
     final isWeekend = now.weekday == DateTime.saturday || now.weekday == DateTime.sunday;
     
-    // Get note context
+    // Get note context (use allNotes so search doesn't affect greeting)
     final provider = context.read<NotesProvider>();
-    final filteredNotes = _getFilteredNotes(provider.notes);
+    final filteredNotes = _getFilteredNotes(provider.allNotes);
     final noteCount = filteredNotes.length;
     final hasNotes = noteCount > 0;
     

@@ -9,6 +9,7 @@ import 'providers/settings_provider.dart';
 import 'providers/folders_provider.dart';
 import 'services/connectivity_service.dart';
 import 'services/recording_queue_service.dart';
+import 'services/failed_recordings_service.dart';
 import 'services/superwall_event_delegate.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
@@ -82,6 +83,11 @@ void main() async {
     ),
   );
 
+  // Initialize services
+  if (envError == null) {
+    await FailedRecordingsService().initialize();
+  }
+
   runApp(MainApp(envError: envError));
 }
 
@@ -95,7 +101,7 @@ class MainApp extends StatelessWidget {
     // If there's an environment error, show error screen
     if (envError != null) {
       return MaterialApp(
-        title: 'Nota AI',
+        title: 'Notie AI',
         debugShowCheckedModeBanner: false,
         theme: ThemeData.dark(),
         home: _EnvironmentErrorScreen(error: envError!),
@@ -117,13 +123,16 @@ class MainApp extends StatelessWidget {
           create: (context) => RecordingQueueService(),
         ),
         ChangeNotifierProvider(
+          create: (context) => FailedRecordingsService(),
+        ),
+        ChangeNotifierProvider(
           create: (context) => ConnectivityService(),
         ),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settingsProvider, child) {
           return MaterialApp(
-            title: 'Nota AI',
+            title: 'Notie AI',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.buildTheme(settingsProvider.settings.themePreset),
             home: const SplashScreen(),
