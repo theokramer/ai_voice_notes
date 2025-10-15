@@ -149,30 +149,193 @@ class RecordingOverlay extends StatelessWidget {
 
 
   Widget _buildVoiceCommands(BuildContext context, ThemeConfig themeConfig, List<String> examples) {
+    // Parse commands with their icons
+    final commands = _parseCommandExamples(examples);
+    
     return Column(
       children: [
-        Text(
-          'Voice Commands Available:',
-          style: TextStyle(
-            color: AppTheme.textPrimary.withOpacity(0.8),
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+        // Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.mic,
+              color: themeConfig.accentLight,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Voice Commands',
+              style: TextStyle(
+                color: AppTheme.textPrimary.withOpacity(0.9),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        ...examples.map((example) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Text(
-            '• $example',
-            style: TextStyle(
-              color: AppTheme.textSecondary.withOpacity(0.7),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+        const SizedBox(height: 12),
+        
+        // Tip banner
+        if (commands.isNotEmpty && commands.first.isTip)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: themeConfig.accentLight.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: themeConfig.accentLight.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '💡',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    commands.first.text,
+                    style: TextStyle(
+                      color: themeConfig.accentLight,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
             ),
           ),
-        )).toList(),
+        
+        // Command cards in a grid
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: commands
+            .where((cmd) => !cmd.isTip)
+            .map((cmd) => _buildCommandCard(themeConfig, cmd))
+            .toList(),
+        ),
       ],
     );
+  }
+  
+  Widget _buildCommandCard(ThemeConfig themeConfig, _VoiceCommandDisplay cmd) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.glassSurface.withOpacity(0.6),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: AppTheme.glassBorder.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Icon
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: themeConfig.accentLight.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              cmd.icon,
+              color: themeConfig.accentLight,
+              size: 16,
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Command text
+          Text(
+            cmd.command,
+            style: TextStyle(
+              color: AppTheme.textPrimary.withOpacity(0.95),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 2),
+          // Description
+          Text(
+            cmd.description,
+            style: TextStyle(
+              color: AppTheme.textSecondary.withOpacity(0.7),
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  List<_VoiceCommandDisplay> _parseCommandExamples(List<String> examples) {
+    final commands = <_VoiceCommandDisplay>[];
+    
+    for (final example in examples) {
+      if (example.isEmpty) continue;
+      
+      // Check if it's the tip
+      if (example.startsWith('💡')) {
+        commands.add(_VoiceCommandDisplay(
+          isTip: true,
+          text: example.substring(2).trim(),
+          icon: Icons.lightbulb,
+          command: '',
+          description: '',
+        ));
+        continue;
+      }
+      
+      // Parse command format: "command" → description
+      final parts = example.split('→');
+      if (parts.length != 2) continue;
+      
+      final commandPart = parts[0].trim().replaceAll('"', '').replaceAll('•', '').trim();
+      final description = parts[1].trim();
+      
+      // Determine icon based on description/command
+      IconData icon;
+      if (commandPart.contains('neu') || commandPart.contains('new') || 
+          commandPart.contains('nouvelle') || commandPart.contains('nuevo')) {
+        icon = Icons.create_new_folder_outlined;
+      } else if (commandPart.contains('ergänzung') || commandPart.contains('addition') || 
+                 commandPart.contains('ajout') || commandPart.contains('adición') ||
+                 commandPart.contains('letzten') || commandPart.contains('last') ||
+                 commandPart.contains('última') || commandPart.contains('dernière')) {
+        icon = Icons.add_circle_outline;
+      } else if (commandPart.contains('titel') || commandPart.contains('title') || 
+                 commandPart.contains('titre') || commandPart.contains('título')) {
+        icon = Icons.title;
+      } else if (commandPart.contains('ordner') || commandPart.contains('folder') || 
+                 commandPart.contains('dossier') || commandPart.contains('carpeta')) {
+        icon = Icons.folder_outlined;
+      } else {
+        icon = Icons.layers_outlined; // For combined commands
+      }
+      
+      commands.add(_VoiceCommandDisplay(
+        isTip: false,
+        text: commandPart,
+        icon: icon,
+        command: commandPart.split('/').first.trim(), // Take first variant for display
+        description: description,
+      ));
+    }
+    
+    return commands;
   }
 
   Widget _buildActionButtons(BuildContext context, ThemeConfig themeConfig) {
@@ -306,36 +469,66 @@ class RecordingOverlay extends StatelessWidget {
     );
   }
 
-  List<String> _getVoiceCommandExamples(AppLanguage language) {
+  List<String> _getVoiceCommandExamples(AppLanguage? language) {
+    language ??= AppLanguage.english; // Default fallback
     switch (language) {
       case AppLanguage.german:
         return [
-          'Neuer Ordner [Name]',
-          'An letzte Notiz',
-          'Notiz [Titel] in [Ordner]',
-          'Ordner [Name] erstellen',
+          '💡 Kurzform empfohlen, längere Varianten funktionieren auch',
+          '',
+          '"neu [Name]" → Ordner erstellen',
+          '"ergänzung" / "zur letzten notiz" → Anhängen',
+          '"titel [Titel]" → Titel setzen',
+          '"ordner [Name]" → In Ordner speichern',
+          '"neue notiz mit titel [X] in ordner [Y]" → Alles kombinieren',
         ];
       case AppLanguage.spanish:
         return [
-          'Nueva carpeta [nombre]',
-          'Añadir a última nota',
-          'Nota [título] en [carpeta]',
-          'Crear carpeta [nombre]',
+          '💡 Forma corta recomendada, variaciones largas también funcionan',
+          '',
+          '"nuevo [nombre]" → Crear carpeta',
+          '"adición" / "añadir a la última" → Añadir',
+          '"título [título]" → Establecer título',
+          '"carpeta [nombre]" → Guardar en carpeta',
+          '"nueva nota con título [X] en carpeta [Y]" → Combinar todo',
         ];
       case AppLanguage.french:
         return [
-          'Nouveau dossier [nom]',
-          'Ajouter à dernière note',
-          'Note [titre] dans [dossier]',
-          'Créer dossier [nom]',
+          '💡 Forme courte recommandée, variantes longues fonctionnent aussi',
+          '',
+          '"nouvelle [nom]" → Créer dossier',
+          '"ajout" / "ajouter à dernière note" → Ajouter',
+          '"titre [titre]" → Définir titre',
+          '"dossier [nom]" → Sauvegarder dans dossier',
+          '"nouvelle note avec titre [X] dans dossier [Y]" → Tout combiner',
         ];
       case AppLanguage.english:
         return [
-          'New folder [name]',
-          'Append to last note',
-          'Note [title] in [folder]',
-          'Create folder [name]',
+          '💡 Short form recommended, longer variations also work',
+          '',
+          '"new [name]" → Create folder',
+          '"addition" / "add to last note" → Append',
+          '"title [title]" → Set title',
+          '"folder [name]" → Save to folder',
+          '"new note with title [X] in folder [Y]" → Combine all',
         ];
     }
   }
+}
+
+/// Helper class to parse and display voice commands
+class _VoiceCommandDisplay {
+  final bool isTip;
+  final String text;
+  final IconData icon;
+  final String command;
+  final String description;
+  
+  _VoiceCommandDisplay({
+    required this.isTip,
+    required this.text,
+    required this.icon,
+    required this.command,
+    required this.description,
+  });
 }

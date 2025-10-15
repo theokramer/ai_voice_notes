@@ -7,7 +7,6 @@ import '../models/settings.dart';
 import '../models/app_language.dart';
 import '../providers/settings_provider.dart';
 import '../providers/notes_provider.dart';
-import '../providers/folders_provider.dart';
 import '../theme/app_theme.dart';
 import '../services/haptic_service.dart';
 import '../services/localization_service.dart';
@@ -16,7 +15,6 @@ import '../widgets/animated_background.dart';
 import '../widgets/theme_preview_card.dart';
 import '../widgets/settings/settings_section.dart';
 import '../widgets/export_dialog.dart';
-import 'organization_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -88,11 +86,7 @@ class SettingsScreen extends StatelessWidget {
                     SettingsSection(
                       title: 'Smart Notes',
                       children: [
-                        _buildTranscriptionModeSelector(context, settingsProvider.currentThemeConfig),
                         _buildAutoOrganizeToggle(context, settingsProvider.currentThemeConfig),
-                        _buildAllowAICreateFoldersToggle(context, settingsProvider.currentThemeConfig),
-                        _buildShowOrganizationHintsToggle(context, settingsProvider.currentThemeConfig),
-                        _buildOrganizeNowButton(context, settingsProvider.currentThemeConfig),
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
@@ -100,8 +94,6 @@ class SettingsScreen extends StatelessWidget {
                       title: LocalizationService().t('preferences'),
                       children: [
                         _buildHapticsToggle(context, settingsProvider.currentThemeConfig),
-                        _buildUnifiedNoteViewToggle(context, settingsProvider.currentThemeConfig),
-                        _buildAutoCloseToggle(context, settingsProvider.currentThemeConfig),
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
@@ -177,50 +169,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUnifiedNoteViewToggle(BuildContext context, ThemeConfig themeConfig) {
-    return Consumer<SettingsProvider>(
-      builder: (context, provider, child) {
-        return _buildTile(
-          context,
-          themeConfig,
-          icon: Icons.description,
-          title: 'Unified Note View',
-          subtitle: 'Show notes as flowing document',
-          trailing: Switch(
-            value: provider.settings.useUnifiedNoteView,
-            activeTrackColor: themeConfig.primaryColor,
-            onChanged: (value) async {
-              await HapticService.light();
-              await provider.updateUnifiedNoteView(value);
-            },
-          ),
-        );
-      },
-    );
-  }
 
-  Widget _buildAutoCloseToggle(BuildContext context, ThemeConfig themeConfig) {
-    return Consumer<SettingsProvider>(
-      builder: (context, provider, child) {
-        final localization = LocalizationService();
-        return _buildTile(
-          context,
-          themeConfig,
-          icon: Icons.timer,
-          title: localization.t('settings_auto_close_title'),
-          subtitle: localization.t('settings_auto_close_subtitle'),
-          trailing: Switch(
-            value: provider.settings.autoCloseAfterEntry,
-            activeTrackColor: themeConfig.primaryColor,
-            onChanged: (value) async {
-              await HapticService.light();
-              await provider.updateAutoCloseAfterEntry(value);
-            },
-          ),
-        );
-      },
-    );
-  }
 
   Widget _buildLanguageSelector(BuildContext context, ThemeConfig themeConfig) {
     return Consumer<SettingsProvider>(
@@ -521,44 +470,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTranscriptionModeSelector(BuildContext context, ThemeConfig themeConfig) {
-    return Consumer<SettingsProvider>(
-      builder: (context, provider, child) {
-        final mode = provider.settings.transcriptionMode;
-        final modeName = mode == TranscriptionMode.aiBeautify ? 'AI Beautify' : 'Plain Text';
-        
-        return _buildTile(
-          context,
-          themeConfig,
-          icon: Icons.auto_awesome,
-          title: 'Transcription Mode',
-          subtitle: modeName,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                modeName,
-                style: TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: AppTheme.textSecondary,
-              ),
-            ],
-          ),
-          onTap: () {
-            HapticService.light();
-            _showTranscriptionModeDialog(context);
-          },
-        );
-      },
-    );
-  }
 
   Widget _buildAutoOrganizeToggle(BuildContext context, ThemeConfig themeConfig) {
     return Consumer<SettingsProvider>(
@@ -582,85 +493,8 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAllowAICreateFoldersToggle(BuildContext context, ThemeConfig themeConfig) {
-    return Consumer<SettingsProvider>(
-      builder: (context, provider, child) {
-        final isAutoOrg = provider.settings.organizationMode == OrganizationMode.autoOrganize;
-        // Disable this toggle if auto-organization is off
-        final onChanged = isAutoOrg ? (bool value) {
-          HapticService.light();
-          provider.updateAllowAICreateFolders(value);
-        } : (bool value) {};
-        
-        return _buildToggleTile(
-          context,
-          themeConfig,
-          icon: Icons.create_new_folder,
-          title: 'Allow AI to Create Folders',
-          subtitle: 'AI can create new folders when appropriate',
-          value: isAutoOrg && provider.settings.allowAICreateFolders,
-          onChanged: onChanged,
-        );
-      },
-    );
-  }
 
-  Widget _buildShowOrganizationHintsToggle(BuildContext context, ThemeConfig themeConfig) {
-    return Consumer<SettingsProvider>(
-      builder: (context, provider, child) {
-        return _buildToggleTile(
-          context,
-          themeConfig,
-          icon: Icons.info_outline,
-          title: 'Show Organization Hints',
-          subtitle: 'Brief notifications when notes are saved',
-          value: provider.settings.showOrganizationHints,
-          onChanged: (value) async {
-            HapticService.light();
-            await provider.updateShowOrganizationHints(value);
-          },
-        );
-      },
-    );
-  }
 
-  Widget _buildOrganizeNowButton(BuildContext context, ThemeConfig themeConfig) {
-    return Consumer3<NotesProvider, SettingsProvider, FoldersProvider>(
-      builder: (context, notesProvider, settingsProvider, foldersProvider, child) {
-        final localization = LocalizationService();
-        // Count unorganized notes (both null and explicit unorganized folder ID)
-        final unorganizedFolderId = foldersProvider.unorganizedFolderId;
-        final unorganizedCount = notesProvider.notes.where((n) {
-          return n.folderId == null || n.folderId == unorganizedFolderId;
-        }).length;
-        
-        return _buildTile(
-          context,
-          themeConfig,
-          icon: Icons.folder_special,
-          title: localization.t('settings_unorganized_notes', {'count': unorganizedCount.toString()}),
-          subtitle: unorganizedCount > 0 
-              ? localization.t('settings_tap_to_organize')
-              : localization.t('settings_all_organized'),
-          trailing: unorganizedCount > 0 ? Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color: AppTheme.textSecondary,
-          ) : Icon(
-            Icons.check_circle,
-            color: Colors.green,
-          ),
-          onTap: unorganizedCount > 0 ? () {
-            HapticService.light();
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const OrganizationScreen()),
-            );
-          } : null,
-        );
-      },
-    );
-  }
 
   Widget _buildExportDataButton(BuildContext context, ThemeConfig themeConfig) {
     final localization = LocalizationService();
@@ -1177,115 +1011,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showTranscriptionModeDialog(BuildContext context) {
-    final provider = context.read<SettingsProvider>();
-    final themeConfig = provider.currentThemeConfig;
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.black87,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(AppTheme.spacing24),
-          decoration: BoxDecoration(
-            color: const Color(0xEE1A1F2E),
-            borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-            border: Border.all(
-              color: AppTheme.glassBorder.withOpacity(0.3),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 30,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Transcription Mode',
-                style: Theme.of(context).textTheme.displaySmall,
-              ),
-              const SizedBox(height: AppTheme.spacing16),
-              ...TranscriptionMode.values.map((mode) {
-                final isSelected = provider.settings.transcriptionMode == mode;
-                final modeName = mode == TranscriptionMode.aiBeautify ? 'AI Beautify' : 'Plain Text';
-                final modeDesc = mode == TranscriptionMode.aiBeautify
-                    ? 'AI structures with headings and formatting'
-                    : 'Direct transcription, no formatting';
-                
-                return GestureDetector(
-                  onTap: () async {
-                    await HapticService.medium();
-                    await provider.updateTranscriptionMode(mode);
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: AppTheme.spacing8),
-                    padding: const EdgeInsets.all(AppTheme.spacing16),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? themeConfig.primaryColor.withValues(alpha: 0.2)
-                          : AppTheme.glassSurface,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                      border: Border.all(
-                        color: isSelected
-                            ? themeConfig.primaryColor
-                            : AppTheme.glassBorder,
-                        width: isSelected ? 2 : 1.5,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            if (isSelected)
-                              Icon(
-                                Icons.check_circle,
-                                color: themeConfig.primaryColor,
-                                size: 20,
-                              ),
-                            if (isSelected) const SizedBox(width: AppTheme.spacing12),
-                            Text(
-                              modeName,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppTheme.spacing8),
-                        Text(
-                          modeDesc,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      )
-      .animate()
-      .scale(
-        begin: const Offset(0.9, 0.9),
-        end: const Offset(1, 1),
-        duration: AppTheme.animationFast,
-        curve: Curves.easeOut,
-      )
-      .fadeIn(duration: AppTheme.animationFast),
-    );
-  }
 
   Future<void> _clearCache(BuildContext context) async {
     final provider = context.read<SettingsProvider>();

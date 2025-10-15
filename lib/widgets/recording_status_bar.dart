@@ -486,17 +486,21 @@ class _FolderPickerDialogState extends State<_FolderPickerDialog> {
   
   List<Folder> get _filteredFolders {
     if (_searchQuery.isEmpty) {
-      // Show top 5-7 folders by note count
+      // Sort folders alphabetically
       final sorted = List<Folder>.from(widget.folders)
-        ..sort((a, b) => b.noteCount.compareTo(a.noteCount));
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
       return sorted.take(7).toList();
     }
     
     // Search in all folders
     final query = _searchQuery.toLowerCase();
-    return widget.folders.where((folder) {
+    final filtered = widget.folders.where((folder) {
       return folder.name.toLowerCase().contains(query);
     }).toList();
+    
+    // Sort search results alphabetically
+    filtered.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return filtered;
   }
 
   @override

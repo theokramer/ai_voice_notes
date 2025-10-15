@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -24,14 +23,13 @@ import '../widgets/create_note_dialog.dart';
 import '../widgets/custom_snackbar.dart';
 import '../widgets/animated_background.dart';
 import '../widgets/hero_page_route.dart';
-import '../widgets/ai_chat_overlay.dart';
+import '../feature_updates/ai_chat_overlay.dart';
 import '../widgets/note_organization_sheet.dart';
 import '../widgets/folder_selector.dart';
 import '../widgets/recording_overlay.dart';
 import '../widgets/recording_status_bar.dart';
 import '../widgets/folder_management_dialog.dart';
 import '../widgets/home/home_search_overlay.dart';
-import '../widgets/home/home_ask_ai_button.dart';
 import '../widgets/home/home_animated_header.dart';
 import '../widgets/home/home_empty_state.dart';
 import '../widgets/home/home_notes_list.dart';
@@ -47,7 +45,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  final AudioRecorder _audioRecorder = AudioRecorder();
+  AudioRecorder _audioRecorder = AudioRecorder();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<MicrophoneButtonState> _microphoneKey = GlobalKey<MicrophoneButtonState>();
@@ -545,6 +543,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Fire haptic feedback immediately (don't await)
     HapticService.medium();
 
+    // CRITICAL: Cancel any existing subscriptions before starting new recording
+    // This prevents "Stream has already been listened to" error
+    _recordingTimer?.cancel();
+    _amplitudeSubscription?.cancel();
+    _amplitudeSubscription = null;
+
     setState(() {
       _isRecording = true;
       _isRecordingLocked = false;
@@ -552,6 +556,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _recordingDuration = Duration.zero;
       _totalPausedDuration = Duration.zero; // Reset paused duration
       _pauseStartTime = null; // Reset pause start time
+      _currentAmplitude = 0.5; // Reset amplitude for visualization
+      _amplitudeHistory.clear(); // Clear previous recording's amplitude history
     });
 
     // Start recording timer
@@ -565,46 +571,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
     });
 
-    // TODO: Implement real amplitude stream when available in record package
-    // For now, simulate realistic amplitude changes with history tracking
-    _amplitudeSubscription = Stream.periodic(const Duration(milliseconds: 50), (i) {
-      // Create more realistic voice-like amplitude patterns
-      final time = i * 0.05; // Time in seconds
-      final baseAmplitude = -40.0; // Base quiet level
-      
-      // Add voice-like patterns (speaking, pauses, emphasis)
-      double voicePattern = 0.0;
-      if (time % 10 < 7) { // Speaking for 7 seconds, pause for 3
-        // Simulate speech patterns with varying intensity
-        voicePattern = 15.0 * (0.5 + 0.5 * sin(time * 2)) * (0.3 + 0.7 * cos(time * 0.7));
-        
-        // Add occasional emphasis (louder words)
-        if (sin(time * 1.3) > 0.8) {
-          voicePattern *= 1.5;
-        }
-      }
-      
-      // Add some natural variation
-      final variation = 5.0 * sin(time * 3.7);
-      
-      final finalAmplitude = baseAmplitude + voicePattern + variation;
-      return Amplitude(current: finalAmplitude.clamp(-60.0, 0.0), max: 0.0);
-    }).listen((amplitude) {
-      if (mounted) {
-        setState(() {
-          final newAmplitude = _normalizeAmplitude(amplitude.current);
-          _currentAmplitude = newAmplitude;
-          
-          // Add to history (keep last 100 samples)
-          _amplitudeHistory.add(newAmplitude);
-          if (_amplitudeHistory.length > 100) {
-            _amplitudeHistory.removeAt(0);
-          }
-        });
-      }
-    });
-
-    // Use optimized recording service
+    // Use optimized recording service (must start before listening to amplitude)
     final result = await RecordingService().startRecording(_audioRecorder);
 
     if (!result.success) {
@@ -641,6 +608,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       return;
     }
 
+    debugPrint('🎤 Recording started successfully, setting up amplitude listener...');
+    
+    // Listen to real microphone amplitude from the record package
+    try {
+      _amplitudeSubscription = _audioRecorder.onAmplitudeChanged(const Duration(milliseconds: 50))
+        .listen(
+          (amplitude) {
+            if (mounted && _isRecording) {
+              setState(() {
+                final newAmplitude = _normalizeAmplitude(amplitude.current);
+                _currentAmplitude = newAmplitude;
+                
+                // Add to history (keep last 100 samples for smooth scrolling)
+                _amplitudeHistory.add(newAmplitude);
+                if (_amplitudeHistory.length > 100) {
+                  _amplitudeHistory.removeAt(0);
+                }
+              });
+            }
+          },
+          onError: (error) {
+            debugPrint('⚠️ Amplitude stream error: $error');
+          },
+          cancelOnError: false,
+        );
+      debugPrint('✅ Amplitude listener set up successfully');
+    } catch (e) {
+      debugPrint('❌ Failed to set up amplitude listener: $e');
+    }
+
     // Recording path no longer stored - handled by RecordingQueueService
   }
 
@@ -668,6 +665,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     });
     
     final stoppedPath = await RecordingService().stopRecording(_audioRecorder);
+    
+    // Dispose and recreate AudioRecorder for next recording
+    // This ensures fresh amplitude stream every time
+    try {
+      await _audioRecorder.dispose();
+      debugPrint('🔄 AudioRecorder disposed');
+    } catch (e) {
+      debugPrint('⚠️ Error disposing AudioRecorder: $e');
+    }
+    _audioRecorder = AudioRecorder();
+    debugPrint('✅ New AudioRecorder instance created');
 
     if (stoppedPath == null) {
       if (mounted) {
@@ -697,8 +705,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       );
       
       // Show brief hint if enabled (only for explicit folder saves)
-      final settings = context.read<SettingsProvider>().settings;
-      if (settings.showOrganizationHints && mounted && _currentFolderContext != null) {
+      if (mounted && _currentFolderContext != null) {
         final folderName = context.read<FoldersProvider>().getFolderById(_currentFolderContext!)?.name;
         
         if (folderName != null) {
@@ -738,6 +745,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     
     // Stop recording without processing
     final stoppedPath = await RecordingService().stopRecording(_audioRecorder);
+    
+    // Dispose and recreate AudioRecorder for next recording
+    // This ensures fresh amplitude stream every time
+    try {
+      await _audioRecorder.dispose();
+      debugPrint('🔄 AudioRecorder disposed');
+    } catch (e) {
+      debugPrint('⚠️ Error disposing AudioRecorder: $e');
+    }
+    _audioRecorder = AudioRecorder();
+    debugPrint('✅ New AudioRecorder instance created');
     
     // Delete the temp audio file if it exists
     if (stoppedPath != null) {
@@ -1493,12 +1511,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     searchController: _searchController,
                     isInChatMode: _isInChatMode,
                     primaryColor: themeConfig.primaryColor,
-                    onClose: _hideSearchOverlay,
+                    onClose: () {
+                      if (_isInChatMode) {
+                        _exitChatMode();
+                      } else {
+                        _hideSearchOverlay();
+                      }
+                    },
                     onChanged: (value) {
                       if (!_isInChatMode) {
                         context.read<NotesProvider>().setSearchQuery(value);
-                        setState(() {}); // Rebuild to update Ask AI button
                       }
+                      setState(() {});
                     },
                     onSubmitted: (value) async {
                       if (value.trim().isEmpty) return;
@@ -1507,17 +1531,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         _searchController.clear();
                       }
                     },
-                    askAIButton: HomeAskAIButton(
-                      searchQuery: _searchController.text,
-                      hasResults: _getFilteredNotes(context.read<NotesProvider>().notes).isNotEmpty,
-                      primaryColor: themeConfig.primaryColor,
-                      onTap: () {
-                        HapticService.light();
-                        _enterChatMode(_searchController.text.isNotEmpty 
-                            ? _searchController.text 
-                            : '');
-                      },
-                    ),
+                    onAskAI: () {
+                      _enterChatMode(_searchController.text);
+                    },
+                    hasSearchQuery: _searchController.text.isNotEmpty,
                   ),
                 ),
               // Chat overlay

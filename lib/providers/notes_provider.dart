@@ -393,10 +393,9 @@ class NotesProvider extends ChangeNotifier {
     // Start with the original list
     List<Note> filtered;
     
-    // Apply search filter - simplified for content field
+    // Apply search filter
     if (_searchQuery.isNotEmpty && _searchQuery.trim().isNotEmpty) {
       final query = _searchQuery.toLowerCase().trim();
-      filtered = [];
       
       // Check if this is a tag-only search (starts with #)
       final isTagSearch = query.startsWith('#');
@@ -404,21 +403,13 @@ class NotesProvider extends ChangeNotifier {
       
       // If tag-only search, skip (tags removed)
       if (isTagSearch && searchTerm.isNotEmpty) {
-        // Tags feature removed - no results for tag searches
+        filtered = [];
       } else {
-        // Normal search: name and content
-        for (final note in _notes) {
-          // Quick check: name match (most common)
-          if (note.name.toLowerCase().contains(query)) {
-            filtered.add(note);
-            continue;
-          }
-          
-          // Check content
-          if (note.content.toLowerCase().contains(query)) {
-                filtered.add(note);
-          }
-        }
+        // Simple search: name or content contains query
+        filtered = _notes.where((note) {
+          return note.name.toLowerCase().contains(searchTerm) ||
+                 note.content.toLowerCase().contains(searchTerm);
+        }).toList();
       }
     } else {
       // No search query - use shallow copy only

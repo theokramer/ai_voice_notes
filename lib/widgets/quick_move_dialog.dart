@@ -62,9 +62,9 @@ class _QuickMoveDialogState extends State<QuickMoveDialog> {
   
   List<Folder> get _filteredFolders {
     if (_searchQuery.isEmpty) {
-      // Show top 5-7 folders by note count
+      // Sort folders alphabetically
       final sorted = List<Folder>.from(widget.folders)
-        ..sort((a, b) => b.noteCount.compareTo(a.noteCount));
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
       return sorted.take(7).toList();
     }
     

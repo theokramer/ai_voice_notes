@@ -62,6 +62,15 @@ class RecordingService {
     }
 
     try {
+      // Safety check: ensure recorder is not already recording
+      // This prevents issues if previous recording wasn't properly stopped
+      if (await recorder.isRecording()) {
+        debugPrint('⚠️ Recorder still active, stopping previous recording...');
+        await recorder.stop();
+        // Small delay to ensure clean state
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      
       // Use cached temp directory or fetch if not available
       final tempPath = _tempDirectoryPath ?? (await getTemporaryDirectory()).path;
       final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -91,10 +100,24 @@ class RecordingService {
   /// Stop recording
   Future<String?> stopRecording(AudioRecorder recorder) async {
     try {
-      return await recorder.stop();
+      // Check if actually recording before stopping
+      if (await recorder.isRecording()) {
+        final path = await recorder.stop();
+        debugPrint('✅ Recording stopped successfully');
+        return path;
+      } else {
+        debugPrint('⚠️ Recorder not recording, nothing to stop');
+        return null;
+      }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Recording stop failed: $e');
+      }
+      // Try to force stop even if there's an error
+      try {
+        await recorder.stop();
+      } catch (_) {
+        // Ignore error on cleanup attempt
       }
       return null;
     }

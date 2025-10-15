@@ -46,11 +46,12 @@ class MicrophoneButtonState extends State<MicrophoneButton>
   // Drag-to-lock state
   double _dragOffset = 0.0;
   double _dragStartY = 0.0;
+  double _dragStartGlobalY = 0.0;
   bool _isLocked = false;
   bool _isDragging = false;
   bool _isStoppingRecording = false; // Guard to prevent duplicate recordings during stop
-  static const double _lockThreshold = 200.0; // Drag 200px in local coords to lock (increased from 150)
-  static const double _dragStartThreshold = 60.0; // Min 60px moved to start counting as drag (increased from 30 to prevent accidents)
+  static const double _lockThreshold = 35.0; // Drag 35px upward to lock after drag is recognized
+  static const double _dragStartThreshold = 0.5; // Immediately recognize any upward movement as drag
 
   @override
   void initState() {
@@ -184,6 +185,7 @@ class MicrophoneButtonState extends State<MicrophoneButton>
       _isDragging = false;
       _dragOffset = 0.0;
       _dragStartY = 0.0;
+      _dragStartGlobalY = 0.0;
       _isStoppingRecording = false;
     });
     _recordingController.stop();
@@ -208,6 +210,7 @@ class MicrophoneButtonState extends State<MicrophoneButton>
       _isDragging = false;
       _dragOffset = 0.0;
       _dragStartY = 0.0;
+      _dragStartGlobalY = 0.0;
     });
     _recordingController.stop();
     _recordingController.reset();
@@ -247,6 +250,7 @@ class MicrophoneButtonState extends State<MicrophoneButton>
       _isDragging = false;
       _dragOffset = 0.0;
       _dragStartY = 0.0;
+      _dragStartGlobalY = 0.0;
     });
     
     // Notify parent about unlock state change
@@ -291,9 +295,9 @@ class MicrophoneButtonState extends State<MicrophoneButton>
   void _handleDragUpdate(double offset) {
     if (_isLocked) return;
     
-    // Only track positive (downward) movement to prevent accidental triggers
-    // Ignore any upward movement by clamping negative values to 0
-    if (offset < 0) {
+    // Only track negative (upward) movement - upward is negative in widget coordinates
+    // Ignore any downward movement by resetting to 0
+    if (offset > 0) {
       setState(() {
         _dragOffset = 0.0;
       });
@@ -301,28 +305,29 @@ class MicrophoneButtonState extends State<MicrophoneButton>
       return;
     }
     
-    // Track vertical movement in widget coordinates (positive = increased Y)
-    // Clamp to reasonable max value
-    final clampedOffset = offset.clamp(0.0, 200.0);
+    // Track upward movement (negative offset in widget coordinates)
+    // Clamp to reasonable min value (allow up to -50px for visual feedback, slightly beyond lock threshold)
+    final clampedOffset = offset.clamp(-50.0, 0.0);
     
     setState(() {
       _dragOffset = clampedOffset;
     });
     
     // Update lock animation based on progress toward threshold
-    // threshold is +150, so progress goes from 0.0 (at 0) to 1.0 (at +150)
-    final progress = (_dragOffset / _lockThreshold).clamp(0.0, 1.0);
+    // Use absolute value: progress goes from 0.0 (at 0) to 1.0 (at -100px upward)
+    final progress = (_dragOffset.abs() / _lockThreshold).clamp(0.0, 1.0);
     _lockController.value = progress;
     
     if (progress > 0.2) {
-      debugPrint('📊 Drag progress: ${(progress * 100).toInt()}% (offset: $_dragOffset, clamped from: $offset)');
+      debugPrint('📊 Drag progress: ${(progress * 100).toInt()}% (offset: $_dragOffset, abs: ${_dragOffset.abs()})');
     }
   }
 
   void _handleDragEnd() {
-    debugPrint('🔒 Drag ended: offset=$_dragOffset, threshold=$_lockThreshold, isDragging=$_isDragging');
+    debugPrint('🔒 Drag ended: offset=$_dragOffset, abs=${_dragOffset.abs()}, threshold=$_lockThreshold, isDragging=$_isDragging');
     
-    if (_dragOffset >= _lockThreshold) {
+    // Check if dragged far enough upward (using absolute value since offset is negative)
+    if (_dragOffset.abs() >= _lockThreshold) {
       // Lock the recording
       debugPrint('✅ Locking recording!');
       setState(() {
@@ -337,7 +342,7 @@ class MicrophoneButtonState extends State<MicrophoneButton>
       // Note: You might want to add HapticService.heavyImpact() here if available
     } else {
       // Release without locking - stop recording
-      debugPrint('❌ Not locked, stopping recording (offset: $_dragOffset)');
+      debugPrint('❌ Not locked, stopping recording (offset: $_dragOffset, abs: ${_dragOffset.abs()})');
       _handlePressEnd();
     }
   }
@@ -348,100 +353,98 @@ class MicrophoneButtonState extends State<MicrophoneButton>
       builder: (context, settingsProvider, child) {
         final themeConfig = settingsProvider.currentThemeConfig;
         
-        return RawGestureDetector(
-          gestures: {
-            _AllowMultipleGestureRecognizer: GestureRecognizerFactoryWithHandlers<_AllowMultipleGestureRecognizer>(
-              () => _AllowMultipleGestureRecognizer(),
-              (_AllowMultipleGestureRecognizer instance) {
-                instance
-                  ..onDown = (details) {
-                    // Check if tap is on the stop button (when locked)
-                    // Stop button is positioned at top: 20, size: 60x60, centered horizontally
-                    if (_isLocked) {
-                      final dy = details.localPosition.dy;
-                      final dx = details.localPosition.dx;
-                      // Stop button bounds: center ±30px horizontally, 20-80px vertically
-                      final isInStopButton = dy >= 20 && dy <= 80 && 
-                                            dx >= 30 && dx <= 90;
-                      
-                      if (isInStopButton) {
-                        debugPrint('🛑 Stop button hit detected in parent handler');
-                        _handleStopButtonTap();
-                        return;
-                      }
-                    }
-                    
-                    // Start recording immediately on touch down
-                    // Prevent starting if we're in the middle of stopping a recording
-                    if (!_isRecording && !_isLocked && !_isStoppingRecording) {
-                      setState(() {
-                        _dragStartY = details.localPosition.dy;
-                        _isDragging = false;
-                        _dragOffset = 0.0;
-                      });
-                      _handlePressStart();
-                    }
-                  }
-                  ..onUpdate = (details) {
-                    // Track vertical drag
-                    if (_isRecording && !_isLocked) {
-                      // Calculate offset from start position in local widget coordinates
-                      // Positive offset = Y increases in widget space (dragging downward)
-                      final offset = details.localPosition.dy - _dragStartY;
-                      
-                      if (!_isDragging) {
-                        // Only start dragging if moving DOWNWARD beyond threshold
-                        // This prevents accidental locks from horizontal or upward movement
-                        if (offset > _dragStartThreshold) {
-                          setState(() {
-                            _isDragging = true;
-                          });
-                          debugPrint('🎯 Started dragging downward! offset: $offset');
+        return AnimatedBuilder(
+          animation: Listenable.merge([
+            _pressController,
+            _recordingController,
+            _successController,
+            _pulseController,
+            _breathingController,
+            _glowController,
+            _lockController,
+          ]),
+          builder: (context, child) {
+            final buttonSize = _isRecording ? 90.0 : 95.0;
+            final waveformOpacity = _currentAmplitude.clamp(0.4, 0.9);
+            
+            return Transform.scale(
+              scale: _scaleAnimation.value,
+              child: RawGestureDetector(
+                gestures: {
+                  _AllowMultipleGestureRecognizer: GestureRecognizerFactoryWithHandlers<_AllowMultipleGestureRecognizer>(
+                    () => _AllowMultipleGestureRecognizer(),
+                    (_AllowMultipleGestureRecognizer instance) {
+                      instance
+                        ..onDown = (details) {
+                          // Check if tap is on the stop button (when locked)
+                          // Stop button is positioned at top: 20, size: 60x60, centered horizontally
+                          if (_isLocked) {
+                            final dy = details.localPosition.dy;
+                            final dx = details.localPosition.dx;
+                            // Stop button bounds: center ±30px horizontally, 20-80px vertically
+                            final isInStopButton = dy >= 20 && dy <= 80 && 
+                                                  dx >= 30 && dx <= 90;
+                            
+                            if (isInStopButton) {
+                              debugPrint('🛑 Stop button hit detected in parent handler');
+                              _handleStopButtonTap();
+                              return;
+                            }
+                          }
+                          
+                          // Start recording immediately on touch down
+                          // Prevent starting if we're in the middle of stopping a recording
+                          if (!_isRecording && !_isLocked && !_isStoppingRecording) {
+                            setState(() {
+                              _dragStartY = details.localPosition.dy;
+                              _dragStartGlobalY = details.position.dy;
+                              _isDragging = false;
+                              _dragOffset = 0.0;
+                            });
+                            _handlePressStart();
+                          }
                         }
-                      }
-                      
-                      if (_isDragging) {
-                        // Update drag offset and animation
-                        _handleDragUpdate(offset);
-                      }
-                    }
-                  }
-                  ..onEnd = (details) {
-                    // Handle release
-                    if (_isRecording && !_isLocked) {
-                      if (_isDragging) {
-                        // Was dragging - check if should lock
-                        _handleDragEnd();
-                      } else {
-                        // Quick tap - stop recording
-                        _handlePressEnd();
-                      }
-                    }
-                  }
-                  ..onCancel = () {
-                    if (_isRecording && !_isLocked) {
-                      _handlePressEnd();
-                    }
-                  };
-              },
-            ),
-          },
-          child: AnimatedBuilder(
-            animation: Listenable.merge([
-              _pressController,
-              _recordingController,
-              _successController,
-              _pulseController,
-              _breathingController,
-              _glowController,
-              _lockController,
-            ]),
-            builder: (context, child) {
-              final buttonSize = _isRecording ? 90.0 : 95.0;
-              final waveformOpacity = _currentAmplitude.clamp(0.4, 0.9);
-              
-              return Transform.scale(
-                scale: _scaleAnimation.value,
+                        ..onUpdate = (details) {
+                          // Track vertical drag
+                          if (_isRecording && !_isLocked) {
+                            // Calculate offset from start position using GLOBAL coordinates
+                            // Negative offset = Y decreases in screen space (dragging upward)
+                            final offset = details.position.dy - _dragStartGlobalY;
+                            
+                            // Always update drag offset to provide immediate visual feedback
+                            _handleDragUpdate(offset);
+                            
+                            // Mark as dragging once moved upward beyond threshold
+                            if (!_isDragging && offset < -_dragStartThreshold) {
+                              setState(() {
+                                _isDragging = true;
+                              });
+                              debugPrint('🎯 Started dragging upward! offset: $offset (abs: ${offset.abs()})');
+                            }
+                          }
+                        }
+                        ..onEnd = (details) {
+                          // Handle release
+                          if (_isRecording && !_isLocked) {
+                            // Check if there was any upward movement (negative offset)
+                            // or if dragging was explicitly recognized
+                            if (_isDragging || _dragOffset < 0) {
+                              // Was dragging - check if should lock
+                              _handleDragEnd();
+                            } else {
+                              // Quick tap - stop recording
+                              _handlePressEnd();
+                            }
+                          }
+                        }
+                        ..onCancel = () {
+                          if (_isRecording && !_isLocked) {
+                            _handlePressEnd();
+                          }
+                        };
+                    },
+                  ),
+                },
                 child: SizedBox(
                   width: 120,
                   height: 250, // Increased height to accommodate stop button and indicators
@@ -452,35 +455,72 @@ class MicrophoneButtonState extends State<MicrophoneButton>
                       // Lock threshold indicator (when recording, not locked)
                       if (_isRecording && !_isLocked)
                         Positioned(
-                          top: 40,
+                          top: 60, // Positioned closer to button for short drag gesture
                           child: AnimatedBuilder(
                             animation: _lockAnimation,
                             builder: (context, child) {
-                              // Start with low opacity, increase as dragging up
-                              final opacity = 0.3 + (_lockAnimation.value * 0.7);
-                              return Opacity(
-                                opacity: opacity,
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.lock_outline,
-                                      size: 28,
-                                      color: themeConfig.accentLight.withOpacity(
-                                        0.5 + (_lockAnimation.value * 0.5)
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      width: 40,
-                                      height: 3,
-                                      decoration: BoxDecoration(
-                                        color: themeConfig.accentLight.withOpacity(
-                                          0.3 + (_lockAnimation.value * 0.7)
+                              // Start more visible, increase as dragging up
+                              final opacity = 0.6 + (_lockAnimation.value * 0.4);
+                              final scale = 0.9 + (_lockAnimation.value * 0.2); // Scale up as approaching lock
+                              return Transform.scale(
+                                scale: scale,
+                                child: Opacity(
+                                  opacity: opacity,
+                                  child: Column(
+                                    children: [
+                                      // Lock icon with animated background
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: themeConfig.accentLight.withOpacity(
+                                            0.15 + (_lockAnimation.value * 0.25)
+                                          ),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: themeConfig.accentLight.withOpacity(
+                                              0.4 + (_lockAnimation.value * 0.6)
+                                            ),
+                                            width: 2,
+                                          ),
                                         ),
-                                        borderRadius: BorderRadius.circular(2),
+                                        child: Icon(
+                                          _lockAnimation.value > 0.8 ? Icons.lock : Icons.lock_outline,
+                                          size: 24,
+                                          color: themeConfig.accentLight,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 6),
+                                      // Progress bar
+                                      Container(
+                                        width: 50,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: themeConfig.accentLight.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                        child: FractionallySizedBox(
+                                          alignment: Alignment.centerLeft,
+                                          widthFactor: _lockAnimation.value,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: themeConfig.accentLight,
+                                              borderRadius: BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      // Text hint
+                                      Text(
+                                        _lockAnimation.value > 0.8 ? 'Release to lock' : 'Slide up',
+                                        style: TextStyle(
+                                          color: themeConfig.accentLight.withOpacity(0.9),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             },
@@ -679,9 +719,9 @@ class MicrophoneButtonState extends State<MicrophoneButton>
                     ],
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         );
       },
     );

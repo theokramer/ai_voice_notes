@@ -166,6 +166,9 @@ class _FolderMenuSheetState extends State<_FolderMenuSheet> {
             f.name.toLowerCase().contains(_searchQuery.toLowerCase())
           ).toList();
     
+    // Sort folders alphabetically
+    filteredFolders.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       child: BackdropFilter(

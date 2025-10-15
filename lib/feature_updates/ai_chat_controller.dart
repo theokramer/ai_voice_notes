@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/note.dart';
 import '../services/openai_service.dart';
-import '../widgets/ai_chat_overlay.dart';
+import 'ai_chat_overlay.dart';
 
 /// Controller for AI chat functionality
 /// Manages chat state, messages, and communication with OpenAI

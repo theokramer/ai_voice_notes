@@ -22,24 +22,14 @@ enum OrganizationMode {
   manualOrganize // Save to Unorganized, batch organize later
 }
 
-enum TranscriptionMode {
-  plain,      // Just transcribe speech to text
-  aiBeautify  // AI structures and beautifies the text
-}
-
 class Settings {
   final ThemePreset themePreset;
   final AudioQuality audioQuality;
   final bool hapticsEnabled;
-  final bool useUnifiedNoteView;
   final BackgroundStyle backgroundStyle;
   final bool hasRequestedMicPermission;
-  final bool autoCloseAfterEntry;
   final AppLanguage? preferredLanguage;
   final OrganizationMode organizationMode;
-  final TranscriptionMode transcriptionMode;
-  final bool showOrganizationHints;
-  final bool allowAICreateFolders;
   final bool isSimpleMode; // Simple mode: no glassmorphism, minimal animations, solid backgrounds
   
   /// User preference learning: Map of folder ID -> list of note content keywords that were rejected
@@ -51,15 +41,10 @@ class Settings {
     this.themePreset = ThemePreset.modern,
     this.audioQuality = AudioQuality.high,
     this.hapticsEnabled = true,
-    this.useUnifiedNoteView = true,
     this.backgroundStyle = BackgroundStyle.clouds, // Default to gentle clouds
     this.hasRequestedMicPermission = false,
-    this.autoCloseAfterEntry = false,
     this.preferredLanguage,
     this.organizationMode = OrganizationMode.autoOrganize,
-    this.transcriptionMode = TranscriptionMode.aiBeautify,
-    this.showOrganizationHints = true,
-    this.allowAICreateFolders = true,
     this.isSimpleMode = false, // Default to fancy glassmorphism mode
     this.rejectedFolderSuggestions = const {},
   });
@@ -68,15 +53,10 @@ class Settings {
     ThemePreset? themePreset,
     AudioQuality? audioQuality,
     bool? hapticsEnabled,
-    bool? useUnifiedNoteView,
     BackgroundStyle? backgroundStyle,
     bool? hasRequestedMicPermission,
-    bool? autoCloseAfterEntry,
     AppLanguage? preferredLanguage,
     OrganizationMode? organizationMode,
-    TranscriptionMode? transcriptionMode,
-    bool? showOrganizationHints,
-    bool? allowAICreateFolders,
     bool? isSimpleMode,
     Map<String, List<String>>? rejectedFolderSuggestions,
   }) {
@@ -84,15 +64,10 @@ class Settings {
       themePreset: themePreset ?? this.themePreset,
       audioQuality: audioQuality ?? this.audioQuality,
       hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
-      useUnifiedNoteView: useUnifiedNoteView ?? this.useUnifiedNoteView,
       backgroundStyle: backgroundStyle ?? this.backgroundStyle,
       hasRequestedMicPermission: hasRequestedMicPermission ?? this.hasRequestedMicPermission,
-      autoCloseAfterEntry: autoCloseAfterEntry ?? this.autoCloseAfterEntry,
       preferredLanguage: preferredLanguage ?? this.preferredLanguage,
       organizationMode: organizationMode ?? this.organizationMode,
-      transcriptionMode: transcriptionMode ?? this.transcriptionMode,
-      showOrganizationHints: showOrganizationHints ?? this.showOrganizationHints,
-      allowAICreateFolders: allowAICreateFolders ?? this.allowAICreateFolders,
       isSimpleMode: isSimpleMode ?? this.isSimpleMode,
       rejectedFolderSuggestions: rejectedFolderSuggestions ?? this.rejectedFolderSuggestions,
     );
@@ -103,15 +78,10 @@ class Settings {
       'themePreset': themePreset.name,
       'audioQuality': audioQuality.name,
       'hapticsEnabled': hapticsEnabled,
-      'useUnifiedNoteView': useUnifiedNoteView,
       'backgroundStyle': backgroundStyle.name,
       'hasRequestedMicPermission': hasRequestedMicPermission,
-      'autoCloseAfterEntry': autoCloseAfterEntry,
       'preferredLanguage': preferredLanguage?.name,
       'organizationMode': organizationMode.name,
-      'transcriptionMode': transcriptionMode.name,
-      'showOrganizationHints': showOrganizationHints,
-      'allowAICreateFolders': allowAICreateFolders,
       'isSimpleMode': isSimpleMode,
       'rejectedFolderSuggestions': rejectedFolderSuggestions,
     };
@@ -154,24 +124,16 @@ class Settings {
         orElse: () => AudioQuality.high,
       ),
       hapticsEnabled: json['hapticsEnabled'] ?? true,
-      useUnifiedNoteView: json['useUnifiedNoteView'] ?? true,
       backgroundStyle: BackgroundStyle.values.firstWhere(
         (e) => e.name == json['backgroundStyle'],
         orElse: () => BackgroundStyle.clouds,
       ),
       hasRequestedMicPermission: json['hasRequestedMicPermission'] ?? false,
-      autoCloseAfterEntry: json['autoCloseAfterEntry'] ?? false,
       preferredLanguage: language,
       organizationMode: OrganizationMode.values.firstWhere(
         (e) => e.name == json['organizationMode'],
         orElse: () => OrganizationMode.autoOrganize,
       ),
-      transcriptionMode: TranscriptionMode.values.firstWhere(
-        (e) => e.name == json['transcriptionMode'],
-        orElse: () => TranscriptionMode.aiBeautify,
-      ),
-      showOrganizationHints: json['showOrganizationHints'] ?? true,
-      allowAICreateFolders: json['allowAICreateFolders'] ?? true,
       isSimpleMode: json['isSimpleMode'] ?? false,
       rejectedFolderSuggestions: rejectedSuggestions,
     );

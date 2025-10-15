@@ -72,6 +72,144 @@ class OpenAIService {
     }
   }
 
+  /// Generate a concise, well-structured summary from transcription (GPT-4o for quality)
+  /// Creates a beautiful summary with key points, main ideas, and action items
+  /// Returns structured plain text optimized for custom UI rendering
+  Future<String> generateSummary(String transcription, {String? detectedLanguage}) async {
+    try {
+      // Get language name from ISO code for clearer instructions
+      String? languageName;
+      if (detectedLanguage != null) {
+        final langMap = {
+          'en': 'English',
+          'de': 'German',
+          'es': 'Spanish',
+          'fr': 'French',
+          'it': 'Italian',
+          'pt': 'Portuguese',
+          'nl': 'Dutch',
+          'pl': 'Polish',
+          'ru': 'Russian',
+          'ja': 'Japanese',
+          'zh': 'Chinese',
+          'ko': 'Korean',
+          'ar': 'Arabic',
+        };
+        languageName = langMap[detectedLanguage];
+      }
+      
+      final prompt = '''You are an expert at creating concise, insightful summaries. Create a BEAUTIFUL, WELL-STRUCTURED summary that captures the essence of this note.
+
+INPUT TRANSCRIPTION:
+"$transcription"
+
+🚨 CRITICAL RULE - LANGUAGE PRESERVATION:
+${languageName != null ? 'The user spoke in $languageName (detected: $detectedLanguage). You MUST respond in $languageName ONLY.' : 'DETECT the language of the input text above and respond in THE EXACT SAME LANGUAGE.'}
+- German input → German output
+- English input → English output  
+- Spanish input → Spanish output
+DO NOT TRANSLATE. DO NOT SWITCH LANGUAGES.
+
+🚨 CRITICAL RULE - STRUCTURED FORMAT:
+Output in a SPECIFIC structure using these section markers:
+
+[MAIN_TOPIC]
+A single clear sentence describing what this note is about.
+
+[KEY_POINTS]
+- First key point or main idea
+- Second key point or main idea
+- Third key point or main idea
+(Include 2-5 key points, each on a new line starting with -)
+
+[ACTION_ITEMS]
+- Action item 1
+- Action item 2
+(ONLY include this section if there are clear action items, todos, or things to do. Otherwise OMIT this section entirely.)
+
+[CONTEXT]
+Any additional important context, dates, people mentioned, or relevant details that provide understanding.
+(ONLY include if there's meaningful context. Otherwise OMIT this section.)
+
+SUMMARY REQUIREMENTS:
+✓ 30-50% of original length (concise but comprehensive)
+✓ Extract the most important information
+✓ Remove filler words and redundancy
+✓ Clear, direct language
+✓ Preserve all important details, names, dates, numbers
+✓ Each section must be clearly marked with [SECTION_NAME]
+✓ Use plain text, no markdown (no **, no ##, no bullets except - for lists)
+
+EXAMPLES:
+
+Input: "So today I had a meeting with Sarah about the Q3 project. Um, she mentioned we need to finalize the budget by Friday. Also, we should schedule a follow-up next week to review the timeline."
+
+Output:
+[MAIN_TOPIC]
+Meeting with Sarah about Q3 project budget and timeline.
+
+[KEY_POINTS]
+- Budget needs to be finalized by Friday
+- Follow-up meeting required next week
+- Discussion focused on project timeline review
+
+[ACTION_ITEMS]
+- Finalize Q3 project budget by Friday
+- Schedule follow-up meeting for next week
+
+[CONTEXT]
+Meeting participants: Sarah. Timeline review is the main focus for the follow-up.
+
+---
+
+Input: "I've been thinking about learning to play guitar. There's this song I really love and I want to be able to play it someday."
+
+Output:
+[MAIN_TOPIC]
+Interest in learning to play guitar to perform a favorite song.
+
+[KEY_POINTS]
+- Desire to learn guitar
+- Motivated by a specific song
+- Long-term personal goal
+
+[CONTEXT]
+Personal aspiration, no immediate timeline mentioned.
+
+Return ONLY the structured summary with clear section markers. No explanations. No translations.''';
+
+      final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
+      final response = await http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': 'gpt-4o', // Use GPT-4o for high-quality summaries
+          'messages': [
+            {'role': 'system', 'content': 'You are a summary expert that creates concise, well-structured summaries using specific section markers. You NEVER translate or change the language of the input text. You always preserve the original language.'},
+            {'role': 'user', 'content': prompt},
+          ],
+          'temperature': 0.3, // Balanced for quality and consistency
+          'max_tokens': 800,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final content = data['choices'][0]['message']['content'] as String;
+        return content.trim();
+      } else {
+        debugPrint('Summary generation failed: ${response.body}');
+        throw Exception('Failed to generate summary');
+      }
+    } catch (e) {
+      debugPrint('Error generating summary: $e');
+      throw Exception('Error generating summary: $e');
+    }
+  }
+
   /// Beautify raw transcription into structured note (GPT-4o for quality)
   /// Outputs clean plain text without any markdown formatting
   /// If detectedLanguage is provided (from Whisper), uses it to ensure language preservation

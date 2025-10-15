@@ -7,7 +7,8 @@ class Note {
   final String icon;
   final String content; // Single plain text field - replaces headlines/entries
   final String? rawTranscription; // Original Whisper transcription (unmodified)
-  final String? beautifiedContent; // AI-improved/summarized version
+  final String? beautifiedContent; // AI-improved/summarized version (deprecated, use summary instead)
+  final String? summary; // AI-generated concise summary of the transcription
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? lastAccessedAt;
@@ -24,6 +25,7 @@ class Note {
     required this.content,
     this.rawTranscription,
     this.beautifiedContent,
+    this.summary,
     required this.createdAt,
     required this.updatedAt,
     this.lastAccessedAt,
@@ -113,6 +115,7 @@ class Note {
     String? content,
     String? rawTranscription,
     String? beautifiedContent,
+    String? summary,
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? lastAccessedAt,
@@ -129,6 +132,7 @@ class Note {
       content: content ?? this.content,
       rawTranscription: rawTranscription ?? this.rawTranscription,
       beautifiedContent: beautifiedContent ?? this.beautifiedContent,
+      summary: summary ?? this.summary,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       lastAccessedAt: lastAccessedAt ?? this.lastAccessedAt,
@@ -148,6 +152,7 @@ class Note {
       'content': content,
       'rawTranscription': rawTranscription,
       'beautifiedContent': beautifiedContent,
+      'summary': summary,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'lastAccessedAt': lastAccessedAt?.toIso8601String(),
@@ -178,6 +183,7 @@ class Note {
       content: content,
       rawTranscription: json['rawTranscription'] as String?,
       beautifiedContent: json['beautifiedContent'] as String?,
+      summary: json['summary'] as String?,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       lastAccessedAt: json['lastAccessedAt'] != null

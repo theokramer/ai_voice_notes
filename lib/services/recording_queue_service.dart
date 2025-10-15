@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_quill/quill_delta.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/note.dart';
 import '../models/settings.dart';
 import '../providers/notes_provider.dart';
@@ -9,6 +10,24 @@ import '../providers/folders_provider.dart';
 import '../providers/settings_provider.dart';
 import 'openai_service.dart';
 import 'voice_command_service.dart';
+
+/// Format a custom title from voice command
+/// Removes trailing punctuation and ensures proper capitalization
+String formatCustomTitle(String title) {
+  if (title.trim().isEmpty) return title;
+  
+  String formatted = title.trim();
+  
+  // Remove trailing punctuation (., !, ?, etc.)
+  formatted = formatted.replaceAll(RegExp(r'[.!?,;:]+$'), '');
+  
+  // Capitalize first letter if it's lowercase
+  if (formatted.isNotEmpty && formatted[0] == formatted[0].toLowerCase()) {
+    formatted = formatted[0].toUpperCase() + formatted.substring(1);
+  }
+  
+  return formatted.trim();
+}
 
 /// Get smart emoji for folder based on name semantics
 String getSmartEmojiForFolder(String folderName) {
@@ -324,70 +343,94 @@ class RecordingQueueService extends ChangeNotifier {
       debugPrint('✅ Transcription validated: ${transcription.length} chars, $wordCount words');
       
       // 2. DETECT VOICE COMMAND (before beautification)
-      final voiceCommand = VoiceCommandService.detectCommand(
+      final apiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
+      final voiceCommandResult = await VoiceCommandService.detectCommand(
         transcription,
         foldersProvider.folders,
+        apiKey: apiKey.isNotEmpty ? apiKey : null,
       );
       
       String? voiceCommandDescription;
-      String contentForProcessing = transcription;
+      String contentForProcessing = voiceCommandResult.remainingContent;
       bool isAppendCommand = false;
       String? voiceCommandFolderId;
+      String? customNoteTitle;
       
-      if (voiceCommand != null) {
-        voiceCommandDescription = VoiceCommandService.getCommandDescription(voiceCommand);
-        debugPrint('🎯 Voice command detected: $voiceCommand');
+      if (voiceCommandResult.hasCommands) {
+        voiceCommandDescription = VoiceCommandService.getCommandsDescription(voiceCommandResult.commands);
+        debugPrint('🎯 Voice commands detected: ${voiceCommandResult.commands.length} command(s)');
+        debugPrint('   Commands: $voiceCommandDescription');
+        debugPrint('   Remaining content: "${contentForProcessing.substring(0, contentForProcessing.length > 100 ? 100 : contentForProcessing.length)}..."');
         
-        // Extract content without the command keyword
-        contentForProcessing = VoiceCommandService.extractContentAfterCommand(
-          transcription,
-          voiceCommand,
-        );
-        
-        debugPrint('📝 Content after command extraction: "${contentForProcessing.substring(0, contentForProcessing.length > 100 ? 100 : contentForProcessing.length)}..."');
-        
-        // Handle command types
-        if (voiceCommand.type == VoiceCommandType.folder) {
-          // Override folder assignment with voice command folder
-          voiceCommandFolderId = voiceCommand.folderId;
-          debugPrint('📁 Voice command folder override: ${voiceCommand.folderName} (${voiceCommand.folderId})');
-        } else if (voiceCommand.type == VoiceCommandType.createFolder) {
-          // Create new folder with the specified name
-          if (voiceCommand.newFolderName != null) {
-            debugPrint('📁 Voice command: creating new folder "${voiceCommand.newFolderName}"');
-            // Check if folder already exists (case-insensitive)
-            final existingFolder = foldersProvider.getFolderByName(voiceCommand.newFolderName!);
-            if (existingFolder != null) {
-              // Folder already exists, use it
-              voiceCommandFolderId = existingFolder.id;
-              debugPrint('📁 Folder "${voiceCommand.newFolderName}" already exists, using it (${existingFolder.id})');
-            } else {
-              // Create new folder
-              final newFolder = await foldersProvider.createFolder(
-                name: voiceCommand.newFolderName!,
-                icon: getSmartEmojiForFolder(voiceCommand.newFolderName!),
-              );
-              voiceCommandFolderId = newFolder.id;
-              debugPrint('✨ Created new folder: ${newFolder.name} (${newFolder.id})');
-            }
+        // Process each command
+        for (final command in voiceCommandResult.commands) {
+          debugPrint('   Processing: $command');
+          
+          switch (command.type) {
+            case VoiceCommandType.folder:
+              // Override folder assignment with voice command folder
+              voiceCommandFolderId = command.folderId;
+              debugPrint('📁 Voice command folder override: ${command.folderName} (${command.folderId})');
+              break;
+              
+            case VoiceCommandType.createFolder:
+              // Create new folder with the specified name
+              if (command.newFolderName != null) {
+                debugPrint('📁 Voice command: creating new folder "${command.newFolderName}"');
+                // Check if folder already exists (case-insensitive)
+                final existingFolder = foldersProvider.getFolderByName(command.newFolderName!);
+                if (existingFolder != null) {
+                  // Folder already exists, use it
+                  voiceCommandFolderId = existingFolder.id;
+                  debugPrint('📁 Folder "${command.newFolderName}" already exists, using it (${existingFolder.id})');
+                } else {
+                  // Create new folder
+                  final newFolder = await foldersProvider.createFolder(
+                    name: command.newFolderName!,
+                    icon: getSmartEmojiForFolder(command.newFolderName!),
+                  );
+                  voiceCommandFolderId = newFolder.id;
+                  debugPrint('✨ Created new folder: ${newFolder.name} (${newFolder.id})');
+                }
+              }
+              break;
+              
+            case VoiceCommandType.setTitle:
+              // Set custom title for note and format it properly
+              if (command.noteTitle != null) {
+                customNoteTitle = formatCustomTitle(command.noteTitle!);
+                debugPrint('📝 Custom title set: "$customNoteTitle" (formatted from: "${command.noteTitle}")');
+              }
+              break;
+              
+            case VoiceCommandType.append:
+              // Mark for append operation (handled later)
+              isAppendCommand = true;
+              debugPrint('➕ Will append to last created note');
+              break;
           }
-        } else if (voiceCommand.type == VoiceCommandType.append) {
-          // Mark for append operation (handled later)
-          isAppendCommand = true;
-          debugPrint('➕ Will append to last created note');
         }
       }
       
       // Validate content after command extraction
-      if (contentForProcessing.trim().isEmpty && voiceCommand != null) {
-        debugPrint('⚠️ Content is empty after command extraction, using command keyword as content');
-        contentForProcessing = voiceCommand.originalKeyword;
+      if (contentForProcessing.trim().isEmpty) {
+        // If we have a custom title but no content, that's okay for title-only notes
+        if (customNoteTitle == null) {
+          debugPrint('⚠️ Content is empty after command extraction and no title set');
+          if (voiceCommandResult.hasCommands) {
+            // If we detected commands but got no content, the whole transcription was just commands
+            throw Exception('No content provided after voice command. Please provide note content.');
+          }
+        } else {
+          debugPrint('ℹ️ Creating title-only note: "$customNoteTitle"');
+        }
       }
       
-      // 3. BEAUTIFY (if enabled)
+      // 3. BEAUTIFY (always enabled, unless content is empty for title-only note)
       String content = contentForProcessing;
       bool beautified = false;
-      if (settings.transcriptionMode == TranscriptionMode.aiBeautify) {
+      
+      if (contentForProcessing.trim().isNotEmpty) {
         try {
           debugPrint('🎨 Starting beautification for ${contentForProcessing.length} chars...');
           debugPrint('🌍 Using detected language: $detectedLanguage');
@@ -417,13 +460,22 @@ class RecordingQueueService extends ChangeNotifier {
           content = contentForProcessing;
           beautified = false;
         }
-      } else {
-        debugPrint('ℹ️ Beautification skipped (mode: ${settings.transcriptionMode})');
+      } else if (customNoteTitle != null) {
+        // Title-only note, no content to beautify
+        debugPrint('ℹ️ Skipping beautification for title-only note');
+        content = ''; // Empty content is okay for title-only notes
+        beautified = false;
       }
       
       // 4. HANDLE APPEND COMMAND (if detected)
       if (isAppendCommand) {
         debugPrint('➕ Processing append command...');
+        
+        // Check if we have content to append
+        if (content.trim().isEmpty) {
+          debugPrint('⚠️ Append command detected but no content to append, skipping');
+          throw Exception('No content to append. Please provide content after the append command.');
+        }
         
         // Get the last created note
         final allNotes = notesProvider.allNotes;
@@ -531,7 +583,7 @@ class RecordingQueueService extends ChangeNotifier {
         );
         
         // Handle folder creation if suggested
-        if (result.createNewFolder && settings.allowAICreateFolders) {
+        if (result.createNewFolder) {
           // Check if a folder with this name already exists (case-insensitive)
           final proposedFolderName = result.folderName ?? 'New Folder';
           
@@ -574,34 +626,43 @@ class RecordingQueueService extends ChangeNotifier {
         folderName = 'Unorganized';
       }
       
-      // 6. GENERATE TITLE (pass folder name to avoid redundant titles)
+      // 6. GENERATE OR USE CUSTOM TITLE
       
-      // Final content validation before creating note
-      if (content.trim().isEmpty) {
-        debugPrint('❌ CRITICAL: Content is empty after beautification!');
+      // Final content validation before creating note (unless title-only note)
+      if (content.trim().isEmpty && customNoteTitle == null) {
+        debugPrint('❌ CRITICAL: Content is empty after beautification and no custom title!');
         debugPrint('   Transcription was: "${transcription.substring(0, transcription.length > 200 ? 200 : transcription.length)}..."');
         throw Exception('Content processing failed - please try recording again');
       }
       
-      // Generate descriptive title from content
+      // Use custom title if provided by voice command, otherwise generate one
       String noteTitle;
-      try {
-        debugPrint('📝 Generating title for content (${content.length} chars)...');
-        noteTitle = await openAIService.generateNoteTitle(
-          content,
-          folderName: folderName, // Pass folder name to avoid redundant titles
-          detectedLanguage: detectedLanguage, // Use same language as content
-        );
-        
-        // Validate title
-        if (noteTitle.trim().isEmpty) {
-          debugPrint('⚠️ Title generation returned empty, using default');
+      if (customNoteTitle != null) {
+        noteTitle = customNoteTitle;
+        debugPrint('✅ Using custom title from voice command: "$noteTitle"');
+      } else if (content.trim().isNotEmpty) {
+        // Generate descriptive title from content
+        try {
+          debugPrint('📝 Generating title for content (${content.length} chars)...');
+          noteTitle = await openAIService.generateNoteTitle(
+            content,
+            folderName: folderName, // Pass folder name to avoid redundant titles
+            detectedLanguage: detectedLanguage, // Use same language as content
+          );
+          
+          // Validate title
+          if (noteTitle.trim().isEmpty) {
+            debugPrint('⚠️ Title generation returned empty, using default');
+            noteTitle = 'Voice Note ${DateTime.now().toString().substring(5, 16)}';
+          } else {
+            debugPrint('✅ Generated title: "$noteTitle"');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Failed to generate title: $e, using default');
           noteTitle = 'Voice Note ${DateTime.now().toString().substring(5, 16)}';
-        } else {
-          debugPrint('✅ Generated title: "$noteTitle"');
         }
-      } catch (e) {
-        debugPrint('⚠️ Failed to generate title: $e, using default');
+      } else {
+        // Should not reach here, but just in case
         noteTitle = 'Voice Note ${DateTime.now().toString().substring(5, 16)}';
       }
       
@@ -629,7 +690,16 @@ class RecordingQueueService extends ChangeNotifier {
       await notesProvider.addNote(note);
       debugPrint('✅ Note created successfully: ${note.id}');
       
-      // 7. MARK COMPLETE
+      // 7. GENERATE SUMMARY IN BACKGROUND (don't block UI)
+      _generateSummaryInBackground(
+        noteId: note.id,
+        transcription: transcription,
+        detectedLanguage: detectedLanguage,
+        notesProvider: notesProvider,
+        openAIService: openAIService,
+      );
+      
+      // 8. MARK COMPLETE
       updateRecording(
         id,
         status: RecordingStatus.complete,
@@ -741,6 +811,48 @@ class RecordingQueueService extends ChangeNotifier {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Generate summary in background (fire-and-forget)
+  /// This doesn't block the UI - summary appears when ready
+  void _generateSummaryInBackground({
+    required String noteId,
+    required String transcription,
+    required String? detectedLanguage,
+    required NotesProvider notesProvider,
+    required OpenAIService openAIService,
+  }) {
+    // Run in background without blocking
+    Future.microtask(() async {
+      try {
+        debugPrint('📝 Starting background summary generation for note $noteId...');
+        
+        // Generate summary using the new method
+        final summary = await openAIService.generateSummary(
+          transcription,
+          detectedLanguage: detectedLanguage,
+        );
+        
+        debugPrint('✅ Summary generated successfully (${summary.length} chars)');
+        
+        // Update the note with the summary
+        final note = notesProvider.getNoteById(noteId);
+        if (note != null) {
+          final updatedNote = note.copyWith(
+            summary: summary,
+            updatedAt: DateTime.now(),
+          );
+          await notesProvider.updateNote(updatedNote);
+          debugPrint('✅ Note updated with summary');
+        } else {
+          debugPrint('⚠️ Note $noteId not found, cannot update summary');
+        }
+      } catch (e) {
+        // Don't fail the entire flow if summary generation fails
+        debugPrint('⚠️ Failed to generate summary: $e');
+        // Summary will be null, user can regenerate it later if needed
+      }
+    });
   }
 
   /// Get smart emoji for folder based on name keywords

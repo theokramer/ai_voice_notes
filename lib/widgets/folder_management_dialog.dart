@@ -134,6 +134,9 @@ class _FolderManagementDialogState extends State<FolderManagementDialog> {
                       : allFolders.where((folder) {
                           return folder.name.toLowerCase().contains(_searchQuery.toLowerCase());
                         }).toList();
+                  
+                  // Sort folders alphabetically
+                  folders.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
                   if (folders.isEmpty) {
                     return Center(

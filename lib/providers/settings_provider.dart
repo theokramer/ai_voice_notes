@@ -67,9 +67,6 @@ class SettingsProvider extends ChangeNotifier {
     await updateSettings(_settings.copyWith(hapticsEnabled: enabled));
   }
 
-  Future<void> updateUnifiedNoteView(bool enabled) async {
-    await updateSettings(_settings.copyWith(useUnifiedNoteView: enabled));
-  }
 
   Future<void> updateBackgroundStyle(BackgroundStyle style) async {
     await updateSettings(_settings.copyWith(backgroundStyle: style));
@@ -87,11 +84,6 @@ class SettingsProvider extends ChangeNotifier {
 
   bool get isSimpleMode => _settings.isSimpleMode;
 
-  Future<void> updateAutoCloseAfterEntry(bool enabled) async {
-    await updateSettings(_settings.copyWith(autoCloseAfterEntry: enabled));
-  }
-
-  bool get autoCloseAfterEntry => _settings.autoCloseAfterEntry;
 
   Future<void> clearCache() async {
     // Placeholder for cache clearing logic
@@ -110,21 +102,12 @@ class SettingsProvider extends ChangeNotifier {
       _settings.preferredLanguage ?? LanguageHelper.detectDeviceLanguage();
 
   // Smart Notes settings
-  Future<void> updateTranscriptionMode(TranscriptionMode mode) async {
-    await updateSettings(_settings.copyWith(transcriptionMode: mode));
-  }
 
   Future<void> updateOrganizationMode(OrganizationMode mode) async {
     await updateSettings(_settings.copyWith(organizationMode: mode));
   }
 
-  Future<void> updateAllowAICreateFolders(bool allow) async {
-    await updateSettings(_settings.copyWith(allowAICreateFolders: allow));
-  }
 
-  Future<void> updateShowOrganizationHints(bool show) async {
-    await updateSettings(_settings.copyWith(showOrganizationHints: show));
-  }
   
   /// Add a rejected folder suggestion for user preference learning
   /// [folderId] - The folder that was rejected

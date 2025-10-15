@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../theme/app_theme.dart';
-import '../ai_chat_overlay.dart';
+import '../../feature_updates/ai_chat_overlay.dart';
 import '../note_citation_chip.dart';
 
 /// Individual chat message bubble widget
