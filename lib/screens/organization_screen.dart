@@ -7,10 +7,12 @@ import '../models/folder.dart';
 import '../models/organization_suggestion.dart';
 import '../providers/notes_provider.dart';
 import '../providers/folders_provider.dart';
+import '../providers/settings_provider.dart';
 import '../services/openai_service.dart';
 import '../services/haptic_service.dart';
 import '../services/localization_service.dart';
 import '../services/recording_queue_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/loading_indicator.dart';
 import '../widgets/organization/folder_group_card.dart';
 
@@ -268,10 +270,11 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
       });
 
       if (mounted) {
+        final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${LocalizationService().t('failed_to_load')}: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.getErrorColor(themeConfig),
           ),
         );
       }
@@ -373,12 +376,12 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(LocalizationService().t('notes_organized_count', {'count': processed.toString()})),
-          backgroundColor: Colors.green,
-        ),
-      );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(LocalizationService().t('notes_organized_count', {'count': processed.toString()})),
+            backgroundColor: AppTheme.getSuccessColor(context.read<SettingsProvider>().currentThemeConfig),
+          ),
+        );
       
       // Reload to get updated list
       await _loadSuggestions();
@@ -445,7 +448,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(LocalizationService().t('note_organized_success')),
-              backgroundColor: Colors.green,
+              backgroundColor: AppTheme.getSuccessColor(context.read<SettingsProvider>().currentThemeConfig),
               duration: const Duration(seconds: 2),
             ),
           );
@@ -457,7 +460,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${LocalizationService().t('error')}: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.getErrorColor(context.read<SettingsProvider>().currentThemeConfig),
           ),
         );
       }
@@ -467,21 +470,24 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
   Future<void> _deleteNote(String noteId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(LocalizationService().t('delete_note_confirm_title')),
-        content: Text(LocalizationService().t('delete_note_confirm_message')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(LocalizationService().t('cancel')),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text(LocalizationService().t('delete')),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
+        return AlertDialog(
+          title: Text(LocalizationService().t('delete_note_confirm_title')),
+          content: Text(LocalizationService().t('delete_note_confirm_message')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(LocalizationService().t('cancel')),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: AppTheme.getErrorColor(themeConfig)),
+              child: Text(LocalizationService().t('delete')),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed == true) {
@@ -551,6 +557,8 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
   }
 
   Widget _buildBody(List<Note> unorganizedNotes, List<Folder> allFolders) {
+    final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
+    
     if (_isLoading) {
       return Center(
         child: Column(
@@ -585,7 +593,7 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
             Icon(
               Icons.check_circle_outline,
               size: 80,
-              color: Colors.green.shade400,
+              color: AppTheme.getSuccessColor(themeConfig),
             ),
             const SizedBox(height: 24),
             Text(

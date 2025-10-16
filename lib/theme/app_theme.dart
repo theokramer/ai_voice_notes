@@ -12,6 +12,10 @@ class ThemeConfig {
   final Color buttonSecondaryColor;
   final Color accentLight;
   final Color accentDark;
+  final Color errorColor;
+  final Color warningColor;
+  final Color successColor;
+  final Color infoColor;
 
   const ThemeConfig({
     required this.gradientStart,
@@ -24,6 +28,10 @@ class ThemeConfig {
     required this.buttonSecondaryColor,
     required this.accentLight,
     required this.accentDark,
+    required this.errorColor,
+    required this.warningColor,
+    required this.successColor,
+    required this.infoColor,
   });
 
   Color get primary => primaryColor;
@@ -63,6 +71,10 @@ class AppTheme {
       buttonSecondaryColor: Color(0xFF0d9488),
       accentLight: Color(0xFF67e8f9),
       accentDark: Color(0xFF0e7490),
+      errorColor: Color(0xFFef4444), // Red for destructive actions
+      warningColor: Color(0xFFf59e0b), // Amber for warnings
+      successColor: Color(0xFF10b981), // Emerald for success
+      infoColor: Color(0xFF3b82f6), // Blue for info/ratings
     ),
     ThemePreset.sunsetOrange: ThemeConfig(
       gradientStart: Color(0xFFff6b6b),
@@ -75,6 +87,10 @@ class AppTheme {
       buttonSecondaryColor: Color(0xFFf59e0b),
       accentLight: Color(0xFFfdba74),
       accentDark: Color(0xFFea580c),
+      errorColor: Color(0xFFdc2626), // Darker red for contrast
+      warningColor: Color(0xFFf59e0b), // Amber for warnings
+      successColor: Color(0xFF059669), // Darker green for contrast
+      infoColor: Color(0xFF2563eb), // Blue for info/ratings
     ),
     ThemePreset.forestGreen: ThemeConfig(
       gradientStart: Color(0xFF065f46),
@@ -87,6 +103,10 @@ class AppTheme {
       buttonSecondaryColor: Color(0xFF059669),
       accentLight: Color(0xFF6ee7b7),
       accentDark: Color(0xFF047857),
+      errorColor: Color(0xFFdc2626), // Red for destructive actions
+      warningColor: Color(0xFFf59e0b), // Amber for warnings
+      successColor: Color(0xFF10b981), // Emerald for success
+      infoColor: Color(0xFF3b82f6), // Blue for info/ratings
     ),
     ThemePreset.aurora: ThemeConfig(
       gradientStart: Color(0xFF3b82f6),
@@ -99,6 +119,10 @@ class AppTheme {
       buttonSecondaryColor: Color(0xFF2563eb),
       accentLight: Color(0xFFfda4af),
       accentDark: Color(0xFF9f1239),
+      errorColor: Color(0xFFdc2626), // Red for destructive actions
+      warningColor: Color(0xFFf59e0b), // Amber for warnings
+      successColor: Color(0xFF059669), // Green for success
+      infoColor: Color(0xFF3b82f6), // Blue for info/ratings
     ),
     ThemePreset.midnightPurple: ThemeConfig(
       gradientStart: Color(0xFF4c1d95),
@@ -111,6 +135,10 @@ class AppTheme {
       buttonSecondaryColor: Color(0xFF6d28d9),
       accentLight: Color(0xFFc4b5fd),
       accentDark: Color(0xFF5b21b6),
+      errorColor: Color(0xFFdc2626), // Red for destructive actions
+      warningColor: Color(0xFFf59e0b), // Amber for warnings
+      successColor: Color(0xFF059669), // Green for success
+      infoColor: Color(0xFF3b82f6), // Blue for info/ratings
     ),
     ThemePreset.cherryBlossom: ThemeConfig(
       gradientStart: Color(0xFF9f1239),
@@ -123,6 +151,10 @@ class AppTheme {
       buttonSecondaryColor: Color(0xFFe11d48),
       accentLight: Color(0xFFfecdd3),
       accentDark: Color(0xFFbe123c),
+      errorColor: Color(0xFFdc2626), // Red for destructive actions
+      warningColor: Color(0xFFf59e0b), // Amber for warnings
+      successColor: Color(0xFF059669), // Green for success
+      infoColor: Color(0xFF3b82f6), // Blue for info/ratings
     ),
     ThemePreset.arcticBlue: ThemeConfig(
       gradientStart: Color(0xFF0c4a6e),
@@ -135,6 +167,10 @@ class AppTheme {
       buttonSecondaryColor: Color(0xFF0284c7),
       accentLight: Color(0xFFbae6fd),
       accentDark: Color(0xFF075985),
+      errorColor: Color(0xFFdc2626), // Red for destructive actions
+      warningColor: Color(0xFFf59e0b), // Amber for warnings
+      successColor: Color(0xFF059669), // Green for success
+      infoColor: Color(0xFF3b82f6), // Blue for info/ratings
     ),
     ThemePreset.emeraldNight: ThemeConfig(
       gradientStart: Color(0xFF134e4a),
@@ -147,12 +183,22 @@ class AppTheme {
       buttonSecondaryColor: Color(0xFF0d9488),
       accentLight: Color(0xFF99f6e4),
       accentDark: Color(0xFF115e59),
+      errorColor: Color(0xFFdc2626), // Red for destructive actions
+      warningColor: Color(0xFFf59e0b), // Amber for warnings
+      successColor: Color(0xFF10b981), // Emerald for success
+      infoColor: Color(0xFF3b82f6), // Blue for info/ratings
     ),
   };
 
   static ThemeConfig getThemeConfig(ThemePreset preset) {
     return _themeConfigs[preset] ?? _themeConfigs[ThemePreset.oceanBlue]!;
   }
+
+  // Semantic color getters
+  static Color getErrorColor(ThemeConfig config) => config.errorColor;
+  static Color getWarningColor(ThemeConfig config) => config.warningColor;
+  static Color getSuccessColor(ThemeConfig config) => config.successColor;
+  static Color getInfoColor(ThemeConfig config) => config.infoColor;
   
   // Common colors (independent of theme)
   static const Color background = Color(0xFF1a1a1a);

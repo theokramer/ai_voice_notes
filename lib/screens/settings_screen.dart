@@ -230,7 +230,7 @@ class SettingsScreen extends StatelessWidget {
           trailing: count > 0 ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.orange,
+              color: AppTheme.getWarningColor(themeConfig),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -401,6 +401,7 @@ class SettingsScreen extends StatelessWidget {
 
   void _showDeleteAllNotesDialog(BuildContext context) {
     final localization = LocalizationService();
+    final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -421,7 +422,7 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.warning_amber_rounded,
-                        color: Colors.orange.shade400,
+                        color: AppTheme.getWarningColor(themeConfig),
                         size: 28,
                       ),
                       const SizedBox(width: AppTheme.spacing12),
@@ -492,8 +493,8 @@ class SettingsScreen extends StatelessWidget {
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  Colors.red.shade600,
-                                  Colors.red.shade700,
+                                  AppTheme.getErrorColor(themeConfig),
+                                  AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.8),
                                 ],
                               ),
                               borderRadius:

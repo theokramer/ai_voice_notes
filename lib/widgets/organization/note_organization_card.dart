@@ -4,8 +4,10 @@ import '../../models/note.dart';
 import '../../models/folder.dart';
 import '../../models/organization_suggestion.dart';
 import '../../providers/folders_provider.dart';
+import '../../providers/settings_provider.dart';
 import '../../services/haptic_service.dart';
 import '../../services/localization_service.dart';
+import '../../theme/app_theme.dart';
 import 'folder_picker_dialog.dart';
 
 /// Displays a single note organization suggestion with actions
@@ -29,10 +31,10 @@ class NoteOrganizationCard extends StatelessWidget {
     required this.onApply,
   });
 
-  Color _getConfidenceColor(double confidence) {
-    if (confidence >= 0.8) return Colors.green.shade400;
-    if (confidence >= 0.6) return Colors.orange.shade400;
-    return Colors.red.shade400;
+  Color _getConfidenceColor(double confidence, ThemeConfig themeConfig) {
+    if (confidence >= 0.8) return AppTheme.getSuccessColor(themeConfig);
+    if (confidence >= 0.6) return AppTheme.getWarningColor(themeConfig);
+    return AppTheme.getErrorColor(themeConfig);
   }
 
   Future<void> _showFolderPicker(BuildContext context) async {
@@ -61,16 +63,17 @@ class NoteOrganizationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final needsAction = suggestion.needsUserAction;
+    final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: needsAction 
-            ? Colors.orange.shade900.withOpacity(0.2)
+            ? AppTheme.getWarningColor(themeConfig).withOpacity(0.2)
             : const Color(0xFF242938),
         borderRadius: BorderRadius.circular(12),
         border: needsAction 
-            ? Border.all(color: Colors.orange.shade700, width: 1.5)
+            ? Border.all(color: AppTheme.getWarningColor(themeConfig).withValues(alpha: 0.7), width: 1.5)
             : null,
       ),
       child: Column(
@@ -102,16 +105,16 @@ class NoteOrganizationCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getConfidenceColor(suggestion.confidence).withOpacity(0.2),
+                    color: _getConfidenceColor(suggestion.confidence, themeConfig).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: _getConfidenceColor(suggestion.confidence)),
+                    border: Border.all(color: _getConfidenceColor(suggestion.confidence, themeConfig)),
                   ),
                   child: Text(
                     '${(suggestion.confidence * 100).toInt()}%',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: _getConfidenceColor(suggestion.confidence),
+                      color: _getConfidenceColor(suggestion.confidence, themeConfig),
                     ),
                   ),
                 ),
@@ -124,21 +127,21 @@ class NoteOrganizationCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.orange.shade900.withOpacity(0.3),
+                color: AppTheme.getWarningColor(themeConfig).withOpacity(0.3),
                 border: Border(
-                  top: BorderSide(color: Colors.orange.shade700),
+                  top: BorderSide(color: AppTheme.getWarningColor(themeConfig).withValues(alpha: 0.7)),
                 ),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.warning_amber, size: 16, color: Colors.orange.shade400),
+                  Icon(Icons.warning_amber, size: 16, color: AppTheme.getWarningColor(themeConfig)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Uncertain assignment - Please review',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.orange.shade300,
+                        color: AppTheme.getWarningColor(themeConfig).withValues(alpha: 0.8),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -161,7 +164,7 @@ class NoteOrganizationCard extends StatelessWidget {
                     label: Text(LocalizationService().t('accept')),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: Colors.green.shade700,
+                      backgroundColor: AppTheme.getSuccessColor(themeConfig),
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -176,8 +179,8 @@ class NoteOrganizationCard extends StatelessWidget {
                       onPressed: onDelete,
                       icon: const Icon(Icons.delete_outline, size: 20),
                       style: IconButton.styleFrom(
-                        foregroundColor: Colors.red.shade400,
-                        backgroundColor: Colors.red.shade900.withOpacity(0.2),
+                        foregroundColor: AppTheme.getErrorColor(themeConfig),
+                        backgroundColor: AppTheme.getErrorColor(themeConfig).withOpacity(0.2),
                       ),
                       tooltip: 'Delete',
                     ),

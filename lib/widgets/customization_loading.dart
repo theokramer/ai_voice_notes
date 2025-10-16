@@ -167,20 +167,8 @@ class _CustomizationLoadingState extends State<CustomizationLoading> {
                     
                     const SizedBox(height: AppTheme.spacing48),
                     
-                    // Progress indicator
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                      child: LinearProgressIndicator(
-                        value: _currentStep / tasks.length,
-                        backgroundColor: settingsProvider.currentThemeConfig.primary.withValues(alpha: 0.2),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          settingsProvider.currentThemeConfig.primary,
-                        ),
-                        minHeight: 8,
-                      ),
-                    )
-                        .animate()
-                        .fadeIn(delay: 300.ms, duration: 600.ms),
+                    // Progress indicator - hidden on loading screen
+                    const SizedBox.shrink(),
                     
                     const SizedBox(height: AppTheme.spacing32),
                     

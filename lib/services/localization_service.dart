@@ -57,7 +57,6 @@ class LocalizationService {
       'onboarding_beautify_title': 'Perfect Summaries Created',
       'onboarding_beautify_benefit_1': 'AI creates concise summaries from everything you say',
       'onboarding_beautify_benefit_2': 'Key points extracted and organized automatically',
-      'onboarding_beautify_benefit_3': 'Get the essence without the rambling',
       
       'onboarding_chat_title': 'Chat with Your Notes',
       'onboarding_chat_benefit_1': 'Create new notes by chatting with AI',
@@ -139,41 +138,42 @@ class LocalizationService {
       'onboarding_question_7_option_2': 'Hybrid / Assisted',
       'onboarding_question_7_option_2_sub': 'You guide the AI and stay in control',
       
+      // AI Autonomy Question
+      'onboarding_ai_autonomy_title': 'How should AI\norganize your notes?',
+      'onboarding_ai_autonomy_option_1': 'Automatic',
+      'onboarding_ai_autonomy_option_1_sub': 'AI organizes everything as you record',
+      'onboarding_ai_autonomy_option_2': 'Manual',
+      'onboarding_ai_autonomy_option_2_sub': 'I\'ll organize notes myself',
+      
       // Merged Record + Voice Commands Page
       'onboarding_record_voice_title': 'Push to Talk',
       'onboarding_record_voice_benefit_1': 'Hold to record. Release when done.',
-      'onboarding_record_voice_benefit_2': 'Use voice commands to save and organize effortlessly.',
-      'onboarding_record_voice_benefit_3': 'Use simple voice commands to organize notes hands-free',
+      'onboarding_record_voice_benefit_2': 'Use simple voice commands to organize notes hands-free',
+      'onboarding_record_voice_benefit_3': 'Voice commands work in any language you speak',
       'onboarding_voice_section_title': 'Voice Commands Available',
       
       // Personalized Time Savings Page - Work
-      'time_savings_work_title': 'Business professionals\nsave 5+ hours/week',
-      'time_savings_work_subtitle': 'Focus on strategy.\nLet AI handle the notes.',
+      'time_savings_work_title': 'Turn 1-hour meetings into\n3-minute summaries',
       'time_savings_work_stat': 'Meeting notes',
       
       // Personalized Time Savings Page - Learning
-      'time_savings_learning_title': 'Students remember\n2x more with Notie AI',
-      'time_savings_learning_subtitle': 'Focus on learning.\nLet AI organize everything.',
+      'time_savings_learning_title': '2-hour lectures? Get the\nkey points in 5 minutes',
       'time_savings_learning_stat': 'Study notes',
       
       // Personalized Time Savings Page - Journal
-      'time_savings_journal_title': 'Make journaling\neffortless',
-      'time_savings_journal_subtitle': 'Focus on reflection.\nLet AI capture your thoughts.',
+      'time_savings_journal_title': 'Reflect deeply in just\n2 minutes a day',
       'time_savings_journal_stat': 'Daily entries',
       
       // Personalized Time Savings Page - Creative
-      'time_savings_creative_title': 'Creators save\n4+ hours/week',
-      'time_savings_creative_subtitle': 'Focus on creating.\nLet AI capture inspiration.',
+      'time_savings_creative_title': 'Never lose a brilliant\nidea again',
       'time_savings_creative_stat': 'Ideas captured',
       
       // Personalized Time Savings Page - Other
-      'time_savings_other_title': 'Save 3+ hours\nevery week',
-      'time_savings_other_subtitle': 'Focus on what matters.\nLet AI handle the rest.',
+      'time_savings_other_title': 'Organize everything in\nunder 5 minutes',
       'time_savings_other_stat': 'Notes organized',
       
       // Default
-      'time_savings_default_title': 'Save 3+ hours\nevery week',
-      'time_savings_default_subtitle': 'Focus on what matters.\nLet AI handle the rest.',
+      'time_savings_default_title': 'Organize everything in\nunder 5 minutes',
       'time_savings_default_stat': 'Notes organized',
       
       // Question: Transcription Quality
@@ -343,7 +343,7 @@ class LocalizationService {
       'ai_actions_subtitle': 'What can I help you with?',
       'action_create_note_from_chat': 'Create Note from Chat',
       'type_message_hint': 'Type your message in the search bar above',
-      'type_message_placeholder': 'Type your message...',
+      'type_message_placeholder': 'Interact with your notes',
       'consolidate_entries': 'Consolidate Entries',
       'move_entries': 'Move Entries',
       'create_summary': 'Create Summary',
@@ -610,6 +610,7 @@ class LocalizationService {
       'onboarding_record_voice_title': 'Push to Talk',
       'onboarding_record_voice_benefit_1': 'Mantén presionado para grabar. Suelta al terminar.',
       'onboarding_record_voice_benefit_2': 'Usa comandos de voz para guardar y organizar sin esfuerzo',
+      'onboarding_record_voice_benefit_3': 'Los comandos de voz funcionan en cualquier idioma',
       'onboarding_voice_section_title': 'Comandos de Voz Disponibles',
       
       // Interstitial Screens
@@ -757,7 +758,7 @@ class LocalizationService {
       'ai_actions_subtitle': '¿En qué puedo ayudarte?',
       'action_create_note_from_chat': 'Crear nota del chat',
       'type_message_hint': 'Escribe tu mensaje en la barra de búsqueda',
-      'type_message_placeholder': 'Escribe tu mensaje...',
+      'type_message_placeholder': 'Interactúa con tus notas',
       'consolidate_entries': 'Consolidar entradas',
       'move_entries': 'Mover entradas',
       'create_summary': 'Crear resumen',
@@ -1024,6 +1025,7 @@ class LocalizationService {
       'onboarding_record_voice_title': 'Push to Talk',
       'onboarding_record_voice_benefit_1': 'Maintenez pour enregistrer. Relâchez quand c\'est fait.',
       'onboarding_record_voice_benefit_2': 'Utilisez les commandes vocales pour sauvegarder et organiser sans effort',
+      'onboarding_record_voice_benefit_3': 'Les commandes vocales fonctionnent dans toute langue',
       'onboarding_voice_section_title': 'Commandes Vocales Disponibles',
       
       // Interstitial Screens
@@ -1438,6 +1440,7 @@ class LocalizationService {
       'onboarding_record_voice_title': 'Push to Talk',
       'onboarding_record_voice_benefit_1': 'Halten zum Aufnehmen. Loslassen wenn fertig.',
       'onboarding_record_voice_benefit_2': 'Nutze Sprachbefehle zum mühelosen Speichern und Organisieren',
+      'onboarding_record_voice_benefit_3': 'Sprachbefehle funktionieren in jeder Sprache',
       'onboarding_voice_section_title': 'Sprachbefehle Verfügbar',
       
       // Interstitial Screens
@@ -1585,7 +1588,7 @@ class LocalizationService {
       'ai_actions_subtitle': 'Wobei kann ich dir helfen?',
       'action_create_note_from_chat': 'Notiz aus Chat erstellen',
       'type_message_hint': 'Schreib deine Nachricht in die Suchleiste',
-      'type_message_placeholder': 'Schreib deine Nachricht...',
+      'type_message_placeholder': 'Interagiere mit deinen Notizen',
       'consolidate_entries': 'Einträge konsolidieren',
       'move_entries': 'Einträge verschieben',
       'create_summary': 'Zusammenfassung erstellen',

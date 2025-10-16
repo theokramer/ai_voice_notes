@@ -148,7 +148,7 @@ class _OnboardingRatingPageState extends State<OnboardingRatingPage> {
                         isSelected ? Icons.star : Icons.star_border,
                         size: 48,
                         color: isSelected
-                            ? Colors.amber
+                            ? AppTheme.getInfoColor(themeConfig)
                             : AppTheme.textSecondary,
                       ),
                     ),
@@ -163,7 +163,7 @@ class _OnboardingRatingPageState extends State<OnboardingRatingPage> {
               Icon(
                 Icons.check_circle,
                 size: 64,
-                color: Colors.green.shade400,
+                color: AppTheme.getSuccessColor(themeConfig),
               )
                   .animate()
                   .scale(duration: 400.ms, curve: Curves.elasticOut),

@@ -410,7 +410,8 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
             // Floating action button for regenerating summary
             floatingActionButton: _viewMode == NoteViewMode.transcription &&
                     _transcriptionModified &&
-                    !_isRegeneratingSummary
+                    !_isRegeneratingSummary &&
+                    MediaQuery.of(context).viewInsets.bottom == 0
                 ? FloatingActionButton.extended(
                     onPressed: _regenerateSummary,
                     backgroundColor: themeConfig.accentColor,

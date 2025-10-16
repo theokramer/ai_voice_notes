@@ -861,21 +861,24 @@ class _HomeScreenState extends State<HomeScreen> {
           // Show confirmation for destructive action
           final confirmed = await showDialog<bool>(
             context: context,
-            builder: (context) => AlertDialog(
-              title: Text(LocalizationService().t('delete_note_confirm_title')),
-              content: Text('Are you sure you want to delete "${note.name}"?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: Text(LocalizationService().t('cancel')),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  child: Text(LocalizationService().t('delete')),
-                ),
-              ],
-            ),
+            builder: (context) {
+              final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
+              return AlertDialog(
+                title: Text(LocalizationService().t('delete_note_confirm_title')),
+                content: Text('Are you sure you want to delete "${note.name}"?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(LocalizationService().t('cancel')),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    style: TextButton.styleFrom(foregroundColor: AppTheme.getErrorColor(themeConfig)),
+                    child: Text(LocalizationService().t('delete')),
+                  ),
+                ],
+              );
+            },
           );
           
           if (confirmed != true) return;
@@ -1298,6 +1301,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showDeleteConfirmation(Note note) async {
     HapticService.light();
+    final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => Dialog(
@@ -1320,12 +1324,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     padding: const EdgeInsets.all(AppTheme.spacing16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFef4444).withValues(alpha: 0.2),
+                      color: AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.delete_outline,
-                      color: Color(0xFFef4444),
+                      color: AppTheme.getErrorColor(themeConfig),
                       size: 32,
                     ),
                   ),
@@ -1381,19 +1385,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               vertical: AppTheme.spacing16,
                             ),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  Color(0xFFef4444),
-                                  Color(0xFFdc2626),
+                                  AppTheme.getErrorColor(themeConfig),
+                                  AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.8),
                                 ],
                               ),
                               borderRadius:
                                   BorderRadius.circular(AppTheme.radiusMedium),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFef4444).withValues(alpha: 0.3),
+                                  color: AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.3),
                                   blurRadius: 20,
                                   offset: const Offset(0, 8),
                                 ),
@@ -1567,13 +1571,13 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.all(AppTheme.spacing8),
               decoration: BoxDecoration(
                 color: isDestructive
-                    ? const Color(0xFFef4444).withValues(alpha: 0.2)
+                    ? AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.2)
                     : themeConfig.primaryColor.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
               ),
               child: Icon(
                 icon,
-                color: isDestructive ? const Color(0xFFef4444) : themeConfig.primaryColor,
+                color: isDestructive ? AppTheme.getErrorColor(themeConfig) : themeConfig.primaryColor,
                 size: 20,
               ),
             ),
@@ -1583,7 +1587,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: isDestructive ? const Color(0xFFef4444) : AppTheme.textPrimary,
+                color: isDestructive ? AppTheme.getErrorColor(themeConfig) : AppTheme.textPrimary,
               ),
             ),
           ],
@@ -1881,12 +1885,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.only(right: AppTheme.spacing24),
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
+                                gradient: LinearGradient(
                                   begin: Alignment.centerLeft,
                                   end: Alignment.centerRight,
                                   colors: [
                                     Colors.transparent,
-                                    Color(0xFFef4444),
+                                    AppTheme.getErrorColor(themeConfig),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(AppTheme.radiusLarge),

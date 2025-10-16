@@ -370,20 +370,11 @@ class MicrophoneButtonState extends State<MicrophoneButton>
                     (_AllowMultipleGestureRecognizer instance) {
                       instance
                         ..onDown = (details) {
-                          // Check if tap is on the stop button (when locked)
-                          // Stop button is positioned at top: 20, size: 60x60, centered horizontally
+                          // When locked, any tap on the mic button should stop recording
                           if (_isLocked) {
-                            final dy = details.localPosition.dy;
-                            final dx = details.localPosition.dx;
-                            // Stop button bounds: center ±30px horizontally, 20-80px vertically
-                            final isInStopButton = dy >= 20 && dy <= 80 && 
-                                                  dx >= 30 && dx <= 90;
-                            
-                            if (isInStopButton) {
-                              debugPrint('🛑 Stop button hit detected in parent handler');
-                              _handleStopButtonTap();
-                              return;
-                            }
+                            debugPrint('🛑 Mic button tapped while locked - stopping recording');
+                            _handleStopButtonTap();
+                            return;
                           }
                           
                           // Start recording immediately on touch down

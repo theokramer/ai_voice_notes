@@ -50,43 +50,85 @@ class CustomSnackbar {
   }
 
   static Map<String, Color> _getColors(SnackbarType type, ThemeConfig? themeConfig) {
+    if (themeConfig == null) {
+      // Fallback to default colors if no theme config
+      switch (type) {
+        case SnackbarType.success:
+          return {
+            'border': const Color(0xFF10b981),
+            'shadow': const Color(0xFF10b981).withValues(alpha: 0.3),
+            'iconBg': const Color(0xFF10b981).withValues(alpha: 0.2),
+            'icon': const Color(0xFF10b981),
+            'actionBg': const Color(0xFF10b981).withValues(alpha: 0.2),
+            'actionText': const Color(0xFF10b981),
+          };
+        case SnackbarType.error:
+          return {
+            'border': const Color(0xFFef4444),
+            'shadow': const Color(0xFFef4444).withValues(alpha: 0.3),
+            'iconBg': const Color(0xFFef4444).withValues(alpha: 0.2),
+            'icon': const Color(0xFFef4444),
+            'actionBg': const Color(0xFFef4444).withValues(alpha: 0.2),
+            'actionText': const Color(0xFFef4444),
+          };
+        case SnackbarType.warning:
+          return {
+            'border': const Color(0xFFf59e0b),
+            'shadow': const Color(0xFFf59e0b).withValues(alpha: 0.3),
+            'iconBg': const Color(0xFFf59e0b).withValues(alpha: 0.2),
+            'icon': const Color(0xFFf59e0b),
+            'actionBg': const Color(0xFFf59e0b).withValues(alpha: 0.2),
+            'actionText': const Color(0xFFf59e0b),
+          };
+        case SnackbarType.info:
+          return {
+            'border': const Color(0xFF3b82f6),
+            'shadow': const Color(0xFF3b82f6).withValues(alpha: 0.3),
+            'iconBg': const Color(0xFF3b82f6).withValues(alpha: 0.2),
+            'icon': const Color(0xFF3b82f6),
+            'actionBg': const Color(0xFF3b82f6).withValues(alpha: 0.2),
+            'actionText': const Color(0xFF3b82f6),
+          };
+      }
+    }
+
+    // Use theme colors
     switch (type) {
       case SnackbarType.success:
         return {
-          'border': const Color(0xFF10b981),
-          'shadow': const Color(0xFF10b981).withValues(alpha: 0.3),
-          'iconBg': const Color(0xFF10b981).withValues(alpha: 0.2),
-          'icon': const Color(0xFF10b981),
-          'actionBg': const Color(0xFF10b981).withValues(alpha: 0.2),
-          'actionText': const Color(0xFF10b981),
+          'border': AppTheme.getSuccessColor(themeConfig),
+          'shadow': AppTheme.getSuccessColor(themeConfig).withValues(alpha: 0.3),
+          'iconBg': AppTheme.getSuccessColor(themeConfig).withValues(alpha: 0.2),
+          'icon': AppTheme.getSuccessColor(themeConfig),
+          'actionBg': AppTheme.getSuccessColor(themeConfig).withValues(alpha: 0.2),
+          'actionText': AppTheme.getSuccessColor(themeConfig),
         };
       case SnackbarType.error:
         return {
-          'border': const Color(0xFFef4444),
-          'shadow': const Color(0xFFef4444).withValues(alpha: 0.3),
-          'iconBg': const Color(0xFFef4444).withValues(alpha: 0.2),
-          'icon': const Color(0xFFef4444),
-          'actionBg': const Color(0xFFef4444).withValues(alpha: 0.2),
-          'actionText': const Color(0xFFef4444),
+          'border': AppTheme.getErrorColor(themeConfig),
+          'shadow': AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.3),
+          'iconBg': AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.2),
+          'icon': AppTheme.getErrorColor(themeConfig),
+          'actionBg': AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.2),
+          'actionText': AppTheme.getErrorColor(themeConfig),
         };
       case SnackbarType.warning:
         return {
-          'border': const Color(0xFFf59e0b),
-          'shadow': const Color(0xFFf59e0b).withValues(alpha: 0.3),
-          'iconBg': const Color(0xFFf59e0b).withValues(alpha: 0.2),
-          'icon': const Color(0xFFf59e0b),
-          'actionBg': const Color(0xFFf59e0b).withValues(alpha: 0.2),
-          'actionText': const Color(0xFFf59e0b),
+          'border': AppTheme.getWarningColor(themeConfig),
+          'shadow': AppTheme.getWarningColor(themeConfig).withValues(alpha: 0.3),
+          'iconBg': AppTheme.getWarningColor(themeConfig).withValues(alpha: 0.2),
+          'icon': AppTheme.getWarningColor(themeConfig),
+          'actionBg': AppTheme.getWarningColor(themeConfig).withValues(alpha: 0.2),
+          'actionText': AppTheme.getWarningColor(themeConfig),
         };
       case SnackbarType.info:
-        final primaryColor = themeConfig?.primaryColor ?? AppTheme.primary;
         return {
-          'border': primaryColor,
-          'shadow': primaryColor.withValues(alpha: 0.3),
-          'iconBg': primaryColor.withValues(alpha: 0.2),
-          'icon': primaryColor,
-          'actionBg': primaryColor.withValues(alpha: 0.2),
-          'actionText': primaryColor,
+          'border': AppTheme.getInfoColor(themeConfig),
+          'shadow': AppTheme.getInfoColor(themeConfig).withValues(alpha: 0.3),
+          'iconBg': AppTheme.getInfoColor(themeConfig).withValues(alpha: 0.2),
+          'icon': AppTheme.getInfoColor(themeConfig),
+          'actionBg': AppTheme.getInfoColor(themeConfig).withValues(alpha: 0.2),
+          'actionText': AppTheme.getInfoColor(themeConfig),
         };
     }
   }

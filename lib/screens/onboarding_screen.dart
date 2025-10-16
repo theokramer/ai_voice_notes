@@ -19,6 +19,23 @@ import '../widgets/animated_background.dart';
 import '../widgets/onboarding_interstitial.dart';
 import '../widgets/customization_loading.dart';
 
+// Helper class for time data
+class _TimeData {
+  final int beforeTime;
+  final int afterTime;
+  final double heightFactor;
+  final double speedMultiplier;
+  final int savedTime;
+  
+  _TimeData({
+    required this.beforeTime,
+    required this.afterTime,
+    required this.heightFactor,
+    required this.speedMultiplier,
+    required this.savedTime,
+  });
+}
+
 /// Professional onboarding flow optimized for maximum conversion
 /// Flow: Video → Record+Voice Commands → Beautify → Organize → Theme Selector →
 ///       Question 1 (Source) → Question 2 (Use Case) → Personalized Time Savings → 
@@ -49,10 +66,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   static const int question1Index = 4;  // Where heard (no AI response after)
   static const int question2Index = 5;  // Use case
   static const int question3Index = 7;  // Transcription quality
-  static const int ratingIndex = 10;  // Rating prompt
-  static const int loadingIndex = 11;  // Loading + mic permission
-  static const int completionIndex = 12;  // Completion screen
-  static const int totalPages = 13;
+  static const int aiAutonomyIndex = 9;  // AI autonomy question
+  static const int ratingIndex = 11;  // Rating prompt
+  static const int loadingIndex = 12;  // Loading + mic permission
+  static const int completionIndex = 13;  // Completion screen
+  static const int totalPages = 14;
+  
+  // Progress indicator constants
+  static const int progressStartIndex = 4;  // Start from "What you heard about us"
+  static const int progressEndIndex = 11;  // End at rating screen
+  static const int progressTotalSteps = progressEndIndex - progressStartIndex + 1;  // 8 steps
   
   // State for preventing double rating prompt
   bool _hasShownRatingPrompt = false;
@@ -179,7 +202,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     debugPrint('🔍 Can advance: ${_currentPage < totalPages - 1}');
     
     setState(() => _isNavigating = true);
-    await HapticService.medium();
+    await HapticService.light();
     
     if (_currentPage < totalPages - 1) {
       debugPrint('🔍 Advancing from page $_currentPage to ${_currentPage + 1}');
@@ -255,6 +278,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         return _onboardingData.useCase != null;
       case question3Index:
         return _onboardingData.audioQuality != null;
+      case aiAutonomyIndex:
+        return _onboardingData.aiAutopilot != null;
       case 1: // Record + Voice Commands explanation page
       case 2: // Beautify explanation page
       case 3: // Organize explanation page
@@ -262,6 +287,59 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       default:
         return true;
     }
+  }
+
+  /// Builds the progress indicator widget
+  Widget _buildProgressIndicator(SettingsProvider settingsProvider) {
+    // Only show progress indicator for pages within the progress range
+    if (_currentPage < progressStartIndex || _currentPage > progressEndIndex) {
+      return const SizedBox.shrink();
+    }
+
+    final currentStep = _currentPage - progressStartIndex;
+    final progress = (currentStep + 1) / progressTotalSteps;
+    final theme = settingsProvider.currentThemeConfig;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
+      child: Container(
+        height: 4,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(2),
+          color: AppTheme.glassSurface,
+        ),
+        child: Stack(
+          children: [
+            // Background
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(2),
+                color: AppTheme.glassSurface,
+              ),
+            ),
+            // Progress fill
+            AnimatedFractionallySizedBox(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              alignment: Alignment.centerLeft,
+              widthFactor: progress,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(2),
+                  gradient: LinearGradient(
+                    colors: [
+                      theme.primary,
+                      theme.primary.withValues(alpha: 0.8),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -274,9 +352,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             child: SafeArea(
               child: Column(
                 children: [
-                  // Top bar with progress
-                  _buildTopBar(settingsProvider),
-
+                  // Progress indicator
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppTheme.spacing16),
+                    child: _buildProgressIndicator(settingsProvider),
+                  ),
+                  
                   // PageView
                   Expanded(
                     child: PageView(
@@ -311,6 +392,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         _buildAIHelpsPage(), // Personalized time-saving page
                         _buildQuestion3(), // Transcription quality
                         _buildInterstitial1(), // Privacy
+                        _buildAIAutonomyQuestion(), // AI autonomy question
                         _buildBenefitsScreen(), // "What You'll Get"
                         _buildRatingScreen(),
                         _buildLoadingScreen(),
@@ -330,79 +412,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         );
       },
     );
-  }
-
-  Widget _buildTopBar(SettingsProvider settingsProvider) {
-    // Show progress indicator from first screenshot page through loading screen
-    if (_shouldShowProgress()) {
-      return Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        child: Row(
-          children: [
-            // Back button (if not first page)
-            if (_currentPage > 0)
-              GestureDetector(
-                onTap: _isNavigating ? null : _previousPage,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(
-                    Icons.arrow_back_ios_new,
-                    size: 24,
-                    color: settingsProvider.currentThemeConfig.primary,
-                  ),
-                ),
-              ),
-            if (_currentPage > 0) const SizedBox(width: 8),
-            // Progress bar (expanded)
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: _getProgress(),
-                  backgroundColor: settingsProvider.currentThemeConfig.primary
-                      .withValues(alpha: 0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    settingsProvider.currentThemeConfig.primary,
-                  ),
-                  minHeight: 8,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    
-    return const SizedBox.shrink();
-  }
-
-  double _getProgress() {
-    if (_currentPage < question1Index || _currentPage >= loadingIndex) {
-      return 0.0; // Hide progress
-    }
-    return (_currentPage - question1Index) / (loadingIndex - question1Index);
-  }
-
-  bool _shouldShowProgress() {
-    return _currentPage >= question1Index && _currentPage < completionIndex;
-  }
-
-  void _previousPage() async {
-    if (_isNavigating || _currentPage == 0) return;
-    
-    setState(() => _isNavigating = true);
-    await HapticService.light();
-    
-    _pageController.previousPage(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOutCubic,
-    );
-    
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) {
-        setState(() => _isNavigating = false);
-      }
-    });
   }
 
   Widget _buildBottomButton(SettingsProvider settingsProvider) {
@@ -755,7 +764,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       benefits: [
         LocalizationService().t('onboarding_beautify_benefit_1'),
         LocalizationService().t('onboarding_beautify_benefit_2'),
-        LocalizationService().t('onboarding_beautify_benefit_3'),
       ],
     );
   }
@@ -1008,6 +1016,33 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
+  // AI Autonomy Question
+  Widget _buildAIAutonomyQuestion() {
+    final localization = LocalizationService();
+    return _buildQuestionPage(
+      title: localization.t('onboarding_ai_autonomy_title'),
+      options: [
+        (
+          emoji: '🤖',
+          title: localization.t('onboarding_ai_autonomy_option_1'),
+          subtitle: localization.t('onboarding_ai_autonomy_option_1_sub'),
+          value: true, // true = automatic
+        ),
+        (
+          emoji: '👤',
+          title: localization.t('onboarding_ai_autonomy_option_2'),
+          subtitle: localization.t('onboarding_ai_autonomy_option_2_sub'),
+          value: false, // false = manual
+        ),
+      ],
+      selectedValue: _onboardingData.aiAutopilot,
+      onSelect: (value) {
+        debugPrint('🔍 ONBOARDING DEBUG: AI Autonomy answered with: $value');
+        setState(() => _onboardingData.aiAutopilot = value as bool);
+      },
+    );
+  }
+
   // Stunning personalized time savings page with chart
   Widget _buildAIHelpsPage() {
     return Consumer<SettingsProvider>(
@@ -1021,7 +1056,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         // Get personalized content based on user's use case
         final useCase = _onboardingData.useCase ?? 'default';
         final title = localization.t('time_savings_${useCase}_title');
-        final subtitle = localization.t('time_savings_${useCase}_subtitle');
         final statLabel = localization.t('time_savings_${useCase}_stat');
         
         return Container(
@@ -1029,54 +1063,55 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           height: screenSize.height,
           padding: EdgeInsets.symmetric(
             horizontal: AppTheme.spacing24,
-            vertical: isSmallScreen ? availableHeight * 0.06 : availableHeight * 0.08,
+            vertical: isSmallScreen ? availableHeight * 0.04 : availableHeight * 0.06,
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Spacer(flex: 1),
-              
-              // Title - Reduced size
-              Text(
-                title,
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      fontSize: isSmallScreen ? 28 : 34,
-                      fontWeight: FontWeight.w800,
-                      height: 1.1,
-                      letterSpacing: -0.5,
-                    ),
-                textAlign: TextAlign.center,
-              )
-                  .animate()
-                  .fadeIn(duration: 600.ms)
-                  .slideY(begin: 0.3, end: 0, curve: Curves.easeOutCubic),
-              
-              SizedBox(height: isSmallScreen ? 8 : 12),
-              
-              // Subtitle - Reduced size
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontSize: isSmallScreen ? 14 : 16,
-                      color: AppTheme.textSecondary,
-                      height: 1.3,
-                    ),
-                textAlign: TextAlign.center,
-              )
-                  .animate()
-                  .fadeIn(delay: 300.ms, duration: 600.ms),
-              
-              const Spacer(flex: 2),
-              
-              // Time comparison chart
-              _buildTimeComparisonChart(
-                context,
-                theme,
-                statLabel,
-                isSmallScreen,
+              // Flexible header section
+              Flexible(
+                flex: 2,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Title - Reduced size
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            fontSize: isSmallScreen ? 24 : 30,
+                            fontWeight: FontWeight.w800,
+                            height: 1.1,
+                            letterSpacing: -0.5,
+                          ),
+                      textAlign: TextAlign.center,
+                    )
+                        .animate()
+                        .fadeIn(duration: 600.ms)
+                        .slideY(begin: 0.3, end: 0, curve: Curves.easeOutCubic),
+                    
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+                  ],
+                ),
               ),
               
-              const Spacer(flex: 2),
+              SizedBox(height: isSmallScreen ? 16 : 20),
+              
+              // Time comparison chart - Flexible but with minimum space
+              Flexible(
+                flex: 5,
+                child: _buildTimeComparisonChart(
+                  context,
+                  theme,
+                  statLabel,
+                  isSmallScreen,
+                  useCase,
+                ),
+              ),
+              
+              // Bottom spacer - Flexible
+              Flexible(
+                flex: 1,
+                child: Container(),
+              ),
             ],
           ),
         );
@@ -1084,14 +1119,63 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
   
+  _TimeData _getTimeDataForUseCase(String useCase) {
+    switch (useCase) {
+      case 'work':
+        return _TimeData(
+          beforeTime: 60,
+          afterTime: 3,
+          heightFactor: 0.05,
+          speedMultiplier: 20.0,
+          savedTime: 57,
+        );
+      case 'learning':
+        return _TimeData(
+          beforeTime: 120,
+          afterTime: 5,
+          heightFactor: 0.04,
+          speedMultiplier: 24.0,
+          savedTime: 115,
+        );
+      case 'journal':
+        return _TimeData(
+          beforeTime: 20,
+          afterTime: 2,
+          heightFactor: 0.10,
+          speedMultiplier: 10.0,
+          savedTime: 18,
+        );
+      case 'creative':
+        return _TimeData(
+          beforeTime: 30,
+          afterTime: 1,
+          heightFactor: 0.03,
+          speedMultiplier: 30.0,
+          savedTime: 29,
+        );
+      default: // 'other' or any other value
+        return _TimeData(
+          beforeTime: 45,
+          afterTime: 5,
+          heightFactor: 0.11,
+          speedMultiplier: 9.0,
+          savedTime: 40,
+        );
+    }
+  }
+  
   Widget _buildTimeComparisonChart(
     BuildContext context,
     dynamic theme,
     String statLabel,
     bool isSmallScreen,
+    String useCase,
   ) {
+    // Get dynamic values based on use case
+    final timeData = _getTimeDataForUseCase(useCase);
+    
     return Container(
-      padding: EdgeInsets.all(isSmallScreen ? AppTheme.spacing16 : AppTheme.spacing20),
+      padding: EdgeInsets.all(isSmallScreen ? AppTheme.spacing12 : AppTheme.spacing16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -1108,43 +1192,44 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Chart title - Smaller
           Text(
             'Time spent on $statLabel',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontSize: isSmallScreen ? 12 : 13,
+                  fontSize: isSmallScreen ? 11 : 12,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textSecondary,
                 ),
           ),
           
-          SizedBox(height: isSmallScreen ? 16 : 20),
+          SizedBox(height: isSmallScreen ? 12 : 16),
           
           // Bars
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Before - Tall bar (45 min)
+              // Before - Tall bar
               _buildTimeBar(
                 context,
                 'Without\nNotie AI',
                 1.0,
-                '45 min',
-                const Color(0xFF4A4A4A),
+                '${timeData.beforeTime} min',
+                AppTheme.textTertiary,
                 theme,
                 isSmallScreen,
                 600,
               ),
               
-              // After - Short bar (10 min)
+              // After - Short bar
               _buildTimeBar(
                 context,
                 'With\nNotie AI',
-                0.22,
-                '10 min',
-                const Color(0xFF00FF88),
+                timeData.heightFactor,
+                '${timeData.afterTime} min',
+                AppTheme.getSuccessColor(theme),
                 theme,
                 isSmallScreen,
                 900,
@@ -1152,13 +1237,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ],
           ),
           
-          SizedBox(height: isSmallScreen ? 12 : 16),
+          SizedBox(height: isSmallScreen ? 8 : 12),
           
           // Speed indicator and savings
           Container(
             padding: EdgeInsets.symmetric(
-              horizontal: isSmallScreen ? AppTheme.spacing12 : AppTheme.spacing16,
-              vertical: isSmallScreen ? 6 : 8,
+              horizontal: isSmallScreen ? AppTheme.spacing8 : AppTheme.spacing12,
+              vertical: isSmallScreen ? 4 : 6,
             ),
             decoration: BoxDecoration(
               color: theme.primary.withValues(alpha: 0.15),
@@ -1170,13 +1255,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 Icon(
                   Icons.bolt,
                   color: theme.primary,
-                  size: isSmallScreen ? 16 : 18,
+                  size: isSmallScreen ? 14 : 16,
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 Text(
-                  '4.5x faster · Save 35 min',
+                  '${timeData.speedMultiplier}x faster · Save ${timeData.savedTime} min',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontSize: isSmallScreen ? 12 : 13,
+                        fontSize: isSmallScreen ? 10 : 11,
                         fontWeight: FontWeight.w700,
                         color: theme.primary,
                       ),
@@ -1205,16 +1290,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     bool isSmallScreen,
     int delay,
   ) {
-    final maxHeight = isSmallScreen ? 100.0 : 120.0;
+    final maxHeight = isSmallScreen ? 80.0 : 100.0;
     final barHeight = maxHeight * heightFactor;
     
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         // Time amount above bar
         Text(
           timeAmount,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontSize: isSmallScreen ? 14 : 16,
+                fontSize: isSmallScreen ? 12 : 14,
                 fontWeight: FontWeight.w700,
                 color: barColor,
               ),
@@ -1222,11 +1308,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             .animate()
             .fadeIn(delay: (delay + 200).ms, duration: 400.ms),
         
-        const SizedBox(height: 12),
+        SizedBox(height: isSmallScreen ? 8 : 10),
         
         // Bar container
         Container(
-          width: isSmallScreen ? 60 : 75,
+          width: isSmallScreen ? 50 : 65,
           height: barHeight,
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -1237,12 +1323,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 barColor.withValues(alpha: 0.8),
               ],
             ),
-            borderRadius: BorderRadius.circular(24), // Very rounded corners
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: barColor.withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
@@ -1256,15 +1342,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               curve: Curves.elasticOut,
             ),
         
-        const SizedBox(height: 8),
+        SizedBox(height: isSmallScreen ? 6 : 8),
         
         // Label below bar
         SizedBox(
-          width: isSmallScreen ? 60 : 75,
+          width: isSmallScreen ? 50 : 65,
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: isSmallScreen ? 10 : 11,
+                  fontSize: isSmallScreen ? 9 : 10,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textSecondary,
                   height: 1.2,

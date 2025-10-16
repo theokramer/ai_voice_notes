@@ -430,12 +430,12 @@ class _RecordingOverlayState extends State<RecordingOverlay> with TickerProvider
             height: 56,
             decoration: BoxDecoration(
               color: isDestructive 
-                  ? Colors.red.withOpacity(0.2)
+                  ? AppTheme.getErrorColor(themeConfig).withOpacity(0.2)
                   : themeConfig.accentLight.withOpacity(0.2),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isDestructive 
-                    ? Colors.red.withOpacity(0.5)
+                    ? AppTheme.getErrorColor(themeConfig).withOpacity(0.5)
                     : themeConfig.accentLight.withOpacity(0.4),
                 width: 1.5,
               ),
@@ -443,7 +443,7 @@ class _RecordingOverlayState extends State<RecordingOverlay> with TickerProvider
             child: Icon(
               icon,
               color: isDestructive 
-                  ? Colors.red.shade300
+                  ? AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.8)
                   : themeConfig.accentLight,
               size: 26,
             ),
@@ -519,12 +519,12 @@ class _RecordingOverlayState extends State<RecordingOverlay> with TickerProvider
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.15),
+                    color: AppTheme.getErrorColor(themeConfig).withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.warning_rounded,
-                    color: Colors.red.shade300,
+                    color: AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.8),
                     size: 28,
                   ),
                 ),
@@ -602,17 +602,17 @@ class _RecordingOverlayState extends State<RecordingOverlay> with TickerProvider
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.2),
+                            color: AppTheme.getErrorColor(themeConfig).withOpacity(0.2),
                             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                             border: Border.all(
-                              color: Colors.red.withOpacity(0.5),
+                              color: AppTheme.getErrorColor(themeConfig).withOpacity(0.5),
                               width: 1.5,
                             ),
                           ),
                           child: Text(
                             'Discard',
                             style: TextStyle(
-                              color: Colors.red.shade300,
+                              color: AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.8),
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.1,

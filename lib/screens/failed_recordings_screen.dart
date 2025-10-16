@@ -225,10 +225,10 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
               Container(
                 padding: const EdgeInsets.all(AppTheme.spacing12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.2),
+                  color: AppTheme.getErrorColor(themeConfig).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                   border: Border.all(
-                    color: Colors.red.withOpacity(0.3),
+                    color: AppTheme.getErrorColor(themeConfig).withOpacity(0.3),
                     width: 1,
                   ),
                 ),
@@ -236,7 +236,7 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
                   children: [
                     Icon(
                       Icons.error_outline,
-                      color: Colors.red,
+                      color: AppTheme.getErrorColor(themeConfig),
                       size: 16,
                     ),
                     const SizedBox(width: AppTheme.spacing8),
@@ -244,7 +244,7 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
                       child: Text(
                         _retryError!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.red,
+                          color: AppTheme.getErrorColor(themeConfig),
                         ),
                       ),
                     ),
@@ -320,7 +320,7 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
             children: [
               Icon(
                 Icons.mic_off,
-                color: Colors.orange,
+                color: AppTheme.getWarningColor(themeConfig),
                 size: 20,
               ),
               const SizedBox(width: AppTheme.spacing8),
@@ -338,12 +338,12 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(AppTheme.spacing8),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: AppTheme.getErrorColor(themeConfig).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                   ),
                   child: Icon(
                     Icons.delete_outline,
-                    color: Colors.red,
+                    color: AppTheme.getErrorColor(themeConfig),
                     size: 16,
                   ),
                 ),
@@ -378,10 +378,10 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
           Container(
             padding: const EdgeInsets.all(AppTheme.spacing12),
             decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.1),
+              color: AppTheme.getErrorColor(themeConfig).withOpacity(0.1),
               borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
               border: Border.all(
-                color: Colors.red.withOpacity(0.2),
+                color: AppTheme.getErrorColor(themeConfig).withOpacity(0.2),
                 width: 1,
               ),
             ),
@@ -390,7 +390,7 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
               children: [
                 Icon(
                   Icons.error_outline,
-                  color: Colors.red,
+                  color: AppTheme.getErrorColor(themeConfig),
                   size: 16,
                 ),
                 const SizedBox(width: AppTheme.spacing8),
@@ -398,7 +398,7 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
                   child: Text(
                     recording.errorMessage ?? 'Unknown error',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.red.shade700,
+                      color: AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.8),
                     ),
                   ),
                 ),
@@ -412,6 +412,7 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
 
   void _showDeleteConfirmation(FailedRecording recording, FailedRecordingsService service) {
     HapticService.light();
+    final themeConfig = context.read<SettingsProvider>().currentThemeConfig;
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -431,7 +432,7 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
                 children: [
                   Icon(
                     Icons.warning_amber_rounded,
-                    color: Colors.orange.shade400,
+                    color: AppTheme.getWarningColor(themeConfig),
                     size: 28,
                   ),
                   const SizedBox(width: AppTheme.spacing12),
@@ -496,15 +497,15 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
                         padding: const EdgeInsets.symmetric(
                           vertical: AppTheme.spacing16,
                         ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.red.shade600,
-                              Colors.red.shade700,
-                            ],
-                          ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  AppTheme.getErrorColor(themeConfig),
+                                  AppTheme.getErrorColor(themeConfig).withValues(alpha: 0.8),
+                                ],
+                              ),
                           borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                           boxShadow: AppTheme.buttonShadow,
                         ),
