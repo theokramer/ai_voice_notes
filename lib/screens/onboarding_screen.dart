@@ -122,8 +122,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       if (duration.inSeconds > 0 && 
           position.inSeconds >= duration.inSeconds &&
           _videoHasFlownOut) {
-        // Wait for fly-out animation to complete (300ms), then reset - reduced from 600ms
-        Future.delayed(const Duration(milliseconds: 300), () {
+        // Wait for fly-out animation to complete (200ms), then reset - matches new 400ms animation
+        Future.delayed(const Duration(milliseconds: 200), () {
           if (mounted && _videoController != null) {
             setState(() {
               _videoHasFlownOut = false;
@@ -377,14 +377,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   double _getProgress() {
-    if (_currentPage == 0 || _currentPage >= loadingIndex) {
+    if (_currentPage < question1Index || _currentPage >= loadingIndex) {
       return 0.0; // Hide progress
     }
-    return _currentPage / (loadingIndex - 1);
+    return (_currentPage - question1Index) / (loadingIndex - question1Index);
   }
 
   bool _shouldShowProgress() {
-    return _currentPage > 0 && _currentPage < completionIndex;
+    return _currentPage >= question1Index && _currentPage < completionIndex;
   }
 
   void _previousPage() async {
@@ -418,18 +418,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
     
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppTheme.spacing24, AppTheme.spacing24, AppTheme.spacing24, 32),
+      padding: const EdgeInsets.fromLTRB(AppTheme.spacing24, AppTheme.spacing24, AppTheme.spacing24, 40),
       child: Column(
         children: [
           // Main hook text above button
           if (_currentPage == videoPageIndex)
             Padding(
-              padding: const EdgeInsets.only(bottom: AppTheme.spacing16),
+              padding: const EdgeInsets.only(bottom: AppTheme.spacing24),
               child: RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontSize: isSmallScreen ? 24 : (availableHeight < 800 ? 28 : 36),
+                        fontSize: isSmallScreen ? 20 : (availableHeight < 800 ? 24 : 28),
                         height: 1.3,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textPrimary,
@@ -509,36 +509,33 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           builder: (context, constraints) {
             final availableHeight = constraints.maxHeight;
             final isSmallScreen = availableHeight < 700;
-            final screenWidth = MediaQuery.of(context).size.width;
             
-            // Calculate max video height to prevent overflow
-            // Leave room for: top spacing (16) + bottom text (~120) + spacer + button (80)
-            // Increased video size to ensure border radius is visible and not cropped
-            final maxVideoHeight = availableHeight - 180; // Increased for bigger video with visible border radius
-            final maxVideoWidth = screenWidth - (isSmallScreen ? 24 : 32); // Reduced padding for bigger video
+            // Calculate max video height to use more screen space
+            // Leave room for: top spacing (60) + bottom text (~120) + spacer + button (80)
+            // Use more height for better video visibility
+            final maxVideoHeight = availableHeight - 120; // Use more screen height
             
             return Column(
               children: [
-                SizedBox(height: isSmallScreen ? 20 : 30),
+                SizedBox(height: isSmallScreen ? 40 : 60),
               
-              // Video with original slide-up animation - CONSTRAINED
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16),
-                child: AnimatedSlide(
-                  offset: _videoHasFlownOut 
-                      ? const Offset(0, -2) 
-                      : const Offset(0, 0),
-                  duration: const Duration(milliseconds: 600),
-                  curve: Curves.easeInCubic,
-                  child: AnimatedScale(
-                    scale: _videoHasFlownOut ? 0.85 : 1.0,
-                    duration: const Duration(milliseconds: 600),
+                // Video with aspect fit layout
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 4 : 6),
+                  child: AnimatedSlide(
+                    offset: _videoHasFlownOut 
+                        ? const Offset(0, -2) 
+                        : const Offset(0, 0),
+                    duration: const Duration(milliseconds: 400),
                     curve: Curves.easeInCubic,
-                    child: Container(
-                      constraints: BoxConstraints(
-                        maxHeight: maxVideoHeight,
-                        maxWidth: maxVideoWidth,
-                      ),
+                    child: AnimatedScale(
+                      scale: _videoHasFlownOut ? 0.85 : 1.0,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInCubic,
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxHeight: maxVideoHeight,
+                        ),
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(isSmallScreen ? AppTheme.radiusMedium : AppTheme.radiusXLarge),
@@ -593,9 +590,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     .fadeIn(delay: 200.ms, duration: 800.ms)
                     .slideY(begin: -0.3, end: 0, curve: Curves.easeOutCubic)
                     .scale(begin: const Offset(0.85, 0.85), end: const Offset(1, 1)),
-              ),
-              
-              const Spacer(),
+                ),
               ],
             );
           },
