@@ -724,10 +724,10 @@ class RecordingQueueService extends ChangeNotifier {
           // Update the note with dual-mode support
           final updatedNote = lastNote.copyWith(
             content: updatedContent,
-            // Append to raw transcription if it exists (use cleaned transcription)
+            // Append to raw transcription if it exists (use cleaned content)
             rawTranscription: lastNote.rawTranscription != null 
-                ? '${lastNote.rawTranscription}\n\n$finalTranscription'
-                : finalTranscription,
+                ? '${lastNote.rawTranscription}\n\n$contentForProcessing'
+                : contentForProcessing,
             // Append to beautified content if it exists and new content is beautified
             beautifiedContent: lastNote.beautifiedContent != null && beautified
                 ? '${lastNote.beautifiedContent}\n\n$content'
@@ -742,7 +742,7 @@ class RecordingQueueService extends ChangeNotifier {
           updateRecording(
             id,
             status: RecordingStatus.complete,
-            transcription: finalTranscription, // Use cleaned transcription
+            transcription: contentForProcessing, // Use cleaned content (voice commands removed)
             noteId: lastNote.id,
             assignedFolderId: lastNote.folderId,
             folderName: lastNote.folderId != null 
@@ -900,7 +900,7 @@ class RecordingQueueService extends ChangeNotifier {
         name: noteTitle, // Use AI-generated title
         icon: '🎤',
         content: content, // Active content (beautified by default, or raw if not beautified)
-        rawTranscription: finalTranscription, // Use cleaned transcription instead of original
+        rawTranscription: contentForProcessing, // Use cleaned content (voice commands removed)
         beautifiedContent: beautified ? content : null, // Save beautified version if AI processed it
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -916,7 +916,7 @@ class RecordingQueueService extends ChangeNotifier {
       // 7. GENERATE SUMMARY IN BACKGROUND (don't block UI)
       _generateSummaryInBackground(
         noteId: note.id,
-        transcription: finalTranscription, // Use cleaned transcription
+        transcription: contentForProcessing, // Use cleaned content (voice commands removed)
         detectedLanguage: detectedLanguage,
         notesProvider: notesProvider,
         openAIService: openAIService,
@@ -926,7 +926,7 @@ class RecordingQueueService extends ChangeNotifier {
       updateRecording(
         id,
         status: RecordingStatus.complete,
-        transcription: finalTranscription, // Use cleaned transcription
+        transcription: contentForProcessing, // Use cleaned content (voice commands removed)
         noteId: note.id,
         assignedFolderId: folderId,
         folderName: folderName,

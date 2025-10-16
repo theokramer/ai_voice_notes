@@ -161,7 +161,9 @@ class _FolderGroupCardState extends State<FolderGroupCard> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${widget.suggestions.length} notes',
+                          widget.suggestions.length == 1 
+                              ? '${widget.suggestions.length} note'
+                              : '${widget.suggestions.length} notes',
                           style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
                         ),
                         if (lowConfidenceCount > 0)

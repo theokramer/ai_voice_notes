@@ -30,6 +30,8 @@
 	<string>Notie AI needs microphone access to record your voice notes and transform them into organized, searchable text.</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This helps us provide you with a better experience and improve our app.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Notie AI would like to send you a notification to remind you about the ending of the free trial.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

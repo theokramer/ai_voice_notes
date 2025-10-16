@@ -49,6 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<MicrophoneButtonState> _microphoneKey = GlobalKey<MicrophoneButtonState>();
   final FocusNode _searchFocusNode = FocusNode();
+  bool _isSearchFocused = false;
+  double _pullDownOffset = 0.0; // Track pull-down amount for search bar animation
   
   // Chat mode state
   bool _isInChatMode = false;
@@ -149,10 +151,37 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
+    _searchFocusNode.addListener(_handleSearchFocusChange);
+    
+    // Ensure search bar is never focused on init
+    _searchFocusNode.unfocus();
     
     // Request microphone permission on first launch
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _requestMicPermissionIfNeeded();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Ensure search bar is never focused when navigating to home screen
+    // Use a post-frame callback to ensure this happens after the widget tree is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _searchFocusNode.hasFocus) {
+        _searchFocusNode.unfocus();
+        // Also clear any search state to ensure clean state
+        if (_searchController.text.isNotEmpty) {
+          _searchController.clear();
+          context.read<NotesProvider>().setSearchQuery('');
+        }
+      }
+    });
+  }
+
+  void _handleSearchFocusChange() {
+    setState(() {
+      _isSearchFocused = _searchFocusNode.hasFocus;
     });
   }
 
@@ -190,11 +219,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _handleScroll() {
     if (_scrollController.hasClients) {
-      // Detect overscroll at the top for pull-down-to-focus
-      if (_scrollController.offset < -50 && !_searchFocusNode.hasFocus) {
-        _searchFocusNode.requestFocus();
-        HapticService.light();
+      final offset = _scrollController.offset;
+      
+      // Track pull-down offset for animation (negative values mean pulling down)
+      if (offset < 0) {
+        setState(() {
+          _pullDownOffset = offset.abs().clamp(0.0, 100.0);
+        });
+      } else if (_pullDownOffset != 0.0) {
+        setState(() {
+          _pullDownOffset = 0.0;
+        });
       }
+      
+      // DISABLED: Automatic pull-down-to-focus to prevent accidental triggers
+      // Users can still tap the search bar to focus it manually
+      // This prevents the search bar from focusing when navigating to home screen
     }
   }
 
@@ -215,6 +255,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _searchController.clear();
     });
     
+    // Clear the search filter in NotesProvider when entering chat mode
+    context.read<NotesProvider>().setSearchQuery('');
+    
+    // Unfocus the search bar when entering AI chat mode
+    _searchFocusNode.unfocus();
+    
     // Only send to AI if there's a query
     if (query.trim().isNotEmpty) {
       await _sendToAI(query);
@@ -229,6 +275,12 @@ class _HomeScreenState extends State<HomeScreen> {
       _chatContext = null;
       _isAIProcessing = false;
     });
+    
+    // Ensure search filter is cleared when exiting chat mode
+    context.read<NotesProvider>().setSearchQuery('');
+    
+    // Unfocus the search bar to show the microphone button
+    _searchFocusNode.unfocus();
   }
 
   Future<void> _sendToAI(String message) async {
@@ -307,10 +359,30 @@ class _HomeScreenState extends State<HomeScreen> {
           
         case 'add_to_note':
           final noteId = _lastAction!['noteId'] as String;
-          final oldContent = _undoData as String;
+          final undoData = _undoData as Map<String, dynamic>;
+          final oldContent = undoData['content'] as String;
+          final oldRawTranscription = undoData['rawTranscription'] as String?;
           final note = notesProvider.getNoteById(noteId);
           if (note != null) {
-            final restoredNote = note.copyWith(content: oldContent);
+            final restoredNote = note.copyWith(
+              content: oldContent,
+              rawTranscription: oldRawTranscription,
+            );
+            await notesProvider.updateNote(restoredNote);
+          }
+          break;
+          
+        case 'add_to_last_note':
+          final noteId = _lastAction!['noteId'] as String;
+          final undoData = _undoData as Map<String, dynamic>;
+          final oldContent = undoData['content'] as String;
+          final oldRawTranscription = undoData['rawTranscription'] as String?;
+          final note = notesProvider.getNoteById(noteId);
+          if (note != null) {
+            final restoredNote = note.copyWith(
+              content: oldContent,
+              rawTranscription: oldRawTranscription,
+            );
             await notesProvider.updateNote(restoredNote);
           }
           break;
@@ -387,7 +459,10 @@ class _HomeScreenState extends State<HomeScreen> {
         case 'create_note':
           final noteName = action.data['noteName'] as String;
           final noteContent = action.data['noteContent'] as String? ?? '';
-          final folderId = action.data['folderId'] as String?;
+          
+          // Always use the default unorganized folder for AI-created notes
+          // This prevents the AI from creating unnecessary folders
+          String? finalFolderId = foldersProvider.unorganizedFolderId;
           
           HapticService.success();
           final newNote = Note(
@@ -398,7 +473,7 @@ class _HomeScreenState extends State<HomeScreen> {
             rawTranscription: noteContent, // Set rawTranscription to keep plain text format
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
-            folderId: folderId,
+            folderId: finalFolderId,
           );
 
           await notesProvider.addNote(newNote, foldersProvider: foldersProvider);
@@ -443,6 +518,77 @@ class _HomeScreenState extends State<HomeScreen> {
           }
           break;
         
+        case 'add_to_last_note':
+          final contentToAdd = action.data['contentToAdd'] as String;
+          
+          // Get all notes and sort by creation date (most recent first)
+          final allNotes = notesProvider.allNotes;
+          if (allNotes.isEmpty) {
+            setState(() {
+              _chatMessages.add(ChatMessage(
+                text: '❌ No notes found to append to.',
+                isUser: false,
+                timestamp: DateTime.now(),
+              ));
+            });
+            return;
+          }
+          
+          // Sort by creation date and get most recent
+          final sortedNotes = List<Note>.from(allNotes)
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          final lastNote = sortedNotes.first;
+          
+          HapticService.success();
+          
+          // Save old content for undo
+          final oldContent = lastNote.content;
+          final oldRawTranscription = lastNote.rawTranscription;
+          
+          // Append new content to both content and rawTranscription
+          final newContent = lastNote.content.isEmpty 
+              ? contentToAdd 
+              : '${lastNote.content}\n\n$contentToAdd';
+          
+          final newRawTranscription = lastNote.rawTranscription == null
+              ? contentToAdd
+              : '${lastNote.rawTranscription}\n\n$contentToAdd';
+          
+          final updatedNote = lastNote.copyWith(
+            content: newContent,
+            rawTranscription: newRawTranscription,
+          );
+          await notesProvider.updateNote(updatedNote);
+          
+          // Save undo data
+          _lastAction = {'type': 'add_to_last_note', 'noteId': lastNote.id};
+          _undoData = {'content': oldContent, 'rawTranscription': oldRawTranscription};
+          
+          setState(() {
+            _chatMessages.add(ChatMessage(
+              text: '✅ Added content to "${lastNote.name}"!',
+              isUser: false,
+              timestamp: DateTime.now(),
+              noteCitations: [NoteCitation(
+                noteId: lastNote.id,
+                noteName: lastNote.name,
+              )],
+            ));
+          });
+          
+          if (mounted) {
+            CustomSnackbar.show(
+              context,
+              message: 'Added content to "${lastNote.name}"',
+              type: SnackbarType.success,
+              actionLabel: 'UNDO',
+              onAction: _undoLastAction,
+              duration: const Duration(seconds: 4),
+              themeConfig: settingsProvider.currentThemeConfig,
+            );
+          }
+          break;
+        
         case 'add_to_note':
           final noteId = action.data['noteId'] as String;
           final contentToAdd = action.data['contentToAdd'] as String;
@@ -463,24 +609,36 @@ class _HomeScreenState extends State<HomeScreen> {
           
           // Save old content for undo
           final oldContent = note.content;
+          final oldRawTranscription = note.rawTranscription;
           
-          // Append new content
+          // Append new content to both content and rawTranscription
           final newContent = note.content.isEmpty 
               ? contentToAdd 
               : '${note.content}\n\n$contentToAdd';
           
-          final updatedNote = note.copyWith(content: newContent);
+          final newRawTranscription = note.rawTranscription == null
+              ? contentToAdd
+              : '${note.rawTranscription}\n\n$contentToAdd';
+          
+          final updatedNote = note.copyWith(
+            content: newContent,
+            rawTranscription: newRawTranscription,
+          );
           await notesProvider.updateNote(updatedNote);
           
           // Save undo data
           _lastAction = {'type': 'add_to_note', 'noteId': noteId};
-          _undoData = oldContent;
+          _undoData = {'content': oldContent, 'rawTranscription': oldRawTranscription};
           
           setState(() {
             _chatMessages.add(ChatMessage(
               text: '✅ Added content to "${note.name}"!',
               isUser: false,
               timestamp: DateTime.now(),
+              noteCitations: [NoteCitation(
+                noteId: note.id,
+                noteName: note.name,
+              )],
             ));
           });
           
@@ -499,8 +657,6 @@ class _HomeScreenState extends State<HomeScreen> {
         
         case 'move_note':
           final noteId = action.data['noteId'] as String;
-          final targetFolderId = action.data['targetFolderId'] as String?;
-          final targetFolderName = action.data['targetFolderName'] as String?;
           
           final note = notesProvider.getNoteById(noteId);
           if (note == null) {
@@ -519,9 +675,10 @@ class _HomeScreenState extends State<HomeScreen> {
           // Save old folder for undo
           final oldFolderId = note.folderId;
           
+          // Always move to unorganized folder to prevent AI from creating/moving to wrong folders
           await notesProvider.moveNoteToFolder(
             noteId, 
-            targetFolderId,
+            foldersProvider.unorganizedFolderId,
             foldersProvider: foldersProvider,
           );
           
@@ -531,7 +688,7 @@ class _HomeScreenState extends State<HomeScreen> {
           
           setState(() {
             _chatMessages.add(ChatMessage(
-              text: '✅ Moved "${note.name}" to $targetFolderName!',
+              text: '✅ Moved "${note.name}" to the main folder!',
               isUser: false,
               timestamp: DateTime.now(),
             ));
@@ -540,7 +697,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (mounted) {
             CustomSnackbar.show(
               context,
-              message: 'Moved to $targetFolderName',
+              message: 'Moved to main folder',
               type: SnackbarType.success,
               actionLabel: 'UNDO',
               onAction: _undoLastAction,
@@ -551,54 +708,16 @@ class _HomeScreenState extends State<HomeScreen> {
           break;
         
         case 'create_folder':
+          // Disabled: AI should not create folders, always use unorganized folder
           final folderName = action.data['folderName'] as String;
-          
-          // Check if folder already exists
-          final existingFolder = foldersProvider.getFolderByName(folderName);
-          if (existingFolder != null) {
-            setState(() {
-              _chatMessages.add(ChatMessage(
-                text: '✅ Folder "$folderName" already exists!',
-                isUser: false,
-                timestamp: DateTime.now(),
-              ));
-            });
-            return;
-          }
-          
-          HapticService.success();
-          
-          // Use smart emoji selection
-          final smartIcon = getSmartEmojiForFolder(folderName);
-          final newFolder = await foldersProvider.createFolder(
-            name: folderName,
-            icon: smartIcon,
-            aiCreated: true,
-          );
-          
-          // Save undo data
-          _lastAction = {'type': 'create_folder'};
-          _undoData = newFolder.id;
           
           setState(() {
             _chatMessages.add(ChatMessage(
-              text: '✅ Created folder "$folderName" $smartIcon!',
+              text: '📝 Note will be saved to the main folder instead of creating "$folderName"',
               isUser: false,
               timestamp: DateTime.now(),
             ));
           });
-          
-          if (mounted) {
-            CustomSnackbar.show(
-              context,
-              message: 'Created folder "$folderName"',
-              type: SnackbarType.success,
-              actionLabel: 'UNDO',
-              onAction: _undoLastAction,
-              duration: const Duration(seconds: 4),
-              themeConfig: settingsProvider.currentThemeConfig,
-            );
-          }
           break;
         
         case 'summarize_chat':
@@ -904,7 +1023,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // This must match the actual NoteCard rendering in grid view
   Future<void> _startRecording() async {
     // Fire haptic feedback immediately (don't await)
-    HapticService.medium();
+    HapticService.light();
 
     // CRITICAL: Cancel any existing subscriptions before starting new recording
     // This prevents "Stream has already been listened to" error
@@ -1006,7 +1125,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _stopRecording() async {
     // Fire haptic feedback immediately (don't await)
-    HapticService.medium();
+    HapticService.light();
     
     // Capture the final recording duration before resetting
     final finalRecordingDuration = _recordingDuration;
@@ -1090,7 +1209,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _discardRecording() async {
     // Fire haptic feedback immediately (don't await)
-    HapticService.medium();
+    HapticService.light();
     
     // Clean up timer and amplitude subscription
     _recordingTimer?.cancel();
@@ -1481,14 +1600,22 @@ class _HomeScreenState extends State<HomeScreen> {
         final themeConfig = settingsProvider.currentThemeConfig;
         return GestureDetector(
           onTap: () {
-            // Unfocus search bar when tapping background
-            FocusScope.of(context).unfocus();
+            // Properly unfocus search bar when tapping background
+            // This should behave the same as pressing the keyboard done button
+            if (_searchFocusNode.hasFocus) {
+              _searchFocusNode.unfocus();
+              // Clear any search query when unfocusing via background tap
+              if (_searchController.text.isNotEmpty) {
+                _searchController.clear();
+                context.read<NotesProvider>().setSearchQuery('');
+              }
+            } else {
+              FocusScope.of(context).unfocus();
+            }
           },
-          child: Scaffold(
-            body: AnimatedBackground(
-            style: settingsProvider.settings.backgroundStyle,
+        child: Scaffold(
+          body: AnimatedBackground(
             themeConfig: settingsProvider.currentThemeConfig,
-            isSimpleMode: settingsProvider.isSimpleMode,
             child: SafeArea(
               top: false, // Allow header to extend into safe area
               child: Stack(
@@ -1541,6 +1668,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               setState(() {});
                             },
                             onSearchSubmitted: (value) async {
+                              // Properly unfocus search bar when done button is pressed
+                              _searchFocusNode.unfocus();
+                              
                               if (value.trim().isEmpty) return;
                               if (_isInChatMode) {
                                 await _sendToAI(value);
@@ -1552,6 +1682,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                             hasSearchQuery: _searchController.text.isNotEmpty,
                             isInChatMode: _isInChatMode,
+                            isSearchFocused: _isSearchFocused,
+                            pullDownOffset: _pullDownOffset,
                           ),
                           expandedHeight: 140.0 + MediaQuery.of(context).padding.top,
                           collapsedHeight: 56.0 + MediaQuery.of(context).padding.top,
@@ -1829,43 +1961,45 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               
               // Microphone button - centered (or Organize button when viewing Unorganized)
-              Positioned(
-                bottom: 24,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: Consumer<FoldersProvider>(
-                    builder: (context, foldersProvider, child) {
-                      final isViewingUnorganized = _currentFolderContext == foldersProvider.unorganizedFolderId;
-                      
-                      if (isViewingUnorganized) {
-                        // Show Organize button when viewing unorganized folder
-                        return FloatingActionButton.extended(
-                          onPressed: () {
-                            HapticService.medium();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const OrganizationScreen()),
-                            );
-                          },
-                          icon: const Icon(Icons.auto_fix_high),
-                          label: Text(LocalizationService().t('organize')),
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                        );
-                      } else {
-                        // Show microphone button for all other views
-                        return MicrophoneButton(
-                          key: _microphoneKey,
-                          onRecordingStart: _startRecording,
-                          onRecordingStop: _stopRecording,
-                          onRecordingLock: _onRecordingLock,
-                          onRecordingUnlock: _onRecordingUnlock,
-                        );
-                      }
-                    },
+              // Hide when search is focused or in chat mode
+              if (!_isSearchFocused && !_isInChatMode)
+                Positioned(
+                  bottom: 24,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Consumer<FoldersProvider>(
+                      builder: (context, foldersProvider, child) {
+                        final isViewingUnorganized = _currentFolderContext == foldersProvider.unorganizedFolderId;
+                        
+                        if (isViewingUnorganized) {
+                          // Show Organize button when viewing unorganized folder
+                          return FloatingActionButton.extended(
+                            onPressed: () {
+                              HapticService.medium();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const OrganizationScreen()),
+                              );
+                            },
+                            icon: const Icon(Icons.auto_fix_high),
+                            label: Text(LocalizationService().t('organize')),
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                          );
+                        } else {
+                          // Show microphone button for all other views
+                          return MicrophoneButton(
+                            key: _microphoneKey,
+                            onRecordingStart: _startRecording,
+                            onRecordingStop: _stopRecording,
+                            onRecordingLock: _onRecordingLock,
+                            onRecordingUnlock: _onRecordingUnlock,
+                          );
+                        }
+                      },
+                    ),
                   ),
                 ),
-              ),
           
               // Chat overlay
               if (_isInChatMode)
@@ -2013,7 +2147,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } else if (hour >= 21 && hour < 24) {
       // Night
       return [
-        'Night owl mode 🦉',
+        
         'Late night genius',
         'Still going strong',
       ];

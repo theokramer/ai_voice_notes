@@ -5,7 +5,6 @@ import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/settings_provider.dart';
-import 'waveform_visualizer.dart';
 
 class MicrophoneButton extends StatefulWidget {
   final VoidCallback onRecordingStart;
@@ -45,7 +44,6 @@ class MicrophoneButtonState extends State<MicrophoneButton>
   
   // Drag-to-lock state
   double _dragOffset = 0.0;
-  double _dragStartY = 0.0;
   double _dragStartGlobalY = 0.0;
   bool _isLocked = false;
   bool _isDragging = false;
@@ -184,7 +182,6 @@ class MicrophoneButtonState extends State<MicrophoneButton>
       _isLocked = false;
       _isDragging = false;
       _dragOffset = 0.0;
-      _dragStartY = 0.0;
       _dragStartGlobalY = 0.0;
       _isStoppingRecording = false;
     });
@@ -209,7 +206,6 @@ class MicrophoneButtonState extends State<MicrophoneButton>
       _isRecording = false;
       _isDragging = false;
       _dragOffset = 0.0;
-      _dragStartY = 0.0;
       _dragStartGlobalY = 0.0;
     });
     _recordingController.stop();
@@ -249,7 +245,6 @@ class MicrophoneButtonState extends State<MicrophoneButton>
       _isLocked = false;
       _isDragging = false;
       _dragOffset = 0.0;
-      _dragStartY = 0.0;
       _dragStartGlobalY = 0.0;
     });
     
@@ -365,7 +360,6 @@ class MicrophoneButtonState extends State<MicrophoneButton>
           ]),
           builder: (context, child) {
             final buttonSize = _isRecording ? 90.0 : 95.0;
-            final waveformOpacity = _currentAmplitude.clamp(0.4, 0.9);
             
             return Transform.scale(
               scale: _scaleAnimation.value,
@@ -396,7 +390,6 @@ class MicrophoneButtonState extends State<MicrophoneButton>
                           // Prevent starting if we're in the middle of stopping a recording
                           if (!_isRecording && !_isLocked && !_isStoppingRecording) {
                             setState(() {
-                              _dragStartY = details.localPosition.dy;
                               _dragStartGlobalY = details.position.dy;
                               _isDragging = false;
                               _dragOffset = 0.0;
@@ -556,21 +549,6 @@ class MicrophoneButtonState extends State<MicrophoneButton>
                                       ),
                                     );
                                   },
-                                ),
-                              
-                              // Waveform visualizer when recording
-                              if (_isRecording)
-                                Opacity(
-                                  opacity: waveformOpacity,
-                                  child: Transform.scale(
-                                    scale: _pulseAnimation.value,
-                                    child: WaveformVisualizer(
-                                      isRecording: _isRecording,
-                                      size: 115,
-                                      color: themeConfig.accentLight.withOpacity(0.6),
-                                      amplitude: _currentAmplitude,
-                                    ),
-                                  ),
                                 ),
                               
                               // Outer pulse ring (recording state) - uses theme color

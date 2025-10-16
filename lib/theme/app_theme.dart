@@ -52,18 +52,6 @@ class ThemeConfig {
 class AppTheme {
   // Static theme configs for each preset
   static const _themeConfigs = {
-    ThemePreset.modern: ThemeConfig(
-      gradientStart: Color(0xFF1f2937),
-      gradientMiddle: Color(0xFF475569),
-      gradientEnd: Color(0xFF64748b),
-      accentColor: Color(0xFF38bdf8),
-      primaryColor: Color(0xFF38bdf8), // Sky blue - vibrant but fits modern dark theme
-      secondaryColor: Color(0xFF0ea5e9),
-      buttonColor: Color(0xFF0ea5e9),
-      buttonSecondaryColor: Color(0xFF0284c7),
-      accentLight: Color(0xFF7dd3fc),
-      accentDark: Color(0xFF0369a1),
-    ),
     ThemePreset.oceanBlue: ThemeConfig(
       gradientStart: Color(0xFF1e3a8a),
       gradientMiddle: Color(0xFF06b6d4),
@@ -112,10 +100,58 @@ class AppTheme {
       accentLight: Color(0xFFfda4af),
       accentDark: Color(0xFF9f1239),
     ),
+    ThemePreset.midnightPurple: ThemeConfig(
+      gradientStart: Color(0xFF4c1d95),
+      gradientMiddle: Color(0xFF7c3aed),
+      gradientEnd: Color(0xFFa78bfa),
+      accentColor: Color(0xFF8b5cf6),
+      primaryColor: Color(0xFFa78bfa), // Bright violet for midnight theme
+      secondaryColor: Color(0xFF7c3aed),
+      buttonColor: Color(0xFF7c3aed),
+      buttonSecondaryColor: Color(0xFF6d28d9),
+      accentLight: Color(0xFFc4b5fd),
+      accentDark: Color(0xFF5b21b6),
+    ),
+    ThemePreset.cherryBlossom: ThemeConfig(
+      gradientStart: Color(0xFF9f1239),
+      gradientMiddle: Color(0xFFf43f5e),
+      gradientEnd: Color(0xFFfda4af),
+      accentColor: Color(0xFFfb7185),
+      primaryColor: Color(0xFFfda4af), // Soft pink for cherry blossom theme
+      secondaryColor: Color(0xFFfb7185),
+      buttonColor: Color(0xFFf43f5e),
+      buttonSecondaryColor: Color(0xFFe11d48),
+      accentLight: Color(0xFFfecdd3),
+      accentDark: Color(0xFFbe123c),
+    ),
+    ThemePreset.arcticBlue: ThemeConfig(
+      gradientStart: Color(0xFF0c4a6e),
+      gradientMiddle: Color(0xFF0ea5e9),
+      gradientEnd: Color(0xFF7dd3fc),
+      accentColor: Color(0xFF38bdf8),
+      primaryColor: Color(0xFF7dd3fc), // Bright icy blue for arctic theme
+      secondaryColor: Color(0xFF38bdf8),
+      buttonColor: Color(0xFF0ea5e9),
+      buttonSecondaryColor: Color(0xFF0284c7),
+      accentLight: Color(0xFFbae6fd),
+      accentDark: Color(0xFF075985),
+    ),
+    ThemePreset.emeraldNight: ThemeConfig(
+      gradientStart: Color(0xFF134e4a),
+      gradientMiddle: Color(0xFF14b8a6),
+      gradientEnd: Color(0xFF5eead4),
+      accentColor: Color(0xFF2dd4bf),
+      primaryColor: Color(0xFF5eead4), // Bright teal for emerald theme
+      secondaryColor: Color(0xFF2dd4bf),
+      buttonColor: Color(0xFF14b8a6),
+      buttonSecondaryColor: Color(0xFF0d9488),
+      accentLight: Color(0xFF99f6e4),
+      accentDark: Color(0xFF115e59),
+    ),
   };
 
   static ThemeConfig getThemeConfig(ThemePreset preset) {
-    return _themeConfigs[preset] ?? _themeConfigs[ThemePreset.modern]!;
+    return _themeConfigs[preset] ?? _themeConfigs[ThemePreset.oceanBlue]!;
   }
   
   // Common colors (independent of theme)
@@ -130,8 +166,13 @@ class AppTheme {
   static const Color glassStrongSurface = Color(0x40FFFFFF); // 25% white (for cards)
   static const Color glassDarkSurface = Color(0x60000000); // 38% black (dark frosting for headers)
   
+  // Recording overlay - Enhanced glass with better contrast
+  static const Color glassRecordingSurface = Color(0x66FFFFFF); // 40% white - better visibility
+  static const Color glassRecordingStrong = Color(0x8CFFFFFF); // 55% white - critical UI elements
+  static const Color glassRecordingBorder = Color(0x66FFFFFF); // 40% white - vibrant borders
+  
   // Backward compatibility - use default theme
-  static final ThemeConfig _defaultConfig = getThemeConfig(ThemePreset.modern);
+  static final ThemeConfig _defaultConfig = getThemeConfig(ThemePreset.oceanBlue);
   static Color get gradientStart => _defaultConfig.gradientStart;
   static Color get gradientMiddle => _defaultConfig.gradientMiddle;
   static Color get gradientEnd => _defaultConfig.gradientEnd;
@@ -255,7 +296,7 @@ class AppTheme {
   }
 
   // Backward compatibility - get default theme
-  static ThemeData get theme => buildTheme(ThemePreset.modern);
+  static ThemeData get theme => buildTheme(ThemePreset.oceanBlue);
 
   // Custom spacing - Generous for elegant design
   static const double spacing4 = 4;
@@ -416,6 +457,37 @@ class AppTheme {
           blurRadius: 1,
           spreadRadius: 0,
           offset: const Offset(0, -1),
+        ),
+      ],
+    );
+  }
+
+  // Recording overlay decoration with enhanced glass and theme-aware styling
+  static BoxDecoration recordingGlassDecoration({
+    required ThemeConfig themeConfig,
+    double radius = radiusLarge,
+    bool isStrong = false,
+    List<BoxShadow>? shadows,
+  }) {
+    return BoxDecoration(
+      color: isStrong ? glassRecordingStrong : glassRecordingSurface,
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(
+        color: themeConfig.accentLight.withOpacity(0.4),
+        width: 1.5,
+      ),
+      boxShadow: shadows ?? [
+        BoxShadow(
+          color: themeConfig.accentLight.withOpacity(0.15),
+          blurRadius: 20,
+          spreadRadius: 0,
+          offset: const Offset(0, 8),
+        ),
+        BoxShadow(
+          color: Colors.black.withOpacity(0.3),
+          blurRadius: 15,
+          spreadRadius: 0,
+          offset: const Offset(0, 4),
         ),
       ],
     );

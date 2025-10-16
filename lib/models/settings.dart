@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import '../widgets/animated_background.dart';
 import 'app_language.dart';
 
 enum ThemePreset {
-  modern,
   oceanBlue,
   sunsetOrange,
   forestGreen,
   aurora,
+  midnightPurple,
+  cherryBlossom,
+  arcticBlue,
+  emeraldNight,
 }
 
 enum AudioQuality {
@@ -26,11 +28,9 @@ class Settings {
   final ThemePreset themePreset;
   final AudioQuality audioQuality;
   final bool hapticsEnabled;
-  final BackgroundStyle backgroundStyle;
   final bool hasRequestedMicPermission;
   final AppLanguage? preferredLanguage;
   final OrganizationMode organizationMode;
-  final bool isSimpleMode; // Simple mode: no glassmorphism, minimal animations, solid backgrounds
   
   /// User preference learning: Map of folder ID -> list of note content keywords that were rejected
   /// When a user moves a note away from an AI-suggested folder, we store the note's content pattern
@@ -38,14 +38,12 @@ class Settings {
   final Map<String, List<String>> rejectedFolderSuggestions;
   
   Settings({
-    this.themePreset = ThemePreset.modern,
+    this.themePreset = ThemePreset.oceanBlue,
     this.audioQuality = AudioQuality.high,
     this.hapticsEnabled = true,
-    this.backgroundStyle = BackgroundStyle.clouds, // Default to gentle clouds
     this.hasRequestedMicPermission = false,
     this.preferredLanguage,
     this.organizationMode = OrganizationMode.autoOrganize,
-    this.isSimpleMode = false, // Default to fancy glassmorphism mode
     this.rejectedFolderSuggestions = const {},
   });
 
@@ -53,22 +51,18 @@ class Settings {
     ThemePreset? themePreset,
     AudioQuality? audioQuality,
     bool? hapticsEnabled,
-    BackgroundStyle? backgroundStyle,
     bool? hasRequestedMicPermission,
     AppLanguage? preferredLanguage,
     OrganizationMode? organizationMode,
-    bool? isSimpleMode,
     Map<String, List<String>>? rejectedFolderSuggestions,
   }) {
     return Settings(
       themePreset: themePreset ?? this.themePreset,
       audioQuality: audioQuality ?? this.audioQuality,
       hapticsEnabled: hapticsEnabled ?? this.hapticsEnabled,
-      backgroundStyle: backgroundStyle ?? this.backgroundStyle,
       hasRequestedMicPermission: hasRequestedMicPermission ?? this.hasRequestedMicPermission,
       preferredLanguage: preferredLanguage ?? this.preferredLanguage,
       organizationMode: organizationMode ?? this.organizationMode,
-      isSimpleMode: isSimpleMode ?? this.isSimpleMode,
       rejectedFolderSuggestions: rejectedFolderSuggestions ?? this.rejectedFolderSuggestions,
     );
   }
@@ -78,11 +72,9 @@ class Settings {
       'themePreset': themePreset.name,
       'audioQuality': audioQuality.name,
       'hapticsEnabled': hapticsEnabled,
-      'backgroundStyle': backgroundStyle.name,
       'hasRequestedMicPermission': hasRequestedMicPermission,
       'preferredLanguage': preferredLanguage?.name,
       'organizationMode': organizationMode.name,
-      'isSimpleMode': isSimpleMode,
       'rejectedFolderSuggestions': rejectedFolderSuggestions,
     };
   }
@@ -117,24 +109,19 @@ class Settings {
     return Settings(
       themePreset: ThemePreset.values.firstWhere(
         (e) => e.name == json['themePreset'],
-        orElse: () => ThemePreset.modern,
+        orElse: () => ThemePreset.oceanBlue,
       ),
       audioQuality: AudioQuality.values.firstWhere(
         (e) => e.name == json['audioQuality'],
         orElse: () => AudioQuality.high,
       ),
       hapticsEnabled: json['hapticsEnabled'] ?? true,
-      backgroundStyle: BackgroundStyle.values.firstWhere(
-        (e) => e.name == json['backgroundStyle'],
-        orElse: () => BackgroundStyle.clouds,
-      ),
       hasRequestedMicPermission: json['hasRequestedMicPermission'] ?? false,
       preferredLanguage: language,
       organizationMode: OrganizationMode.values.firstWhere(
         (e) => e.name == json['organizationMode'],
         orElse: () => OrganizationMode.autoOrganize,
       ),
-      isSimpleMode: json['isSimpleMode'] ?? false,
       rejectedFolderSuggestions: rejectedSuggestions,
     );
   }

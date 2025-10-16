@@ -40,11 +40,10 @@ class _SplashScreenState extends State<SplashScreen> {
       final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
       await settingsProvider.initialize();
       
-      // Detect and save device language if not already set
+      // Set English as default language if not already set
       if (settingsProvider.settings.preferredLanguage == null) {
-        final deviceLanguage = LanguageHelper.detectDeviceLanguage();
-        await settingsProvider.updatePreferredLanguage(deviceLanguage);
-        debugPrint('🌍 Detected and saved device language: ${deviceLanguage.name}');
+        await settingsProvider.updatePreferredLanguage(AppLanguage.english);
+        debugPrint('🌍 Set default language to English');
       }
 
       // Load folders provider (must be before notes provider)
@@ -126,45 +125,39 @@ class _SplashScreenState extends State<SplashScreen> {
       builder: (context, settingsProvider, child) {
         return Scaffold(
           body: AnimatedBackground(
-            style: settingsProvider.settings.backgroundStyle,
             themeConfig: settingsProvider.currentThemeConfig,
-            isSimpleMode: false, // Always show fancy splash
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // App icon/logo with glow effect
+                  // Wave logo image with glow effect
                   Container(
                     width: 140,
                     height: 140,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          settingsProvider.currentThemeConfig.accentColor,
-                          settingsProvider.currentThemeConfig.accentColor.withOpacity(0.7),
-                        ],
-                      ),
                       borderRadius: BorderRadius.circular(35),
                       boxShadow: [
                         BoxShadow(
-                          color: settingsProvider.currentThemeConfig.accentColor.withOpacity(0.5),
+                          color: settingsProvider.currentThemeConfig.accentColor.withOpacity(0.3),
                           blurRadius: 40,
                           spreadRadius: 5,
                           offset: const Offset(0, 10),
                         ),
                         BoxShadow(
-                          color: settingsProvider.currentThemeConfig.accentColor.withOpacity(0.3),
+                          color: settingsProvider.currentThemeConfig.accentColor.withOpacity(0.2),
                           blurRadius: 60,
                           spreadRadius: 10,
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.mic_rounded,
-                      size: 70,
-                      color: Colors.white,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(35),
+                      child: Image.asset(
+                        'assets/images/wave-image.png',
+                        width: 140,
+                        height: 140,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   )
                       .animate(
@@ -287,12 +280,11 @@ class _PaywallFlowScreenState extends State<_PaywallFlowScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // App icon/logo
+                // Wave logo image
                 Container(
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: themeConfig.primaryColor,
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
@@ -303,10 +295,14 @@ class _PaywallFlowScreenState extends State<_PaywallFlowScreen> {
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.lock_open,
-                    size: 60,
-                    color: Colors.white,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(30),
+                    child: Image.asset(
+                      'assets/images/wave-image.png',
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 )
                     .animate()

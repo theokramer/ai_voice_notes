@@ -5,7 +5,6 @@ import '../models/app_language.dart';
 import '../services/haptic_service.dart';
 import '../services/localization_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/animated_background.dart';
 
 class SettingsProvider extends ChangeNotifier {
   Settings _settings = Settings();
@@ -31,7 +30,7 @@ class SettingsProvider extends ChangeNotifier {
       HapticService.setEnabled(_settings.hapticsEnabled);
       
       // Update localization service with the loaded language preference
-      final language = _settings.preferredLanguage ?? LanguageHelper.detectDeviceLanguage();
+      final language = _settings.preferredLanguage ?? AppLanguage.english;
       LocalizationService().setLanguage(language);
       debugPrint('🌍 Initialized app with language: ${language.name}');
     } catch (e) {
@@ -67,22 +66,11 @@ class SettingsProvider extends ChangeNotifier {
     await updateSettings(_settings.copyWith(hapticsEnabled: enabled));
   }
 
-
-  Future<void> updateBackgroundStyle(BackgroundStyle style) async {
-    await updateSettings(_settings.copyWith(backgroundStyle: style));
-  }
-
   Future<void> setMicPermissionRequested() async {
     await updateSettings(_settings.copyWith(hasRequestedMicPermission: true));
   }
 
   bool get hasRequestedMicPermission => _settings.hasRequestedMicPermission;
-
-  Future<void> toggleSimpleMode(bool enabled) async {
-    await updateSettings(_settings.copyWith(isSimpleMode: enabled));
-  }
-
-  bool get isSimpleMode => _settings.isSimpleMode;
 
 
   Future<void> clearCache() async {
@@ -99,7 +87,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   AppLanguage get preferredLanguage => 
-      _settings.preferredLanguage ?? LanguageHelper.detectDeviceLanguage();
+      _settings.preferredLanguage ?? AppLanguage.english;
 
   // Smart Notes settings
 

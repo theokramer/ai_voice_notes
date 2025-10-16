@@ -16,12 +16,11 @@ import '../models/app_language.dart';
 import '../widgets/onboarding_question_card.dart';
 import '../widgets/onboarding_screenshot.dart';
 import '../widgets/animated_background.dart';
-import '../widgets/language_selector.dart';
 import '../widgets/onboarding_interstitial.dart';
 import '../widgets/customization_loading.dart';
 
 /// Professional onboarding flow optimized for maximum conversion
-/// Flow: Video + Language → Record+Voice Commands → Beautify → Organize → Theme Selector →
+/// Flow: Video → Record+Voice Commands → Beautify → Organize → Theme Selector →
 ///       Question 1 (Source) → Question 2 (Use Case) → Personalized Time Savings → 
 ///       Privacy Interstitial → Benefits → Rating → Loading + Mic Permission → Completion → Paywall
 /// 
@@ -43,18 +42,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   bool _isVideoInitialized = false;
   bool _videoHasFlownOut = false;
   bool _isNavigating = false; // Prevents button spam
+  bool _isAnimationComplete = true; // Tracks if page animations are complete
 
   // Page indices (only those used for logic are defined as constants)
   static const int videoPageIndex = 0;
-  static const int recordVoiceIndex = 1;  // MERGED: Record + Voice Commands
-  static const int beautifyIndex = 2;
-  static const int organizeIndex = 3;
-  static const int themeSelectorIndex = 4;
-  static const int question1Index = 5;  // Where heard (no AI response after)
-  static const int question2Index = 6;  // Use case
-  static const int aiHelpsIndex = 7;  // NEW - Personalized "How You'll Save Time" page
-  static const int privacyIndex = 8;
-  static const int benefitsIndex = 9;  // "What You'll Get"
+  static const int question1Index = 4;  // Where heard (no AI response after)
+  static const int question2Index = 5;  // Use case
+  static const int question3Index = 7;  // Transcription quality
   static const int ratingIndex = 10;  // Rating prompt
   static const int loadingIndex = 11;  // Loading + mic permission
   static const int completionIndex = 12;  // Completion screen
@@ -76,7 +70,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Future<void> _initializeVideo() async {
     try {
       _videoController = VideoPlayerController.asset(
-        'assets/onboarding/videos/recording_to_note.mp4',
+        'assets/onboarding/videos/video_onboarding.mp4',
       );
       
       await _videoController!.initialize().timeout(
@@ -123,6 +117,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           _videoHasFlownOut = true;
         });
       }
+      
+      // When video ends, reset and restart after fly-out animation completes
+      if (duration.inSeconds > 0 && 
+          position.inSeconds >= duration.inSeconds &&
+          _videoHasFlownOut) {
+        // Wait for fly-out animation to complete (300ms), then reset - reduced from 600ms
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted && _videoController != null) {
+            setState(() {
+              _videoHasFlownOut = false;
+            });
+            _videoController!.seekTo(Duration.zero);
+            _videoController!.play();
+          }
+        });
+      }
     }
   }
 
@@ -131,12 +141,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       if (!mounted) return;
       
       final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
-      final detectedLanguage = LanguageHelper.detectDeviceLanguage();
       
-      // Set language if not already set
+      // Set English as default language if not already set
       if (settingsProvider.settings.preferredLanguage == null) {
-        await settingsProvider.updatePreferredLanguage(detectedLanguage);
-        LocalizationService().setLanguage(detectedLanguage);
+        await settingsProvider.updatePreferredLanguage(AppLanguage.english);
+        LocalizationService().setLanguage(AppLanguage.english);
       } else {
         // Sync with existing language preference
         LocalizationService().setLanguage(settingsProvider.settings.preferredLanguage!);
@@ -244,6 +253,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         return _onboardingData.hearAboutUs != null;
       case question2Index:
         return _onboardingData.useCase != null;
+      case question3Index:
+        return _onboardingData.audioQuality != null;
+      case 1: // Record + Voice Commands explanation page
+      case 2: // Beautify explanation page
+      case 3: // Organize explanation page
+        return _isAnimationComplete; // Only allow proceeding after animations complete
       default:
         return true;
     }
@@ -255,9 +270,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       builder: (context, settingsProvider, child) {
         return Scaffold(
           body: AnimatedBackground(
-            style: settingsProvider.settings.backgroundStyle,
             themeConfig: settingsProvider.currentThemeConfig,
-            isSimpleMode: false, // Always show fancy onboarding
             child: SafeArea(
               child: Column(
                 children: [
@@ -271,17 +284,32 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       physics: const NeverScrollableScrollPhysics(),
                       onPageChanged: (index) {
                         debugPrint('🔍 ONBOARDING DEBUG: Page changed to $index');
-                        setState(() => _currentPage = index);
+                        setState(() {
+                          _currentPage = index;
+                          _isAnimationComplete = false; // Reset animation state
+                        });
+                        
+                        // Set animation complete after appropriate delay for explanation pages
+                        if (index >= 1 && index <= 3) {
+                          Future.delayed(const Duration(milliseconds: 1800), () {
+                            if (mounted) {
+                              setState(() => _isAnimationComplete = true);
+                            }
+                          });
+                        } else {
+                          // For other pages, animations complete immediately
+                          setState(() => _isAnimationComplete = true);
+                        }
                       },
                       children: [
                         _buildVideoPage(),
                         _buildRecordVoiceExplainPage(), // MERGED: Record + Voice Commands
                         _buildBeautifyExplainPage(),
-                        _buildOrganizeExplainPage(),
-                        _buildThemeSelectorPage(),
+                        _buildChatExplainPage(),
                         _buildQuestion1(), // Where heard about us
                         _buildQuestion2(), // Use case
-                        _buildAIHelpsPage(), // NEW: Personalized time-saving page
+                        _buildAIHelpsPage(), // Personalized time-saving page
+                        _buildQuestion3(), // Transcription quality
                         _buildInterstitial1(), // Privacy
                         _buildBenefitsScreen(), // "What You'll Get"
                         _buildRatingScreen(),
@@ -305,48 +333,39 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildTopBar(SettingsProvider settingsProvider) {
-    // Only show language selector on video page
-    if (_currentPage == videoPageIndex) {
+    // Show progress indicator from first screenshot page through loading screen
+    if (_shouldShowProgress()) {
       return Padding(
         padding: const EdgeInsets.all(AppTheme.spacing16),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const SizedBox(width: 48), // Balance for language selector
-            const Spacer(),
-            const LanguageSelector(showPulseAnimation: true),
-          ],
-        ),
-      );
-    }
-    
-    // Show progress indicator for question pages
-    if (_currentPage >= question1Index && _currentPage <= question2Index) {
-      final questionNumber = _getQuestionNumber(_currentPage);
-      final totalQuestions = 2;
-      
-      return Padding(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        child: Column(
-          children: [
-            Text(
-              'Question $questionNumber of $totalQuestions',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w600,
+            // Back button (if not first page)
+            if (_currentPage > 0)
+              GestureDetector(
+                onTap: _isNavigating ? null : _previousPage,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 24,
+                    color: settingsProvider.currentThemeConfig.primary,
                   ),
-            ),
-            const SizedBox(height: AppTheme.spacing8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-              child: LinearProgressIndicator(
-                value: questionNumber / totalQuestions,
-                backgroundColor: settingsProvider.currentThemeConfig.primary
-                    .withValues(alpha: 0.2),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  settingsProvider.currentThemeConfig.primary,
                 ),
-                minHeight: 6,
+              ),
+            if (_currentPage > 0) const SizedBox(width: 8),
+            // Progress bar (expanded)
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: _getProgress(),
+                  backgroundColor: settingsProvider.currentThemeConfig.primary
+                      .withValues(alpha: 0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    settingsProvider.currentThemeConfig.primary,
+                  ),
+                  minHeight: 8,
+                ),
               ),
             ),
           ],
@@ -357,14 +376,39 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return const SizedBox.shrink();
   }
 
-  int _getQuestionNumber(int pageIndex) {
-    if (pageIndex == question1Index) return 1;
-    if (pageIndex == question2Index) return 2;
-    return 0;
+  double _getProgress() {
+    if (_currentPage == 0 || _currentPage >= loadingIndex) {
+      return 0.0; // Hide progress
+    }
+    return _currentPage / (loadingIndex - 1);
+  }
+
+  bool _shouldShowProgress() {
+    return _currentPage > 0 && _currentPage < completionIndex;
+  }
+
+  void _previousPage() async {
+    if (_isNavigating || _currentPage == 0) return;
+    
+    setState(() => _isNavigating = true);
+    await HapticService.light();
+    
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOutCubic,
+    );
+    
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        setState(() => _isNavigating = false);
+      }
+    });
   }
 
   Widget _buildBottomButton(SettingsProvider settingsProvider) {
     final localization = LocalizationService();
+    final availableHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = availableHeight < 700;
     String buttonText = localization.t('onboarding_continue');
     
     if (_currentPage == videoPageIndex) {
@@ -374,47 +418,75 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
     
     return Padding(
-      padding: const EdgeInsets.all(AppTheme.spacing24),
-      child: GestureDetector(
-        onTap: (_canProceed() && !_isNavigating) ? () {
-          debugPrint('🔍 ONBOARDING DEBUG: Bottom button tapped on page $_currentPage');
-          _nextPage();
-        } : null,
-        child: AnimatedOpacity(
-          opacity: (_canProceed() && !_isNavigating) ? 1.0 : 0.4,
-          duration: const Duration(milliseconds: 200),
-          child: Container(
-            width: double.infinity,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  settingsProvider.currentThemeConfig.primary,
-                  settingsProvider.currentThemeConfig.primary
-                      .withValues(alpha: 0.8),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-              boxShadow: (_canProceed() && !_isNavigating)
-                  ? [
-                      BoxShadow(
-                        color: settingsProvider.currentThemeConfig.primary
-                            .withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ]
-                  : [],
+      padding: const EdgeInsets.fromLTRB(AppTheme.spacing24, AppTheme.spacing24, AppTheme.spacing24, 32),
+      child: Column(
+        children: [
+          // Main hook text above button
+          if (_currentPage == videoPageIndex)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppTheme.spacing16),
+              child: RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                        fontSize: isSmallScreen ? 24 : (availableHeight < 800 ? 28 : 36),
+                        height: 1.3,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                      ) ?? const TextStyle(),
+                  children: _buildAnimatedTextSpans(
+                    localization.t('onboarding_subtitle'),
+                  ),
+                ),
+              )
+                  .animate()
+                  .fadeIn(delay: 1200.ms, duration: 800.ms)
+                  .slideY(begin: 0.2, end: 0),
             ),
-            child: Center(
-              child: Text(
-                buttonText,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+          
+          // Button
+          GestureDetector(
+            onTap: (_canProceed() && !_isNavigating) ? () {
+              debugPrint('🔍 ONBOARDING DEBUG: Bottom button tapped on page $_currentPage');
+              _nextPage();
+            } : null,
+            child: AnimatedOpacity(
+              opacity: (_canProceed() && !_isNavigating) ? 1.0 : 0.4,
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                width: double.infinity,
+                height: 64,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      settingsProvider.currentThemeConfig.primary,
+                      settingsProvider.currentThemeConfig.primary
+                          .withValues(alpha: 0.8),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                  boxShadow: (_canProceed() && !_isNavigating)
+                      ? [
+                          BoxShadow(
+                            color: settingsProvider.currentThemeConfig.primary
+                                .withValues(alpha: 0.3),
+                            blurRadius: 24,
+                            offset: const Offset(0, 10),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Center(
+                  child: Text(
+                    buttonText,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
               ),
             ),
           ).animate(onPlay: (controller) => controller.repeat(reverse: true))
@@ -423,7 +495,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 duration: 2000.ms,
                 color: Colors.white.withValues(alpha: 0.3),
               ),
-        ),
+        ],
       ),
     );
   }
@@ -432,7 +504,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildVideoPage() {
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
-        final localization = LocalizationService();
         
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -441,17 +512,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             final screenWidth = MediaQuery.of(context).size.width;
             
             // Calculate max video height to prevent overflow
-            // Leave room for: top spacing (16) + bottom text (~220) + spacer + button (80)
-            final maxVideoHeight = availableHeight - 340;
-            final maxVideoWidth = screenWidth - (isSmallScreen ? 40 : 48); // Account for padding
+            // Leave room for: top spacing (16) + bottom text (~120) + spacer + button (80)
+            // Increased video size to ensure border radius is visible and not cropped
+            final maxVideoHeight = availableHeight - 180; // Increased for bigger video with visible border radius
+            final maxVideoWidth = screenWidth - (isSmallScreen ? 24 : 32); // Reduced padding for bigger video
             
             return Column(
               children: [
-                SizedBox(height: isSmallScreen ? 8 : 12),
+                SizedBox(height: isSmallScreen ? 20 : 30),
               
-              // Video with fly-in/fly-out animation - CONSTRAINED
+              // Video with original slide-up animation - CONSTRAINED
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 20 : 24),
+                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16),
                 child: AnimatedSlide(
                   offset: _videoHasFlownOut 
                       ? const Offset(0, -2) 
@@ -462,30 +534,29 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     scale: _videoHasFlownOut ? 0.85 : 1.0,
                     duration: const Duration(milliseconds: 600),
                     curve: Curves.easeInCubic,
-                    child: ConstrainedBox(
+                    child: Container(
                       constraints: BoxConstraints(
                         maxHeight: maxVideoHeight,
                         maxWidth: maxVideoWidth,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(isSmallScreen ? AppTheme.radiusMedium : AppTheme.radiusXLarge),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(isSmallScreen ? AppTheme.radiusMedium : AppTheme.radiusXLarge),
-                            border: Border.all(
-                              color: settingsProvider.currentThemeConfig.primary
-                                  .withValues(alpha: 0.5),
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: settingsProvider.currentThemeConfig.primary
-                                    .withValues(alpha: _videoHasFlownOut ? 0.1 : 0.3),
-                                blurRadius: isSmallScreen ? 15 : 30,
-                                spreadRadius: isSmallScreen ? 2 : 5,
-                              ),
-                            ],
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(isSmallScreen ? AppTheme.radiusMedium : AppTheme.radiusXLarge),
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 1.5,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: settingsProvider.currentThemeConfig.primary
+                                  .withValues(alpha: _videoHasFlownOut ? 0.05 : 0.15),
+                              blurRadius: isSmallScreen ? 8 : 15,
+                              spreadRadius: isSmallScreen ? 1 : 2,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(isSmallScreen ? AppTheme.radiusMedium - 2 : AppTheme.radiusXLarge - 2),
                           child: _isVideoInitialized && _videoController != null
                               ? AspectRatio(
                                   aspectRatio: _videoController!.value.aspectRatio,
@@ -514,57 +585,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                   ),
                                 ),
                         ),
-                      )
-                          .animate()
-                          .fadeIn(delay: 200.ms, duration: 800.ms)
-                          .slideY(begin: -0.3, end: 0, curve: Curves.easeOutCubic)
-                          .scale(begin: const Offset(0.85, 0.85), end: const Offset(1, 1)),
-                    ),
-                  ),
-                ),
-              ),
-              
-              SizedBox(height: isSmallScreen ? 24 : 32),
-                
-              // Main hook text
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
-                child: RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          fontSize: isSmallScreen ? 24 : (availableHeight < 800 ? 28 : 36),
-                          height: 1.3,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.textPrimary,
-                        ) ?? const TextStyle(),
-                    children: _buildAnimatedTextSpans(
-                      localization.t('onboarding_subtitle'),
-                    ),
-                  ),
-                )
-                    .animate()
-                    .fadeIn(delay: 1200.ms, duration: 800.ms)
-                    .slideY(begin: 0.2, end: 0),
-              ),
-              
-              SizedBox(height: isSmallScreen ? 8 : 12),
-              
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing32),
-                child: Text(
-                  localization.t('onboarding_sub_subtitle'),
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppTheme.textSecondary,
-                        height: 1.5,
-                        fontSize: isSmallScreen ? 14 : 16,
                       ),
-                  textAlign: TextAlign.center,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 )
                     .animate()
-                    .fadeIn(delay: 1800.ms, duration: 600.ms),
+                    .fadeIn(delay: 200.ms, duration: 800.ms)
+                    .slideY(begin: -0.3, end: 0, curve: Curves.easeOutCubic)
+                    .scale(begin: const Offset(0.85, 0.85), end: const Offset(1, 1)),
               ),
               
               const Spacer(),
@@ -610,15 +638,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              SizedBox(height: isSmallScreen ? availableHeight * 0.03 : availableHeight * 0.06),
+              SizedBox(height: isSmallScreen ? availableHeight * 0.01 : availableHeight * 0.02),
               
-              // Screenshot (smaller than original)
+              // Screenshot
               OnboardingScreenshot(
-      screenshotPath: 'assets/onboarding/screenshots/recording_active.png',
+                screenshotPath: 'assets/onboarding/screenshots/recording_active.png',
                 animationDelay: 200,
               ),
               
-              SizedBox(height: isSmallScreen ? availableHeight * 0.03 : availableHeight * 0.04),
+              SizedBox(height: isSmallScreen ? availableHeight * 0.02 : availableHeight * 0.03),
               
               // Title
               Padding(
@@ -641,7 +669,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               
               SizedBox(height: isSmallScreen ? availableHeight * 0.02 : availableHeight * 0.03),
               
-              // Main benefits (2 bullets)
+              // Main benefits (3 bullets)
               Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: isSmallScreen ? AppTheme.spacing24 : AppTheme.spacing32,
@@ -663,71 +691,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       1,
                       isSmallScreen,
                     ),
-                  ],
-                ),
-              ),
-              
-              SizedBox(height: isSmallScreen ? availableHeight * 0.03 : availableHeight * 0.04),
-              
-              // Voice Commands Section - Simplified
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
-                child: Column(
-                  children: [
-                    // Section title
-                    Text(
-                      localization.t('onboarding_voice_section_title'),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontSize: isSmallScreen ? 16 : 18,
-                            fontWeight: FontWeight.w600,
-                            color: theme.primary,
-                          ),
-                      textAlign: TextAlign.center,
-                    )
-                        .animate()
-                        .fadeIn(delay: 1000.ms, duration: 600.ms),
-                    
-                    SizedBox(height: isSmallScreen ? 8 : 12),
-                    
-                    // Simple voice command examples
-                    Container(
-                      padding: EdgeInsets.all(isSmallScreen ? AppTheme.spacing12 : AppTheme.spacing16),
-                      decoration: BoxDecoration(
-                        color: theme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                        border: Border.all(
-                          color: theme.primary.withValues(alpha: 0.2),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          _buildSimpleVoiceCommand(
-                            context,
-                            '"New Work"',
-                            'Creates Work folder',
-                            isSmallScreen,
-                          ),
-                          SizedBox(height: isSmallScreen ? 6 : 8),
-                          _buildSimpleVoiceCommand(
-                            context,
-                            '"Add to last note"',
-                            'Continues previous note',
-                            isSmallScreen,
-                          ),
-                          SizedBox(height: isSmallScreen ? 6 : 8),
-                          _buildSimpleVoiceCommand(
-                            context,
-                            '"Title: Meeting"',
-                            'Sets note title',
-                            isSmallScreen,
-                          ),
-                        ],
-                      ),
-                    )
-                        .animate()
-                        .fadeIn(delay: 1100.ms, duration: 600.ms)
-                        .slideY(begin: 0.1, end: 0),
+                    SizedBox(height: isSmallScreen ? 10 : 12),
+                    _buildBenefitRow(
+                      context,
+                      localization.t('onboarding_record_voice_benefit_3'),
+                      theme.primary,
+                      2,
+                      isSmallScreen,
+                    ),
                   ],
                 ),
               ),
@@ -752,8 +723,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       children: [
         Container(
           margin: const EdgeInsets.only(top: 6),
-          width: 6,
-          height: 6,
+          width: 4,
+          height: 4,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: primaryColor,
@@ -766,7 +737,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: AppTheme.textSecondary,
                   height: 1.5,
-                  fontSize: isSmallScreen ? 15 : 17,
+                  fontSize: isSmallScreen ? 14 : 16,
+                  fontWeight: FontWeight.w500,
                 ),
           ),
         ),
@@ -778,43 +750,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           duration: 600.ms,
         )
         .slideX(begin: -0.2, end: 0);
-  }
-
-  Widget _buildSimpleVoiceCommand(
-    BuildContext context,
-    String command,
-    String description,
-    bool isSmallScreen,
-  ) {
-    return Row(
-      children: [
-        Text(
-          command,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                fontSize: isSmallScreen ? 13 : 14,
-              ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '→',
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: isSmallScreen ? 13 : 14,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            description,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textSecondary,
-                  fontSize: isSmallScreen ? 12 : 13,
-                ),
-          ),
-        ),
-      ],
-    );
   }
 
   // Beautify Explanation Page - "AI Beautifies Your Words"
@@ -830,15 +765,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // Organize Explanation Page - "AI Organizes Everything"
-  Widget _buildOrganizeExplainPage() {
+  // Chat Explanation Page - "Chat with Your Notes"
+  Widget _buildChatExplainPage() {
     return _buildExplanationPageWithScreenshot(
-      screenshotPath: 'assets/onboarding/screenshots/home_with_notes.png',
-      title: LocalizationService().t('onboarding_organize_title'),
+      screenshotPath: 'assets/onboarding/screenshots/note_selection.png',
+      title: LocalizationService().t('onboarding_chat_title'),
       benefits: [
-        LocalizationService().t('onboarding_organize_benefit_1'),
-        LocalizationService().t('onboarding_organize_benefit_2'),
-        LocalizationService().t('onboarding_organize_benefit_3'),
+        LocalizationService().t('onboarding_chat_benefit_1'),
+        LocalizationService().t('onboarding_chat_benefit_2'),
+        LocalizationService().t('onboarding_chat_benefit_3'),
       ],
     );
   }
@@ -859,7 +794,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              SizedBox(height: isSmallScreen ? availableHeight * 0.04 : availableHeight * 0.08),
+              SizedBox(height: isSmallScreen ? availableHeight * 0.01 : availableHeight * 0.02),
               
               // Screenshot
               OnboardingScreenshot(
@@ -867,7 +802,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 animationDelay: 200,
               ),
               
-              SizedBox(height: isSmallScreen ? availableHeight * 0.04 : availableHeight * 0.06),
+              SizedBox(height: isSmallScreen ? availableHeight * 0.02 : availableHeight * 0.03),
               
               // Title
               Padding(
@@ -906,8 +841,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         children: [
                           Container(
                             margin: const EdgeInsets.only(top: 6),
-                            width: 6,
-                            height: 6,
+                            width: 4,
+                            height: 4,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: theme.primary,
@@ -920,7 +855,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                     color: AppTheme.textSecondary,
                                     height: 1.5,
-                                    fontSize: isSmallScreen ? 15 : 17,
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                    fontWeight: FontWeight.w500,
                                   ),
                             ),
                           ),
@@ -940,153 +876,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               SizedBox(height: isSmallScreen ? 12 : 24),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  // Theme Selector Page
-  Widget _buildThemeSelectorPage() {
-    return Consumer<SettingsProvider>(
-      builder: (context, settingsProvider, child) {
-        final availableHeight = MediaQuery.of(context).size.height;
-        final isSmallScreen = availableHeight < 700;
-        final localization = LocalizationService();
-        
-        return Column(
-          children: [
-            SizedBox(height: isSmallScreen ? availableHeight * 0.06 : availableHeight * 0.1),
-            
-            // Title
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
-              child: Text(
-                localization.t('onboarding_theme_title'),
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontSize: isSmallScreen ? 24 : 32,
-                      fontWeight: FontWeight.w700,
-                    ),
-                textAlign: TextAlign.center,
-              )
-                  .animate()
-                  .fadeIn(duration: 600.ms)
-                  .slideY(begin: 0.2, end: 0),
-            ),
-            
-            SizedBox(height: isSmallScreen ? 8 : 16),
-            
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing32),
-              child: Text(
-                localization.t('onboarding_theme_subtitle'),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondary,
-                      fontSize: isSmallScreen ? 13 : 15,
-                    ),
-                textAlign: TextAlign.center,
-              )
-                  .animate()
-                  .fadeIn(delay: 300.ms, duration: 600.ms),
-            ),
-            
-            SizedBox(height: isSmallScreen ? availableHeight * 0.03 : availableHeight * 0.05),
-            
-            // Live preview area - animates when theme changes
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 600),
-              curve: Curves.easeInOut,
-              margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacing24),
-              height: isSmallScreen ? availableHeight * 0.2 : availableHeight * 0.25,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-                gradient: settingsProvider.currentThemeConfig.backgroundGradient,
-                border: Border.all(
-                  color: AppTheme.glassBorder.withValues(alpha: 0.5),
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: settingsProvider.currentThemeConfig.primary.withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    spreadRadius: 3,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.palette_rounded,
-                  size: isSmallScreen ? 45 : 60,
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
-              ),
-            )
-                .animate()
-                .fadeIn(delay: 600.ms, duration: 800.ms)
-                .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1)),
-            
-            SizedBox(height: isSmallScreen ? availableHeight * 0.03 : availableHeight * 0.04),
-            
-            // Theme selector (horizontally scrollable)
-            SizedBox(
-              height: isSmallScreen ? 80 : 100,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacing16),
-                itemCount: ThemePreset.values.length,
-                itemBuilder: (context, index) {
-                  final theme = ThemePreset.values[index];
-                  final themeConfig = AppTheme.getThemeConfig(theme);
-                  final isSelected = settingsProvider.settings.themePreset == theme;
-                  
-                  return GestureDetector(
-                    onTap: () async {
-                      await HapticService.light();
-                      await settingsProvider.updateThemePreset(theme);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 6),
-                      width: isSmallScreen ? 70 : 80,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                        gradient: themeConfig.backgroundGradient,
-                        border: Border.all(
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.white.withValues(alpha: 0.3),
-                          width: isSelected ? 3 : 2,
-                        ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: themeConfig.primary.withValues(alpha: 0.5),
-                                  blurRadius: 15,
-                                  spreadRadius: 1,
-                                ),
-                              ]
-                            : [],
-                      ),
-                      child: isSelected
-                          ? Icon(
-                              Icons.check_circle,
-                              color: Colors.white,
-                              size: isSmallScreen ? 28 : 32,
-                            )
-                          : null,
-                    ),
-                  )
-                      .animate()
-                      .fadeIn(
-                        delay: Duration(milliseconds: 800 + (index * 100)),
-                        duration: 400.ms,
-                      )
-                      .slideX(begin: 0.3, end: 0);
-                },
-              ),
-            ),
-            
-            SizedBox(height: isSmallScreen ? 12 : 24),
-          ],
         );
       },
     );
@@ -1187,6 +976,39 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       onSelect: (value) {
         debugPrint('🔍 ONBOARDING DEBUG: Question 2 answered with: $value');
         setState(() => _onboardingData.useCase = value as String);
+      },
+    );
+  }
+
+  // Question 3: Transcription Quality
+  Widget _buildQuestion3() {
+    final localization = LocalizationService();
+    return _buildQuestionPage(
+      title: localization.t('onboarding_question_audio_quality_title'),
+      options: [
+        (
+          emoji: '🚀',
+          title: localization.t('onboarding_question_audio_quality_option_1'),
+          subtitle: localization.t('onboarding_question_audio_quality_option_1_sub'),
+          value: AudioQuality.high,
+        ),
+        (
+          emoji: '⚡',
+          title: localization.t('onboarding_question_audio_quality_option_2'),
+          subtitle: localization.t('onboarding_question_audio_quality_option_2_sub'),
+          value: AudioQuality.medium,
+        ),
+        (
+          emoji: '💨',
+          title: localization.t('onboarding_question_audio_quality_option_3'),
+          subtitle: localization.t('onboarding_question_audio_quality_option_3_sub'),
+          value: AudioQuality.low,
+        ),
+      ],
+      selectedValue: _onboardingData.audioQuality,
+      onSelect: (value) {
+        debugPrint('🔍 ONBOARDING DEBUG: Question 3 answered with: $value');
+        setState(() => _onboardingData.audioQuality = value as AudioQuality);
       },
     );
   }
@@ -1309,25 +1131,25 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Before - Tall bar
+              // Before - Tall bar (45 min)
               _buildTimeBar(
                 context,
                 'Without\nNotie AI',
                 1.0,
                 '45 min',
-                AppTheme.textSecondary.withValues(alpha: 0.4),
+                const Color(0xFF4A4A4A),
                 theme,
                 isSmallScreen,
                 600,
               ),
               
-              // After - Short bar
+              // After - Short bar (10 min)
               _buildTimeBar(
                 context,
                 'With\nNotie AI',
-                0.25,
+                0.22,
                 '10 min',
-                theme.primary,
+                const Color(0xFF00FF88),
                 theme,
                 isSmallScreen,
                 900,
@@ -1337,7 +1159,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           
           SizedBox(height: isSmallScreen ? 12 : 16),
           
-          // Savings highlight - Smaller
+          // Speed indicator and savings
           Container(
             padding: EdgeInsets.symmetric(
               horizontal: isSmallScreen ? AppTheme.spacing12 : AppTheme.spacing16,
@@ -1357,7 +1179,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Save 35+ min daily',
+                  '4.5x faster · Save 35 min',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontSize: isSmallScreen ? 12 : 13,
                         fontWeight: FontWeight.w700,
@@ -1382,7 +1204,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     BuildContext context,
     String label,
     double heightFactor,
-    String timeText,
+    String timeAmount,
     Color barColor,
     dynamic theme,
     bool isSmallScreen,
@@ -1393,9 +1215,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     
     return Column(
       children: [
-        // Time label - Smaller
+        // Time amount above bar
         Text(
-          timeText,
+          timeAmount,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontSize: isSmallScreen ? 14 : 16,
                 fontWeight: FontWeight.w700,
@@ -1405,9 +1227,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             .animate()
             .fadeIn(delay: (delay + 200).ms, duration: 400.ms),
         
-        const SizedBox(height: 6),
+        const SizedBox(height: 12),
         
-        // Bar - Shorter
+        // Bar container
         Container(
           width: isSmallScreen ? 60 : 75,
           height: barHeight,
@@ -1417,10 +1239,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               end: Alignment.bottomCenter,
               colors: [
                 barColor,
-                barColor.withValues(alpha: 0.7),
+                barColor.withValues(alpha: 0.8),
               ],
             ),
-            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            borderRadius: BorderRadius.circular(24), // Very rounded corners
             boxShadow: [
               BoxShadow(
                 color: barColor.withValues(alpha: 0.3),
@@ -1431,17 +1253,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ),
         )
             .animate()
-            .fadeIn(delay: delay.ms, duration: 600.ms)
+            .fadeIn(delay: delay.ms, duration: 800.ms)
             .scaleY(
               begin: 0.0,
               end: 1.0,
               alignment: Alignment.bottomCenter,
-              curve: Curves.easeOutCubic,
+              curve: Curves.elasticOut,
             ),
         
         const SizedBox(height: 8),
         
-        // Label - Smaller
+        // Label below bar
         SizedBox(
           width: isSmallScreen ? 60 : 75,
           child: Text(

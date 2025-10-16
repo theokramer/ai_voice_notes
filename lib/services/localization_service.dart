@@ -43,7 +43,8 @@ class LocalizationService {
       // Onboarding - Video Screen
       'onboarding_welcome': 'Welcome to\nNotie AI',
       'onboarding_subtitle': 'Tap. Speak. Done.\nAI handles the rest.',
-      'onboarding_sub_subtitle': 'Just dump your thoughts. AI transcribes, beautifies, and organizes everything for you.',
+      'onboarding_sub_subtitle': 'Just dump your thoughts. AI transcribes, beautifies, and organizes everything for you. Speak in any language - AI understands them all.',
+      'onboarding_multi_language_info': 'Record in any language — AI detects and understands them all',
       'onboarding_get_started': 'Get Started',
       'onboarding_continue': 'Continue',
       
@@ -58,10 +59,10 @@ class LocalizationService {
       'onboarding_beautify_benefit_2': 'Key points extracted and organized automatically',
       'onboarding_beautify_benefit_3': 'Get the essence without the rambling',
       
-      'onboarding_organize_title': 'AI Organizes in the Background',
-      'onboarding_organize_benefit_1': 'Organization happens completely automatically',
-      'onboarding_organize_benefit_2': 'Continue working while AI sorts everything',
-      'onboarding_organize_benefit_3': 'Never think about folders or categories again',
+      'onboarding_chat_title': 'Chat with Your Notes',
+      'onboarding_chat_benefit_1': 'Create new notes by chatting with AI',
+      'onboarding_chat_benefit_2': 'Add content to existing notes through conversation',
+      'onboarding_chat_benefit_3': 'Ask questions and get instant summaries',
       
       // Onboarding - Theme Selector
       'onboarding_theme_title': 'Choose Your Style',
@@ -141,7 +142,8 @@ class LocalizationService {
       // Merged Record + Voice Commands Page
       'onboarding_record_voice_title': 'Push to Talk',
       'onboarding_record_voice_benefit_1': 'Hold to record. Release when done.',
-      'onboarding_record_voice_benefit_2': 'Use voice commands to save and organize effortlessly',
+      'onboarding_record_voice_benefit_2': 'Use voice commands to save and organize effortlessly.',
+      'onboarding_record_voice_benefit_3': 'Use simple voice commands to organize notes hands-free',
       'onboarding_voice_section_title': 'Voice Commands Available',
       
       // Personalized Time Savings Page - Work
@@ -174,6 +176,15 @@ class LocalizationService {
       'time_savings_default_subtitle': 'Focus on what matters.\nLet AI handle the rest.',
       'time_savings_default_stat': 'Notes organized',
       
+      // Question: Transcription Quality
+      'onboarding_question_audio_quality_title': 'Choose Your Transcription Quality',
+      'onboarding_question_audio_quality_option_1': 'High Quality',
+      'onboarding_question_audio_quality_option_1_sub': 'Best accuracy, slightly slower',
+      'onboarding_question_audio_quality_option_2': 'Balanced',
+      'onboarding_question_audio_quality_option_2_sub': 'Great accuracy, faster processing',
+      'onboarding_question_audio_quality_option_3': 'Fast',
+      'onboarding_question_audio_quality_option_3_sub': 'Good accuracy, fastest processing',
+      
       // Benefits Screen
       'benefits_screen_title': 'What You\'ll Get',
       'benefit_1_title': 'Save 3+ Hours/Week',
@@ -181,7 +192,7 @@ class LocalizationService {
       'benefit_2_title': 'Never Lose a Thought',
       'benefit_2_subtitle': 'Instant voice capture, anytime, anywhere',
       'benefit_3_title': 'Find Anything Instantly',
-      'benefit_3_subtitle': 'AI organizes everything automatically',
+      'benefit_3_subtitle': 'AI organizes everything automatically in the background',
       'benefit_4_title': 'Professional Quality',
       'benefit_4_subtitle': 'Rambling thoughts → crystal clear notes',
       'benefit_5_title': 'Private & Secure',
@@ -515,10 +526,10 @@ class LocalizationService {
       'onboarding_beautify_benefit_2': 'Puntos clave extraídos y organizados automáticamente',
       'onboarding_beautify_benefit_3': 'Lo esencial sin divagaciones',
       
-      'onboarding_organize_title': 'La IA Organiza en Segundo Plano',
-      'onboarding_organize_benefit_1': 'La organización ocurre completamente automática',
-      'onboarding_organize_benefit_2': 'Continúa trabajando mientras la IA lo ordena todo',
-      'onboarding_organize_benefit_3': 'Nunca pienses en carpetas o categorías otra vez',
+      'onboarding_chat_title': 'Chatea con Tus Notas',
+      'onboarding_chat_benefit_1': 'Haz preguntas sobre cualquiera de tus notas',
+      'onboarding_chat_benefit_2': 'Obtén resúmenes e ideas instantáneas',
+      'onboarding_chat_benefit_3': 'La IA entiende el contexto de todas tus notas',
       
       // Onboarding - Theme Selector
       'onboarding_theme_title': 'Elige Tu Estilo',
@@ -929,10 +940,10 @@ class LocalizationService {
       'onboarding_beautify_benefit_2': 'Points clés extraits et organisés automatiquement',
       'onboarding_beautify_benefit_3': 'L\'essentiel sans divagations',
       
-      'onboarding_organize_title': 'L\'IA Organise en Arrière-Plan',
-      'onboarding_organize_benefit_1': 'L\'organisation se fait complètement automatiquement',
-      'onboarding_organize_benefit_2': 'Continuez à travailler pendant que l\'IA trie tout',
-      'onboarding_organize_benefit_3': 'Ne pensez plus jamais aux dossiers ou catégories',
+      'onboarding_chat_title': 'Discutez avec Vos Notes',
+      'onboarding_chat_benefit_1': 'Posez des questions sur n\'importe laquelle de vos notes',
+      'onboarding_chat_benefit_2': 'Obtenez des résumés et des idées instantanés',
+      'onboarding_chat_benefit_3': 'L\'IA comprend le contexte de toutes vos notes',
       
       // Onboarding - Theme Selector
       'onboarding_theme_title': 'Choisissez Votre Style',
@@ -1343,10 +1354,10 @@ class LocalizationService {
       'onboarding_beautify_benefit_2': 'Wichtige Punkte automatisch extrahiert und organisiert',
       'onboarding_beautify_benefit_3': 'Das Wesentliche ohne das Drumherum',
       
-      'onboarding_organize_title': 'KI Organisiert Im Hintergrund',
-      'onboarding_organize_benefit_1': 'Organisation geschieht vollständig automatisch',
-      'onboarding_organize_benefit_2': 'Arbeite weiter, während KI alles sortiert',
-      'onboarding_organize_benefit_3': 'Denke nie wieder über Ordner oder Kategorien nach',
+      'onboarding_chat_title': 'Chatten Sie mit Ihren Notizen',
+      'onboarding_chat_benefit_1': 'Stellen Sie Fragen zu jeder Ihrer Notizen',
+      'onboarding_chat_benefit_2': 'Erhalten Sie sofortige Zusammenfassungen und Erkenntnisse',
+      'onboarding_chat_benefit_3': 'KI versteht den Kontext aller Ihrer Notizen',
       
       // Onboarding - Theme Selector
       'onboarding_theme_title': 'Wähle deinen Stil',

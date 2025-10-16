@@ -167,8 +167,8 @@ class _NoteCardState extends State<NoteCard>
                                                   .textTheme
                                                   .titleLarge
                                                   ?.copyWith(
-                                                    fontSize: 17,
-                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: widget.isGridView ? 15 : 17,
+                                                    fontWeight: widget.isGridView ? FontWeight.w500 : FontWeight.w600,
                                                     letterSpacing: -0.2,
                                                   ),
                                               maxLines: 2,
@@ -208,8 +208,8 @@ class _NoteCardState extends State<NoteCard>
                                               .bodySmall
                                               ?.copyWith(
                                                 color: AppTheme.textSecondary.withOpacity(0.8),
-                                                fontSize: 14,
-                                                height: 1.5,
+                                                fontSize: 13,
+                                                height: 1.4,
                                               ),
                                         ),
                                       ],

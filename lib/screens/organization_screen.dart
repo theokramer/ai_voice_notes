@@ -509,7 +509,9 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('${unorganizedNotes.length} Notizen organisieren'),
+        title: Text(unorganizedNotes.length == 1 
+            ? '${unorganizedNotes.length} Note' 
+            : '${unorganizedNotes.length} Notes'),
         actions: [
           if (!_isLoading && _suggestions.isNotEmpty)
             TextButton.icon(
@@ -560,12 +562,12 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Analysiere Notizen...',
+              'Analyzing Notes...',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
-              'AI findet die beste Organisation',
+              'AI finds the best organization',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Colors.grey,
               ),
@@ -587,14 +589,14 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Alles organisiert! 🎉',
+              'All organized! 🎉',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Du hast keine unorganisierten Notizen',
+              'You have no unorganized notes',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey,
               ),
@@ -616,12 +618,12 @@ class _OrganizationScreenState extends State<OrganizationScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Keine Vorschläge',
+              'No Suggestions',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              'Versuche mehr Notizen aufzunehmen',
+              'Try recording more notes',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey,
               ),

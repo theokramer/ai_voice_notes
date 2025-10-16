@@ -46,8 +46,6 @@ class _ThemePreviewCardState extends State<ThemePreviewCard>
   String _getThemeName() {
     final loc = LocalizationService();
     switch (widget.preset) {
-      case ThemePreset.modern:
-        return loc.t('theme_modern');
       case ThemePreset.oceanBlue:
         return loc.t('theme_ocean');
       case ThemePreset.sunsetOrange:
@@ -56,6 +54,14 @@ class _ThemePreviewCardState extends State<ThemePreviewCard>
         return loc.t('theme_forest');
       case ThemePreset.aurora:
         return loc.t('theme_aurora');
+      case ThemePreset.midnightPurple:
+        return 'Midnight Purple';
+      case ThemePreset.cherryBlossom:
+        return 'Cherry Blossom';
+      case ThemePreset.arcticBlue:
+        return 'Arctic Blue';
+      case ThemePreset.emeraldNight:
+        return 'Emerald Night';
     }
   }
 

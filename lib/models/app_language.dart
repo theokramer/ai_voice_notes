@@ -90,17 +90,7 @@ extension AppLanguageExtension on AppLanguage {
 class LanguageHelper {
   /// Detect device language and return corresponding AppLanguage
   static AppLanguage detectDeviceLanguage() {
-    final deviceLocale = PlatformDispatcher.instance.locale;
-    final languageCode = deviceLocale.languageCode.toLowerCase();
-
-    // Match device language code to AppLanguage
-    for (final language in AppLanguage.values) {
-      if (language.code == languageCode) {
-        return language;
-      }
-    }
-
-    // Default to English if not found
+    // Always default to English for consistent user experience
     return AppLanguage.english;
   }
 

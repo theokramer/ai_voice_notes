@@ -5,7 +5,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/settings.dart';
-import '../models/app_language.dart';
 import '../providers/settings_provider.dart';
 import '../providers/notes_provider.dart';
 import '../services/failed_recordings_service.dart';
@@ -29,9 +28,7 @@ class SettingsScreen extends StatelessWidget {
         final themeConfig = settingsProvider.currentThemeConfig;
         return Scaffold(
           body: AnimatedBackground(
-            style: settingsProvider.settings.backgroundStyle,
             themeConfig: themeConfig,
-            isSimpleMode: settingsProvider.isSimpleMode,
             child: SafeArea(
               top: false, // Allow header to extend into safe area
               child: CustomScrollView(
@@ -63,45 +60,29 @@ class SettingsScreen extends StatelessWidget {
                     ),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
+                    // Appearance & Experience
                     SettingsSection(
-                      title: LocalizationService().t('language'),
+                      title: 'Appearance & Experience',
                       children: [
-                        _buildLanguageSelector(context, settingsProvider.currentThemeConfig),
-                      ],
-                    ),
-                    const SizedBox(height: AppTheme.spacing24),
-                    SettingsSection(
-                      title: LocalizationService().t('appearance'),
-                      children: [
-                        _buildSimpleModeToggle(context, settingsProvider.currentThemeConfig),
                         _buildThemeSelector(context, settingsProvider.currentThemeConfig),
-                        _buildBackgroundStyleSelector(context, settingsProvider.currentThemeConfig),
-                      ],
-                    ),
-                    const SizedBox(height: AppTheme.spacing24),
-                    SettingsSection(
-                      title: LocalizationService().t('recording'),
-                      children: [
-                        _buildAudioQualitySelector(context, settingsProvider.currentThemeConfig),
-                      ],
-                    ),
-                    const SizedBox(height: AppTheme.spacing24),
-                    SettingsSection(
-                      title: 'Smart Notes',
-                      children: [
-                        _buildAutoOrganizeToggle(context, settingsProvider.currentThemeConfig),
-                      ],
-                    ),
-                    const SizedBox(height: AppTheme.spacing24),
-                    SettingsSection(
-                      title: LocalizationService().t('preferences'),
-                      children: [
                         _buildHapticsToggle(context, settingsProvider.currentThemeConfig),
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
+                    
+                    // AI & Smart Features
                     SettingsSection(
-                      title: 'Data',
+                      title: 'AI & Smart Features',
+                      children: [
+                        _buildAutoOrganizeToggle(context, settingsProvider.currentThemeConfig),
+                        _buildAudioQualitySelector(context, settingsProvider.currentThemeConfig),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.spacing24),
+                    
+                    // Data Management
+                    SettingsSection(
+                      title: 'Data Management',
                       children: [
                         _buildFailedRecordingsButton(context, settingsProvider.currentThemeConfig),
                         _buildExportDataButton(context, settingsProvider.currentThemeConfig),
@@ -110,17 +91,13 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppTheme.spacing24),
+                    
+                    // Legal & Support
                     SettingsSection(
-                      title: 'Legal',
+                      title: 'Legal & Support',
                       children: [
                         _buildPrivacyPolicyTile(context, settingsProvider.currentThemeConfig),
                         _buildTermsOfServiceTile(context, settingsProvider.currentThemeConfig),
-                      ],
-                    ),
-                    const SizedBox(height: AppTheme.spacing24),
-                    SettingsSection(
-                      title: 'About',
-                      children: [
                         _buildAboutTile(context, settingsProvider.currentThemeConfig),
                       ],
                     ),
@@ -131,28 +108,6 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSimpleModeToggle(BuildContext context, ThemeConfig themeConfig) {
-    return Consumer<SettingsProvider>(
-      builder: (context, provider, child) {
-        return _buildTile(
-          context,
-          themeConfig,
-          icon: Icons.palette_outlined,
-          title: 'Simple Mode',
-          subtitle: 'Clean, minimal design without fancy effects (solid backgrounds, less animations)',
-          trailing: Switch(
-            value: provider.isSimpleMode,
-            activeTrackColor: themeConfig.primaryColor,
-            onChanged: (value) async {
-              await HapticService.light();
-              await provider.toggleSimpleMode(value);
-            },
           ),
         );
       },
@@ -183,250 +138,6 @@ class SettingsScreen extends StatelessWidget {
 
 
 
-  Widget _buildLanguageSelector(BuildContext context, ThemeConfig themeConfig) {
-    return Consumer<SettingsProvider>(
-      builder: (context, provider, child) {
-        final localization = LocalizationService();
-        final currentLanguage = provider.preferredLanguage;
-        
-        return _buildTile(
-          context,
-          themeConfig,
-          icon: Icons.language,
-          title: localization.t('settings_language'),
-          subtitle: '${currentLanguage.flag} ${currentLanguage.name} • ${localization.t('settings_language_subtitle')}',
-          onTap: () async {
-            await HapticService.light();
-            // Show language selector modal directly
-            if (context.mounted) {
-              _showLanguageModal(context, provider);
-            }
-          },
-        );
-      },
-    );
-  }
-
-  void _showLanguageModal(BuildContext context, SettingsProvider settingsProvider) {
-    final localization = LocalizationService();
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
-        decoration: BoxDecoration(
-          color: AppTheme.background,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(24),
-          ),
-          border: Border.all(
-            color: AppTheme.glassBorder,
-            width: 1.5,
-          ),
-        ),
-        child: Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.textTertiary.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      localization.t('select_language'),
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () {
-                      HapticService.light();
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            
-            const Divider(height: 1, color: AppTheme.glassBorder),
-            
-            // Beta disclaimer
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.amber.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.amber.shade700,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      localization.t('language_beta_disclaimer'),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.textSecondary,
-                            fontSize: 12,
-                            height: 1.4,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Language list
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: AppLanguage.values.length,
-                itemBuilder: (context, index) {
-                  final language = AppLanguage.values[index];
-                  final isSelected = language == settingsProvider.preferredLanguage;
-                  
-                  return _buildLanguageListItem(
-                    context,
-                    language,
-                    isSelected,
-                    settingsProvider,
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLanguageListItem(
-    BuildContext context,
-    AppLanguage language,
-    bool isSelected,
-    SettingsProvider settingsProvider,
-  ) {
-    return InkWell(
-      onTap: () async {
-        await HapticService.medium();
-        await settingsProvider.updatePreferredLanguage(language);
-        if (context.mounted) {
-          Navigator.pop(context);
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? settingsProvider.currentThemeConfig.primary.withValues(alpha: 0.1)
-              : Colors.transparent,
-          border: Border(
-            left: BorderSide(
-              color: isSelected
-                  ? settingsProvider.currentThemeConfig.primary
-                  : Colors.transparent,
-              width: 3,
-            ),
-          ),
-        ),
-        child: Row(
-          children: [
-            Text(
-              language.flag,
-              style: const TextStyle(fontSize: 32),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        language.name,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: isSelected
-                                  ? settingsProvider.currentThemeConfig.primary
-                                  : AppTheme.textPrimary,
-                            ),
-                      ),
-                      if (language != AppLanguage.english) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: Colors.amber.withValues(alpha: 0.4),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            'BETA',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.amber.shade700,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    language.nativeName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: settingsProvider.currentThemeConfig.primary,
-                size: 24,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildThemeSelector(BuildContext context, ThemeConfig themeConfig) {
     return Consumer<SettingsProvider>(
@@ -436,28 +147,10 @@ class SettingsScreen extends StatelessWidget {
           themeConfig,
           icon: Icons.palette,
           title: 'Theme',
-          subtitle: _getThemeName(provider.settings.themePreset),
+          subtitle: '${_getThemeName(provider.settings.themePreset)} • Choose your color scheme',
           onTap: () {
             HapticService.light();
             _showThemeDialog(context);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildBackgroundStyleSelector(BuildContext context, ThemeConfig themeConfig) {
-    return Consumer<SettingsProvider>(
-      builder: (context, provider, child) {
-        return _buildTile(
-          context,
-          themeConfig,
-          icon: Icons.wallpaper,
-          title: 'Background Animation',
-          subtitle: _getBackgroundStyleName(provider.settings.backgroundStyle),
-          onTap: () {
-            HapticService.light();
-            _showBackgroundStyleDialog(context);
           },
         );
       },
@@ -472,7 +165,7 @@ class SettingsScreen extends StatelessWidget {
           themeConfig,
           icon: Icons.mic,
           title: 'Audio Quality',
-          subtitle: _getAudioQualityName(provider.settings.audioQuality),
+          subtitle: '${_getAudioQualityName(provider.settings.audioQuality)} • Balance quality vs speed',
           onTap: () {
             HapticService.light();
             _showAudioQualityDialog(context);
@@ -487,19 +180,22 @@ class SettingsScreen extends StatelessWidget {
     return Consumer<SettingsProvider>(
       builder: (context, provider, child) {
         final isAuto = provider.settings.organizationMode == OrganizationMode.autoOrganize;
-        return _buildToggleTile(
+        return _buildTile(
           context,
           themeConfig,
           icon: Icons.auto_fix_high,
           title: 'Automatic Organization',
-          subtitle: 'AI organizes notes as you record',
-          value: isAuto,
-          onChanged: (value) async {
-            HapticService.light();
-            await provider.updateOrganizationMode(
-              value ? OrganizationMode.autoOrganize : OrganizationMode.manualOrganize,
-            );
-          },
+          subtitle: 'AI organizes notes as you record • Saves time and keeps things tidy',
+          trailing: Switch(
+            value: isAuto,
+            activeTrackColor: themeConfig.primaryColor,
+            onChanged: (value) async {
+              HapticService.light();
+              await provider.updateOrganizationMode(
+                value ? OrganizationMode.autoOrganize : OrganizationMode.manualOrganize,
+              );
+            },
+          ),
         );
       },
     );
@@ -513,8 +209,8 @@ class SettingsScreen extends StatelessWidget {
       builder: (context, failedRecordingsService, child) {
         final count = failedRecordingsService.count;
         final subtitle = count == 0 
-            ? 'No failed recordings'
-            : '$count recording${count == 1 ? '' : 's'} need retry';
+            ? 'No failed recordings • All recordings processed successfully'
+            : '$count recording${count == 1 ? '' : 's'} need retry • Tap to retry failed recordings';
         
         return _buildTile(
           context,
@@ -552,13 +248,12 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildExportDataButton(BuildContext context, ThemeConfig themeConfig) {
-    final localization = LocalizationService();
     return _buildTile(
       context,
       themeConfig,
       icon: Icons.upload_file,
-      title: localization.t('export_title'),
-      subtitle: localization.t('settings_export_subtitle'),
+      title: 'Export Data',
+      subtitle: 'Download all notes • Backup your data safely',
       onTap: () {
         HapticService.light();
         showDialog(
@@ -570,13 +265,12 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildDeleteAllNotesButton(BuildContext context, ThemeConfig themeConfig) {
-    final localization = LocalizationService();
     return _buildTile(
       context,
       themeConfig,
       icon: Icons.delete_forever,
-      title: localization.t('settings_delete_all_title'),
-      subtitle: localization.t('settings_delete_all_subtitle'),
+      title: 'Delete All Notes',
+      subtitle: 'Permanently remove all notes • Cannot be undone',
       onTap: () {
         HapticService.light();
         _showDeleteAllNotesDialog(context);
@@ -590,7 +284,7 @@ class SettingsScreen extends StatelessWidget {
       themeConfig,
       icon: Icons.delete_outline,
       title: 'Clear Cache',
-      subtitle: 'Free up storage space',
+      subtitle: 'Free up storage space • Remove temporary files',
       onTap: () async {
         await HapticService.light();
         await _clearCache(context);
@@ -604,7 +298,7 @@ class SettingsScreen extends StatelessWidget {
       themeConfig,
       icon: Icons.privacy_tip_outlined,
       title: 'Privacy Policy',
-      subtitle: 'How we handle your data',
+      subtitle: 'How we handle your data • Your privacy matters',
       onTap: () async {
         await HapticService.light();
         _openPrivacyPolicy();
@@ -618,7 +312,7 @@ class SettingsScreen extends StatelessWidget {
       themeConfig,
       icon: Icons.description_outlined,
       title: 'Terms of Service',
-      subtitle: 'Terms and conditions',
+      subtitle: 'Terms and conditions • Usage guidelines',
       onTap: () async {
         await HapticService.light();
         _openTermsOfService();
@@ -632,74 +326,7 @@ class SettingsScreen extends StatelessWidget {
       themeConfig,
       icon: Icons.info_outline,
       title: 'App Version',
-      subtitle: '1.0.0',
-    );
-  }
-
-  Widget _buildToggleTile(
-    BuildContext context,
-    ThemeConfig themeConfig, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return InkWell(
-      onTap: () => onChanged(!value),
-      child: Container(
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: AppTheme.glassBorder.withValues(alpha: 0.3),
-              width: 0.5,
-            ),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppTheme.spacing8),
-              decoration: BoxDecoration(
-                color: themeConfig.primaryColor.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-              ),
-              child: Icon(
-                icon,
-                color: themeConfig.primaryColor,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: AppTheme.spacing16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textSecondary,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-            Switch(
-              value: value,
-              onChanged: onChanged,
-              activeColor: themeConfig.primaryColor,
-            ),
-          ],
-        ),
-      ),
+      subtitle: 'Version 1.0.0 • Notie AI',
     );
   }
 
@@ -1114,8 +741,6 @@ class SettingsScreen extends StatelessWidget {
 
   String _getThemeName(ThemePreset preset) {
     switch (preset) {
-      case ThemePreset.modern:
-        return 'Modern Dark';
       case ThemePreset.oceanBlue:
         return 'Ocean Blue';
       case ThemePreset.sunsetOrange:
@@ -1124,6 +749,14 @@ class SettingsScreen extends StatelessWidget {
         return 'Forest Green';
       case ThemePreset.aurora:
         return 'Aurora';
+      case ThemePreset.midnightPurple:
+        return 'Midnight Purple';
+      case ThemePreset.cherryBlossom:
+        return 'Cherry Blossom';
+      case ThemePreset.arcticBlue:
+        return 'Arctic Blue';
+      case ThemePreset.emeraldNight:
+        return 'Emerald Night';
     }
   }
 
@@ -1136,224 +769,6 @@ class SettingsScreen extends StatelessWidget {
       case AudioQuality.high:
         return 'High (Best)';
     }
-  }
-
-  String _getBackgroundStyleName(BackgroundStyle style) {
-    switch (style) {
-      case BackgroundStyle.none:
-        return 'None';
-      case BackgroundStyle.clouds:
-        return 'Gentle Clouds';
-      case BackgroundStyle.meshGradient:
-        return 'Mesh Gradient';
-      case BackgroundStyle.softBlobs:
-        return 'Soft Blobs'; // Legacy support only
-    }
-  }
-
-  void _showBackgroundStyleDialog(BuildContext context) {
-    final provider = context.read<SettingsProvider>();
-    final themeConfig = provider.currentThemeConfig;
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.black87,  // Darker backdrop for better focus
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          constraints: const BoxConstraints(maxHeight: 600),
-          padding: const EdgeInsets.all(AppTheme.spacing24),
-          decoration: BoxDecoration(
-            // Much more opaque background for perfect text readability
-            color: const Color(0xEE1A1F2E),  // 93% opacity dark blue-grey
-            borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-            border: Border.all(
-              color: AppTheme.glassBorder.withOpacity(0.3),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 30,
-                spreadRadius: 5,
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Background Animation',
-                          style: Theme.of(context).textTheme.displaySmall,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Choose your perfect backdrop',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.textTertiary,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () {
-                      HapticService.light();
-                      Navigator.pop(context);
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppTheme.spacing24),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // None (Default/Recommended)
-                      _buildBackgroundStyleOption(
-                        context,
-                        BackgroundStyle.none,
-                        'None',
-                        'Clean static gradient (Recommended)',
-                        Icons.gradient,
-                        provider,
-                        themeConfig,
-                      ),
-                      const SizedBox(height: AppTheme.spacing8),
-                      // Other options
-                      _buildBackgroundStyleOption(
-                        context,
-                        BackgroundStyle.clouds,
-                        'Gentle Clouds',
-                        'Ultra-subtle floating clouds',
-                        Icons.cloud_outlined,
-                        provider,
-                        themeConfig,
-                      ),
-                      _buildBackgroundStyleOption(
-                        context,
-                        BackgroundStyle.meshGradient,
-                        'Mesh Gradient',
-                        'Flowing morphing gradients',
-                        Icons.grain,
-                        provider,
-                        themeConfig,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      )
-          .animate()
-          .scale(
-            begin: const Offset(0.9, 0.9),
-            end: const Offset(1, 1),
-            duration: AppTheme.animationFast,
-            curve: Curves.easeOut,
-          )
-          .fadeIn(duration: AppTheme.animationFast),
-    );
-  }
-
-  Widget _buildBackgroundStyleOption(
-    BuildContext context,
-    BackgroundStyle style,
-    String title,
-    String description,
-    IconData icon,
-    SettingsProvider provider,
-    ThemeConfig themeConfig,
-  ) {
-    final isSelected = provider.settings.backgroundStyle == style;
-    
-    return GestureDetector(
-      onTap: () async {
-        await HapticService.medium();
-        await provider.updateBackgroundStyle(style);
-        if (context.mounted) {
-          Navigator.pop(context);
-          CustomSnackbar.show(
-            context,
-            message: 'Background updated',
-            type: SnackbarType.success,
-            themeConfig: themeConfig,
-          );
-        }
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppTheme.spacing8),
-        padding: const EdgeInsets.all(AppTheme.spacing16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? themeConfig.primaryColor.withValues(alpha: 0.25)
-              : const Color(0x30FFFFFF),  // Slightly lighter for better contrast
-          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-          border: Border.all(
-            color: isSelected ? themeConfig.primaryColor : Colors.white.withOpacity(0.2),
-            width: isSelected ? 2 : 1.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? themeConfig.primaryColor.withValues(alpha: 0.3)
-                    : AppTheme.glassBorder.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: isSelected ? themeConfig.primaryColor : AppTheme.textSecondary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: AppTheme.spacing12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                        ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.textTertiary,
-                          fontSize: 12,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: themeConfig.primaryColor,
-                size: 20,
-              ),
-          ],
-        ),
-      ),
-    );
   }
 
   // Open Privacy Policy

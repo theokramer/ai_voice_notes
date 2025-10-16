@@ -250,9 +250,7 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
           },
           child: Scaffold(
             body: AnimatedBackground(
-              style: settingsProvider.settings.backgroundStyle,
               themeConfig: themeConfig,
-              isSimpleMode: settingsProvider.isSimpleMode,
               child: SafeArea(
                 child: Column(
                   children: [

@@ -367,29 +367,7 @@ class _FolderMenuItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Text(icon, style: const TextStyle(fontSize: 24)),
-      title: Row(
-        children: [
-          Expanded(child: Text(name)),
-          if (noteCount != null && noteCount! > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: isSelected 
-                    ? Theme.of(context).primaryColor
-                    : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                noteCount.toString(),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: isSelected ? Colors.white : Colors.grey.shade700,
-                ),
-              ),
-            ),
-        ],
-      ),
+      title: Text(name),
       trailing: isSelected
           ? Icon(Icons.check, color: Theme.of(context).primaryColor)
           : null,

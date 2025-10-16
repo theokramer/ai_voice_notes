@@ -72,30 +72,30 @@ class VoiceCommandService {
   // Multilingual keywords for fallback detection
   static const Map<String, List<String>> _appendKeywords = {
     'en': ['add to last note', 'append to last note', 'addition', 'append'],
-    'de': ['füge zu letzter notiz hinzu', 'zur letzten notiz', 'ergänzung', 'hinzufügen'],
-    'fr': ['ajouter à la dernière note', 'ajout', 'ajouter'],
-    'es': ['agregar a la última nota', 'añadir a la última', 'adición'],
+    'de': ['add to last note', 'append to last note', 'addition', 'append'],
+    'fr': ['add to last note', 'append to last note', 'addition', 'append'],
+    'es': ['add to last note', 'append to last note', 'addition', 'append'],
   };
   
   static const Map<String, List<String>> _newFolderKeywords = {
     'en': ['new folder', 'new', 'create folder'],
-    'de': ['neuer ordner', 'neu', 'neue', 'ordner erstellen'],
-    'fr': ['nouveau dossier', 'nouvelle', 'créer dossier'],
-    'es': ['nueva carpeta', 'nuevo', 'crear carpeta'],
+    'de': ['new folder', 'new', 'create folder'],
+    'fr': ['new folder', 'new', 'create folder'],
+    'es': ['new folder', 'new', 'create folder'],
   };
   
   static const Map<String, List<String>> _folderKeywords = {
     'en': ['folder', 'in folder', 'to folder'],
-    'de': ['ordner', 'in ordner', 'zu ordner'],
-    'fr': ['dossier', 'dans dossier', 'au dossier'],
-    'es': ['carpeta', 'en carpeta', 'a carpeta'],
+    'de': ['folder', 'in folder', 'to folder'],
+    'fr': ['folder', 'in folder', 'to folder'],
+    'es': ['folder', 'in folder', 'to folder'],
   };
   
   static const Map<String, List<String>> _titleKeywords = {
     'en': ['note with title', 'title', 'with title'],
-    'de': ['notiz mit titel', 'titel', 'mit titel'],
-    'fr': ['note avec titre', 'titre', 'avec titre'],
-    'es': ['nota con título', 'título', 'con título'],
+    'de': ['note with title', 'title', 'with title'],
+    'fr': ['note with title', 'title', 'with title'],
+    'es': ['note with title', 'title', 'with title'],
   };
   
   /// Detect voice commands from transcription text using AI
@@ -139,22 +139,13 @@ AVAILABLE FOLDERS: $folderNames
 COMMAND TYPES TO DETECT:
 
 1. APPEND - Add content to the last created note
-   English: "add to last note", "append to last note", "addition"
-   German: "füge zu letzter notiz hinzu", "zur letzten notiz", "ergänzung"
-   French: "ajouter à la dernière note", "ajout"
-   Spanish: "agregar a la última nota", "añadir a la última", "adición"
+   Keywords: "add to last note", "append to last note", "addition", "append"
 
 2. FOLDER - Save to an existing folder (will create if doesn't exist)
-   English: "folder [name]", "in folder [name]", "to folder [name]", "new [name]", "new folder [name]"
-   German: "ordner [name]", "in ordner [name]", "neu [name]", "neue [name]", "neuer ordner [name]"
-   French: "dossier [name]", "dans dossier [name]", "nouvelle [name]", "nouveau dossier [name]"
-   Spanish: "carpeta [name]", "en carpeta [name]", "nuevo [name]", "nueva carpeta [name]"
+   Keywords: "folder [name]", "in folder [name]", "to folder [name]", "new [name]", "new folder [name]"
 
 3. SET_TITLE - Set custom title for the note
-   English: "note with title [title]", "title [title]", "with title [title]"
-   German: "notiz mit titel [title]", "titel [title]", "mit titel [title]"
-   French: "note avec titre [title]", "titre [title]", "avec titre [title]"
-   Spanish: "nota con título [title]", "título [title]", "con título [title]"
+   Keywords: "note with title [title]", "title [title]", "with title [title]"
 
 CRITICAL RULES:
 1. Only detect commands if confidence > 0.8 (high certainty it's intentional)
@@ -165,21 +156,46 @@ CRITICAL RULES:
 6. If text doesn't clearly match patterns, return NO commands (avoid false positives)
 7. Be smart: "get together" is NOT "new", but "neue Tagebuch" or "new Journaling" IS a command
 8. **FOLDER AUTO-CREATION**: All folder commands will automatically create the folder if it doesn't exist
-9. **TITLE EXTRACTION**: When detecting title command, extract ONLY the title text (not the whole sentence). Remove the title AND the command keyword from remainingContent. The title should be the phrase immediately after "title" keyword, NOT the entire transcription.
+9. **TITLE EXTRACTION**: When detecting title command, extract the COMPLETE title text (can be 2-10 words). Remove the title AND the command keyword from remainingContent. The title should be the phrase immediately after "title" keyword until a natural pause or next command.
+
+10. **FOLDER EXTRACTION**: When detecting folder command, extract the COMPLETE folder name (can be 2-10 words). Remove the folder name AND the command keyword from remainingContent. The folder name should be the phrase immediately after "folder" keyword until a natural pause or next command.
+
+11. **NATURAL PAUSE DETECTION**: Stop extracting title/folder names at natural pauses like:
+   - Commas: "title grocery list, and today I went shopping" → title: "grocery list"
+   - Leading commas: "title, grocery list and today I went shopping" → title: "grocery list"
+   - Conjunctions: "folder learning and development then I read about..." → folder: "learning and development"
+   - Next command keywords: "title meeting notes in folder work" → title: "meeting notes", folder: "work"
+   - Sentence boundaries: "title weekly report. Today I completed..." → title: "weekly report"
 
 COMBINED COMMAND EXAMPLES:
 - "New note with title Meeting Notes in folder Work and here are my notes..."
   → Commands: [FOLDER("Work"), SET_TITLE("Meeting Notes")], Content: "and here are my notes..."
   
-- "Titel Morgengedanken in Ordner Tagebuch heute war ein guter Tag"
-  → Commands: [SET_TITLE("Morgengedanken"), FOLDER("Tagebuch")], Content: "heute war ein guter Tag"
+- "Title Morning Thoughts in folder Journal today was a good day"
+  → Commands: [SET_TITLE("Morning Thoughts"), FOLDER("Journal")], Content: "today was a good day"
 
-- "Neu Journaling ich bin heute sehr glücklich"
-  → Commands: [FOLDER("Journaling")], Content: "ich bin heute sehr glücklich"
+- "New Journaling I am very happy today"
+  → Commands: [FOLDER("Journaling")], Content: "I am very happy today"
 
 - "Title I love potatoes and today I went shopping"
   → Commands: [SET_TITLE("I love potatoes")], Content: "and today I went shopping"
-  ⚠️ Title is ONLY "I love potatoes" - do NOT include the rest in the title!
+
+- "title grocery list for the week and today I went shopping"
+  → Commands: [SET_TITLE("grocery list for the week")], Content: "and today I went shopping"
+
+- "folder learning and development then I read about new technologies"
+  → Commands: [FOLDER("learning and development")], Content: "then I read about new technologies"
+
+- "title meeting notes with John in folder work today we discussed the project"
+  → Commands: [SET_TITLE("meeting notes with John"), FOLDER("work")], Content: "today we discussed the project"
+
+- "title, grocery list and today I went shopping"
+  → Commands: [SET_TITLE("grocery list")], Content: "today I went shopping"
+
+- "title grocery list folder bananas and today I went shopping"
+  → Commands: [SET_TITLE("grocery list"), FOLDER("bananas")], Content: "today I went shopping"
+
+⚠️ CRITICAL: The extracted title/folder names should NEVER appear in the remainingContent!
 
 NON-COMMAND EXAMPLES (should return NO commands):
 - "I need to get together with John tomorrow" → NO commands (normal note)
@@ -325,25 +341,72 @@ TRANSCRIPTION TO ANALYZE:
     final commands = <VoiceCommand>[];
     String remainingContent = transcription;
     
-    // Helper to extract name after keyword (handles various separators)
+    // Helper to extract name after keyword (handles various separators and multi-word names)
     String? extractNameAfterKeyword(String text, String keyword) {
       final afterKeyword = text.substring(keyword.length).trim();
       
-      // Try different separators
-      if (afterKeyword.contains(':')) {
-        return afterKeyword.substring(0, afterKeyword.indexOf(':')).trim();
+      // Clean up leading punctuation (commas, colons, etc.)
+      final cleanedAfterKeyword = afterKeyword.replaceAll(RegExp(r'^[,:\s]+'), '').trim();
+      
+      // Try different separators first
+      if (cleanedAfterKeyword.contains(':')) {
+        return cleanedAfterKeyword.substring(0, cleanedAfterKeyword.indexOf(':')).trim();
       }
       
-      // Take first 1-3 words as name
-      final words = afterKeyword.split(RegExp(r'\s+'));
+      // Split into words for analysis
+      final words = cleanedAfterKeyword.split(RegExp(r'\s+'));
       if (words.isEmpty) return null;
       
-      // Look for common stopping words
-      final stopWords = ['in', 'im', 'und', 'and', 'et', 'y', 'with', 'mit', 'avec', 'con'];
+      // Enhanced stop words for natural pause detection
+      final stopWords = [
+        // Conjunctions
+        'in', 'im', 'und', 'and', 'et', 'y', 'with', 'mit', 'avec', 'con',
+        'then', 'dann', 'puis', 'entonces', 'also', 'auch', 'aussi', 'también',
+        'but', 'aber', 'mais', 'pero', 'however', 'jedoch', 'cependant', 'sin embargo',
+        // Command keywords - CRITICAL for chained commands
+        'folder', 'ordner', 'dossier', 'carpeta', 'title', 'titel', 'titre', 'título',
+        'new', 'neu', 'nouveau', 'nuevo', 'append', 'hinzufügen', 'ajouter', 'añadir',
+        'in folder', 'in ordner', 'dans dossier', 'en carpeta',
+        'to folder', 'zu ordner', 'au dossier', 'a carpeta',
+        // Sentence boundaries
+        'today', 'heute', 'aujourd\'hui', 'hoy', 'yesterday', 'gestern', 'hier', 'ayer',
+        'tomorrow', 'morgen', 'demain', 'mañana', 'now', 'jetzt', 'maintenant', 'ahora',
+        // Common transition words
+        'so', 'also', 'daher', 'donc', 'por lo tanto', 'therefore', 'deshalb', 'donc', 'por tanto',
+        'next', 'nächste', 'suivant', 'siguiente', 'finally', 'schließlich', 'enfin', 'finalmente'
+      ];
+      
       final nameWords = <String>[];
-      for (final word in words.take(3)) {
-        if (stopWords.contains(word.toLowerCase())) break;
-        nameWords.add(word);
+      final maxWords = 10; // Reasonable limit for title/folder names
+      
+      for (int i = 0; i < words.length && i < maxWords; i++) {
+        final word = words[i].toLowerCase();
+        
+        // Stop at natural pauses
+        if (stopWords.contains(word)) {
+          break;
+        }
+        
+        // Stop at punctuation that indicates sentence boundary
+        if (word.endsWith('.') || word.endsWith('!') || word.endsWith('?')) {
+          // Include the word but remove punctuation
+          final cleanWord = word.replaceAll(RegExp(r'[.!?]+$'), '');
+          if (cleanWord.isNotEmpty) {
+            nameWords.add(words[i].replaceAll(RegExp(r'[.!?]+$'), ''));
+          }
+          break;
+        }
+        
+        // Stop at commas
+        if (word.endsWith(',')) {
+          final cleanWord = word.replaceAll(',', '');
+          if (cleanWord.isNotEmpty) {
+            nameWords.add(words[i].replaceAll(',', ''));
+          }
+          break;
+        }
+        
+        nameWords.add(words[i]);
       }
       
       return nameWords.isEmpty ? null : nameWords.join(' ');
@@ -397,34 +460,28 @@ TRANSCRIPTION TO ANALYZE:
       }
     }
     
-    // Check for folder commands (including "new" keywords)
+    // Check for folder commands (including "new" keywords) - but only if no title command was found
+    // OR if we need to check for chained commands
     for (final langKeywords in _newFolderKeywords.values) {
       for (final keyword in langKeywords) {
-        if (normalized.startsWith(keyword.toLowerCase())) {
-          final folderName = extractNameAfterKeyword(transcription, keyword);
+        if (normalized.contains(keyword.toLowerCase())) {
+          final keywordIndex = normalized.indexOf(keyword.toLowerCase());
           
-          if (folderName != null && folderName.isNotEmpty && folderName.toLowerCase() != 'folder') {
-            // Always use folder command type - backend will handle creation if needed
-            commands.add(VoiceCommand(
-              type: VoiceCommandType.folder,
-              originalKeyword: keyword,
-              folderName: folderName,
-              confidence: 0.9,
-            ));
-            break;
+          // Check if this keyword appears AFTER any existing commands
+          bool isAfterExistingCommand = false;
+          for (final existingCmd in commands) {
+            final existingIndex = normalized.indexOf(existingCmd.originalKeyword.toLowerCase());
+            if (keywordIndex > existingIndex) {
+              isAfterExistingCommand = true;
+              break;
+            }
           }
-        }
-      }
-    }
-    
-    // Check for folder assignment commands (without "new")
-    if (commands.isEmpty) {
-      for (final langKeywords in _folderKeywords.values) {
-        for (final keyword in langKeywords) {
-          if (normalized.startsWith(keyword.toLowerCase())) {
-            final folderName = extractNameAfterKeyword(transcription, keyword);
+          
+          // Only process if it's after existing commands or no commands exist yet
+          if (isAfterExistingCommand || commands.isEmpty) {
+            final folderName = extractNameAfterKeyword(transcription.substring(keywordIndex), keyword);
             
-            if (folderName != null && folderName.isNotEmpty) {
+            if (folderName != null && folderName.isNotEmpty && folderName.toLowerCase() != 'folder') {
               // Always use folder command type - backend will handle creation if needed
               commands.add(VoiceCommand(
                 type: VoiceCommandType.folder,
@@ -439,22 +496,149 @@ TRANSCRIPTION TO ANALYZE:
       }
     }
     
-    // Extract remaining content by removing detected command keywords
-    if (commands.isNotEmpty) {
-      // Simple approach: look for colon or common separators
-      if (transcription.contains(':')) {
-        final colonIndex = transcription.indexOf(':');
-        remainingContent = transcription.substring(colonIndex + 1).trim();
-      } else {
-        // Remove first command's keywords and extracted names
-        final firstCmd = commands.first;
-        if (firstCmd.type == VoiceCommandType.folder) {
-          final folderNameToRemove = firstCmd.folderName ?? '';
-          // Try to find and remove the folder name from the start
-          final pattern = RegExp('${RegExp.escape(firstCmd.originalKeyword)}\\s+${RegExp.escape(folderNameToRemove)}', caseSensitive: false);
-          remainingContent = transcription.replaceFirst(pattern, '').trim();
+    // Check for folder assignment commands (without "new") - but only if no title command was found
+    // OR if we need to check for chained commands
+    if (commands.isEmpty || commands.any((cmd) => cmd.type == VoiceCommandType.setTitle)) {
+      for (final langKeywords in _folderKeywords.values) {
+        for (final keyword in langKeywords) {
+          if (normalized.contains(keyword.toLowerCase())) {
+            final keywordIndex = normalized.indexOf(keyword.toLowerCase());
+            
+            // Check if this keyword appears AFTER any existing commands
+            bool isAfterExistingCommand = false;
+            for (final existingCmd in commands) {
+              final existingIndex = normalized.indexOf(existingCmd.originalKeyword.toLowerCase());
+              if (keywordIndex > existingIndex) {
+                isAfterExistingCommand = true;
+                break;
+              }
+            }
+            
+            // Only process if it's after existing commands or no commands exist yet
+            if (isAfterExistingCommand || commands.isEmpty) {
+              final folderName = extractNameAfterKeyword(transcription.substring(keywordIndex), keyword);
+              
+              if (folderName != null && folderName.isNotEmpty) {
+                // Always use folder command type - backend will handle creation if needed
+                commands.add(VoiceCommand(
+                  type: VoiceCommandType.folder,
+                  originalKeyword: keyword,
+                  folderName: folderName,
+                  confidence: 0.9,
+                ));
+                break;
+              }
+            }
+          }
         }
       }
+    }
+    
+    // Extract remaining content by removing ALL detected command keywords and their values
+    if (commands.isNotEmpty) {
+      remainingContent = transcription;
+      
+      debugPrint('🧹 Starting content removal from: "$remainingContent"');
+      debugPrint('   Commands to remove: ${commands.map((c) => '${c.originalKeyword} ${c.type == VoiceCommandType.setTitle ? c.noteTitle : c.folderName}').join(', ')}');
+      
+      // Process commands in reverse order to maintain correct indices
+      final sortedCommands = List<VoiceCommand>.from(commands);
+      sortedCommands.sort((a, b) {
+        // Sort by position in transcription (if we can determine it)
+        final aIndex = transcription.toLowerCase().indexOf(a.originalKeyword.toLowerCase());
+        final bIndex = transcription.toLowerCase().indexOf(b.originalKeyword.toLowerCase());
+        return bIndex.compareTo(aIndex); // Reverse order
+      });
+      
+      for (final command in sortedCommands) {
+        String? textToRemove;
+        
+        switch (command.type) {
+          case VoiceCommandType.setTitle:
+            if (command.noteTitle != null) {
+              // Remove "title [title]" pattern - handle various separators
+              textToRemove = '${command.originalKeyword} ${command.noteTitle}';
+            }
+            break;
+            
+          case VoiceCommandType.folder:
+            if (command.folderName != null) {
+              // Remove "folder [name]" or "new [name]" pattern - handle various separators
+              textToRemove = '${command.originalKeyword} ${command.folderName}';
+            }
+            break;
+            
+          case VoiceCommandType.append:
+            // Remove just the append keyword
+            textToRemove = command.originalKeyword;
+            break;
+        }
+        
+        if (textToRemove != null) {
+          final beforeRemoval = remainingContent;
+          
+          // Try multiple removal patterns to handle variations in punctuation and spacing
+          final patterns = [
+            // Pattern 1: Exact match with spaces
+            RegExp(RegExp.escape(textToRemove), caseSensitive: false),
+            
+            // Pattern 2: With optional commas around the value
+            RegExp('${RegExp.escape(command.originalKeyword)}\\s*,?\\s*${RegExp.escape(command.type == VoiceCommandType.setTitle ? command.noteTitle! : command.folderName!)}\\s*,?', caseSensitive: false),
+            
+            // Pattern 3: With any punctuation/spaces between keyword and value
+            RegExp('${RegExp.escape(command.originalKeyword)}[,\\s]+${RegExp.escape(command.type == VoiceCommandType.setTitle ? command.noteTitle! : command.folderName!)}[,\\s]*', caseSensitive: false),
+            
+            // Pattern 4: More flexible - keyword followed by any non-word chars, then value
+            RegExp('${RegExp.escape(command.originalKeyword)}[^a-zA-Z0-9]*${RegExp.escape(command.type == VoiceCommandType.setTitle ? command.noteTitle! : command.folderName!)}[^a-zA-Z0-9]*', caseSensitive: false),
+            
+            // Pattern 5: Handle "in folder" pattern specifically
+            if (command.type == VoiceCommandType.folder && command.originalKeyword == 'folder')
+              RegExp('in\\s+${RegExp.escape(command.folderName!)}[,\\s]*', caseSensitive: false),
+            
+            // Pattern 6: Handle "in folder" with commas
+            if (command.type == VoiceCommandType.folder && command.originalKeyword == 'folder')
+              RegExp('in\\s*,?\\s*${RegExp.escape(command.folderName!)}[,\\s]*', caseSensitive: false),
+            
+            // Pattern 7: Handle case where "in" might be left behind
+            if (command.type == VoiceCommandType.folder)
+              RegExp('in\\s*,?\\s*${RegExp.escape(command.folderName!)}[,\\s]*', caseSensitive: false),
+          ];
+          
+          bool removed = false;
+          for (final pattern in patterns.whereType<RegExp>()) {
+            if (remainingContent.contains(pattern)) {
+              remainingContent = remainingContent.replaceFirst(pattern, ' ').trim();
+              removed = true;
+              debugPrint('🧹 Removed command text with pattern: "$textToRemove"');
+              debugPrint('   Before: "$beforeRemoval"');
+              debugPrint('   After: "$remainingContent"');
+              break;
+            }
+          }
+          
+          if (!removed) {
+            debugPrint('⚠️ Failed to remove command text: "$textToRemove"');
+            debugPrint('   Content: "$remainingContent"');
+          }
+        }
+      }
+      
+      // Final cleanup - remove any remaining command-related patterns and extra spaces
+      remainingContent = remainingContent
+          .replaceAll(RegExp(r'^[,.\s]+'), '') // Remove leading punctuation and spaces
+          .replaceAll(RegExp(r'^(and|und|et|y|then|dann|puis|entonces|also|auch|aussi|también)\s+'), '') // Remove leading conjunctions
+          .replaceAll(RegExp(r'\s+(and|und|et|y|then|dann|puis|entonces|also|auch|aussi|también)\s+'), ' ') // Remove middle conjunctions
+          .replaceAll(RegExp(r'\s+'), ' ') // Multiple spaces to single space
+          .trim();
+      
+      // Additional cleanup for leftover command words
+      remainingContent = remainingContent
+          .replaceAll(RegExp(r'^(in|im|dans|en|zu|au|a)\s+'), '') // Remove leading prepositions
+          .replaceAll(RegExp(r'\s+(in|im|dans|en|zu|au|a)\s+'), ' ') // Remove middle prepositions
+          .replaceAll(RegExp(r'^[.,\s]+'), '') // Remove any remaining leading punctuation
+          .trim();
+      
+      debugPrint('🧹 Final cleaned content: "$remainingContent"');
     }
     
     return VoiceCommandResult(

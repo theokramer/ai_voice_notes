@@ -28,15 +28,15 @@ class HomeNotesGrid extends StatelessWidget {
 
   double _estimateNoteCardHeight(Note note) {
     // Base structure for grid view (reduced padding):
-    // top padding (12) + icon (48) + name row (16) + spacing (4) + date (13) + spacing (8)
-    double height = 12.0 + 48.0 + 16.0 + 4.0 + 13.0 + 8.0; // ~101px
+    // top padding (12) + name row (15) + spacing (4) + date (13) + spacing (8)
+    double height = 12.0 + 15.0 + 4.0 + 13.0 + 8.0; // ~52px
 
     // Get the content text
     final latestText = note.content;
 
     if (latestText.isEmpty) {
       // "No content" text
-      height += 12.0 * 1.4; // fontSize 12, height 1.4
+      height += 13.0 * 1.4; // fontSize 13, height 1.4
       height += 12.0; // bottom padding (reduced)
       return height + 12.0; // margin bottom
     }
@@ -48,12 +48,12 @@ class HomeNotesGrid extends StatelessWidget {
     final visibleText = visibleWords.join(' ');
 
     // Calculate lines needed
-    // ~30 chars per line in grid view, fontSize 12
+    // ~30 chars per line in grid view, fontSize 13
     final charsPerLine = 30;
     final estimatedLines = (visibleText.length / charsPerLine).ceil();
 
     // Line height = fontSize * height multiplier
-    final lineHeight = 12.0 * 1.4;
+    final lineHeight = 13.0 * 1.4;
     height += estimatedLines * lineHeight;
 
     height += 12.0; // bottom padding (reduced)

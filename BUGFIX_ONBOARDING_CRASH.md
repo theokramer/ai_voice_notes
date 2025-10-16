@@ -26,7 +26,7 @@ Fixed both the layout overflow and semantics error:
 - This prevents overflow on any screen size while maintaining the visual design and fixing semantics errors
 
 ### Video Error (Not Critical)
-The video initialization error for `assets/onboarding/videos/recording_to_note.mp4` is non-critical because:
+The video initialization error for `assets/onboarding/videos/video_onboarding.mp4` is non-critical because:
 - The onboarding screen already has proper error handling for missing videos
 - If the video fails to load, it displays a placeholder with a mic icon
 - The error is caught and logged but doesn't block the user flow

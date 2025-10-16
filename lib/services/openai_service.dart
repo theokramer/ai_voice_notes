@@ -8,6 +8,22 @@ import '../models/app_language.dart';
 import '../models/organization_suggestion.dart';
 import '../feature_updates/ai_chat_overlay.dart';
 
+/// Content types for adaptive summary generation
+enum ContentType {
+  list,           // Simple lists (groceries, shopping, items)
+  learning,       // Educational content, explanations, concepts
+  productivity,   // Meetings, tasks, projects, work-related
+  personal,       // Personal reflections, thoughts, experiences
+  general,        // Default fallback
+}
+
+/// Summary length categories based on transcription word count
+enum SummaryLength {
+  concise,        // < 200 words: 2-3 key points
+  standard,       // 200-500 words: 3-5 key points
+  comprehensive,  // > 500 words: 5-8 key points, more detail
+}
+
 /// Result from audio transcription including detected language
 class TranscriptionResult {
   final String text;
@@ -99,85 +115,20 @@ class OpenAIService {
         languageName = langMap[detectedLanguage];
       }
       
-      final prompt = '''You are an expert at creating concise, insightful summaries. Create a BEAUTIFUL, WELL-STRUCTURED summary that captures the essence of this note.
-
-INPUT TRANSCRIPTION:
-"$transcription"
-
-🚨 CRITICAL RULE - LANGUAGE PRESERVATION:
-${languageName != null ? 'The user spoke in $languageName (detected: $detectedLanguage). You MUST respond in $languageName ONLY.' : 'DETECT the language of the input text above and respond in THE EXACT SAME LANGUAGE.'}
-- German input → German output
-- English input → English output  
-- Spanish input → Spanish output
-DO NOT TRANSLATE. DO NOT SWITCH LANGUAGES.
-
-🚨 CRITICAL RULE - STRUCTURED FORMAT:
-Output in a SPECIFIC structure using these section markers:
-
-[MAIN_TOPIC]
-A single clear sentence describing what this note is about.
-
-[KEY_POINTS]
-- First key point or main idea
-- Second key point or main idea
-- Third key point or main idea
-(Include 2-5 key points, each on a new line starting with -)
-
-[ACTION_ITEMS]
-- Action item 1
-- Action item 2
-(ONLY include this section if there are clear action items, todos, or things to do. Otherwise OMIT this section entirely.)
-
-[CONTEXT]
-Any additional important context, dates, people mentioned, or relevant details that provide understanding.
-(ONLY include if there's meaningful context. Otherwise OMIT this section.)
-
-SUMMARY REQUIREMENTS:
-✓ 30-50% of original length (concise but comprehensive)
-✓ Extract the most important information
-✓ Remove filler words and redundancy
-✓ Clear, direct language
-✓ Preserve all important details, names, dates, numbers
-✓ Each section must be clearly marked with [SECTION_NAME]
-✓ Use plain text, no markdown (no **, no ##, no bullets except - for lists)
-
-EXAMPLES:
-
-Input: "So today I had a meeting with Sarah about the Q3 project. Um, she mentioned we need to finalize the budget by Friday. Also, we should schedule a follow-up next week to review the timeline."
-
-Output:
-[MAIN_TOPIC]
-Meeting with Sarah about Q3 project budget and timeline.
-
-[KEY_POINTS]
-- Budget needs to be finalized by Friday
-- Follow-up meeting required next week
-- Discussion focused on project timeline review
-
-[ACTION_ITEMS]
-- Finalize Q3 project budget by Friday
-- Schedule follow-up meeting for next week
-
-[CONTEXT]
-Meeting participants: Sarah. Timeline review is the main focus for the follow-up.
-
----
-
-Input: "I've been thinking about learning to play guitar. There's this song I really love and I want to be able to play it someday."
-
-Output:
-[MAIN_TOPIC]
-Interest in learning to play guitar to perform a favorite song.
-
-[KEY_POINTS]
-- Desire to learn guitar
-- Motivated by a specific song
-- Long-term personal goal
-
-[CONTEXT]
-Personal aspiration, no immediate timeline mentioned.
-
-Return ONLY the structured summary with clear section markers. No explanations. No translations.''';
+      // Calculate word count and determine summary length
+      final wordCount = transcription.split(RegExp(r'\s+')).length;
+      final summaryLength = _determineSummaryLength(wordCount);
+      final maxTokens = _calculateMaxTokens(wordCount);
+      
+      // Detect content type and generate adaptive prompt
+      final contentType = await _detectContentType(transcription, detectedLanguage);
+      final prompt = _generateAdaptivePrompt(
+        transcription,
+        languageName,
+        detectedLanguage,
+        contentType,
+        summaryLength,
+      );
 
       final uri = Uri.parse('https://api.openai.com/v1/chat/completions');
       final response = await http.post(
@@ -192,8 +143,8 @@ Return ONLY the structured summary with clear section markers. No explanations. 
             {'role': 'system', 'content': 'You are a summary expert that creates concise, well-structured summaries using specific section markers. You NEVER translate or change the language of the input text. You always preserve the original language.'},
             {'role': 'user', 'content': prompt},
           ],
-          'temperature': 0.3, // Balanced for quality and consistency
-          'max_tokens': 800,
+          'temperature': _getTemperatureForContentType(contentType),
+          'max_tokens': maxTokens,
         }),
       );
 
@@ -275,8 +226,8 @@ Summary instructions:
 - If the input is a story or explanation, make it coherent and well-structured
 
 Examples of CORRECT behavior:
-✓ Input (German): "Ähm, also heute war ein guter Tag. Ich meine, ich habe viel geschafft, weißt du."
-  Output (German): "Mein Tag\n\nHeute war ein guter Tag. Ich habe viel geschafft."
+✓ Input (English): "Um, so today was a good day. I mean, I got a lot done, you know."
+  Output (English): "My Day\n\nToday was a good day. I got a lot done."
 
 ✓ Input (English): "So um, I need to buy like milk and, uh, eggs and bread, you know."
   Output (English): "Shopping List\n\nI need to buy milk, eggs, and bread."
@@ -358,7 +309,7 @@ RULES:
 1. If recent notes suggest a pattern (e.g., multiple notes about same topic), use same folder
 2. STRONGLY prefer using existing folders, even if not perfect match (confidence > 0.7)
 3. If no good match AND content is distinct new topic, suggest creating new folder
-4. Only suggest new folder if confidence > 0.9 AND folder name is GENERIC and BROAD
+4. Only suggest new folder if confidence > 0.85 AND folder name is GENERIC and BROAD
 5. Ask: "Could 10+ other future notes fit in this folder?" If no, don't create it
 6. If uncertain (confidence < 0.7), return "Unorganized"
 7. CRITICAL: ALWAYS use GENERIC, UNIVERSAL folder names - ignore user's previous specific patterns
@@ -760,17 +711,27 @@ Guidelines:
         }
       }
       
-      final prompt = '''Generate a short, descriptive title (3-6 words) for this note.
+      final prompt = '''Generate a clear, understandable title (3-6 words) for this note that balances being generic enough to group similar notes while remaining clear about the content.
 
 Note content:
 "$textSample"$folderContext${languageInstruction ?? ''}
 
 Rules:
 - Maximum 6 words
-- Descriptive and specific
+- Focus on the main topic/subject matter - generic enough to group similar notes
+- Extract the core theme or category that this note represents
+- Avoid overly specific details (names, dates, exact events) - keep it broad
+- Avoid overly generic words like "Ideas", "List", "Notes", "Things"
+- Use clear, descriptive categories that convey the essence
 - No quotes or punctuation
 - Title case (capitalize first letter of each word)${folderName != null && folderName != 'Unorganized' ? '\n- DO NOT include "$folderName" in the title (it\'s redundant with the folder name)' : ''}
 ${detectedLanguage != null ? '- IMPORTANT: Generate the title in the SAME language as the note content' : ''}
+
+Examples:
+- Grocery content → "Shopping List" or "Food Items" (not "Weekend Shopping Items" or "Breakfast Ingredients")
+- Meeting notes → "Meeting Notes" or "Work Discussion" (not "Sarah Project Meeting" or "Budget Discussion")
+- Ideas about travel → "Travel Ideas" or "Vacation Planning" (not "Europe Trip Ideas" or "Summer Vacation Plans")
+- Personal thoughts → "Personal Reflection" or "Daily Thoughts" (not "Morning Meditation" or "Evening Journal")
 
 Return ONLY the title, nothing else.''';
 
@@ -848,6 +809,7 @@ $foldersContext
 **ACTION DETECTION - Detect these intents:**
 - "create note about X" / "make a note" → create_note
 - "add this to [note name]" / "append to note" → add_to_note  
+- "add to last note" / "append to last note" / "add this to my last note" → add_to_last_note
 - "move [note] to [folder]" → move_note
 - "create folder for X" → create_folder
 - "summarize our conversation" / "create note from this chat" → summarize_chat
@@ -861,17 +823,18 @@ CORRECT format:
 {
   "text": "Your conversational response (2-3 sentences)",
   "noteCitations": ["noteId1", "noteId2"],
-  "action": {
-    "type": "create_note|add_to_note|move_note|create_folder|summarize_chat|pin_note|delete_note",
-    "description": "Clear description of what will happen",
-    "buttonLabel": "Short action label (2-4 words)",
-    "data": {}
-  }
+    "action": {
+      "type": "create_note|add_to_note|add_to_last_note|move_note|create_folder|summarize_chat|pin_note|delete_note",
+      "description": "Clear description of what will happen",
+      "buttonLabel": "Short action label (2-4 words)",
+      "data": {}
+    }
 }
 
 Data field examples (choose based on action type):
-- create_note: {"noteName": "Name", "noteContent": "", "folderId": "id"}
+- create_note: {"noteName": "Name", "noteContent": "", "folderId": "id", "folderName": "name"}
 - add_to_note: {"noteId": "id", "contentToAdd": "text"}
+- add_to_last_note: {"contentToAdd": "text"}
 - move_note: {"noteId": "id", "targetFolderId": "id", "targetFolderName": "name"}
 - create_folder: {"folderName": "name"}
 - summarize_chat: {}
@@ -914,6 +877,23 @@ Response:
   }
 }
 
+User: "Create a note titled Apple in folder Bananas with content: test content"
+Response:
+{
+  "text": "I'll create a new note titled 'Apple' in the 'Bananas' folder.",
+  "noteCitations": [],
+  "action": {
+    "type": "create_note",
+    "description": "Create note 'Apple' in folder 'Bananas'",
+    "buttonLabel": "Create Note",
+    "data": {
+      "noteName": "Apple",
+      "noteContent": "test content",
+      "folderName": "Bananas"
+    }
+  }
+}
+
 User: "Add buy milk to my shopping list"
 Response:
 {
@@ -926,6 +906,21 @@ Response:
     "data": {
       "noteId": "xyz789",
       "contentToAdd": "buy milk"
+    }
+  }
+}
+
+User: "Add this to my last note: buy groceries"
+Response:
+{
+  "text": "I'll add 'buy groceries' to your most recent note.",
+  "noteCitations": [],
+  "action": {
+    "type": "add_to_last_note",
+    "description": "Add 'buy groceries' to last note",
+    "buttonLabel": "Add to Last",
+    "data": {
+      "contentToAdd": "buy groceries"
     }
   }
 }'''
@@ -1113,6 +1108,324 @@ Return ONLY the summary, nothing else.''';
     } catch (e) {
       debugPrint('Error summarizing chat: $e');
       throw Exception('Error summarizing chat: $e');
+    }
+  }
+
+
+  /// Determine summary length based on word count
+  SummaryLength _determineSummaryLength(int wordCount) {
+    if (wordCount < 200) {
+      return SummaryLength.concise;
+    } else if (wordCount <= 500) {
+      return SummaryLength.standard;
+    } else {
+      return SummaryLength.comprehensive;
+    }
+  }
+
+  /// Calculate max tokens based on word count and summary length
+  int _calculateMaxTokens(int wordCount) {
+    final summaryLength = _determineSummaryLength(wordCount);
+    switch (summaryLength) {
+      case SummaryLength.concise:
+        return 400;  // Shorter summaries for brief content
+      case SummaryLength.standard:
+        return 600;  // Standard length
+      case SummaryLength.comprehensive:
+        return 1000; // Longer summaries for detailed content
+    }
+  }
+
+  /// Detect content type based on transcription analysis
+  Future<ContentType> _detectContentType(String transcription, String? detectedLanguage) async {
+    try {
+      // Quick pattern analysis for common list indicators
+      final listPatterns = [
+        RegExp(r'\b(buy|get|pick up|grab|need|want)\s+\w+', caseSensitive: false),
+        RegExp(r'\b\d+\s*(items?|things?|stuff)', caseSensitive: false),
+        RegExp(r'\b(list|items?|shopping|groceries)', caseSensitive: false),
+      ];
+      
+      // Check for list patterns
+      for (final pattern in listPatterns) {
+        if (pattern.hasMatch(transcription)) {
+          return ContentType.list;
+        }
+      }
+
+      // Check for learning content patterns
+      final learningPatterns = [
+        RegExp(r'\b(learn|study|understand|explain|concept|theory|lesson)', caseSensitive: false),
+        RegExp(r'\b(how|why|what|when|where)\s+', caseSensitive: false),
+        RegExp(r'\b(example|for instance|such as)', caseSensitive: false),
+      ];
+      
+      int learningScore = 0;
+      for (final pattern in learningPatterns) {
+        learningScore += pattern.allMatches(transcription).length;
+      }
+      
+      // Check for productivity patterns
+      final productivityPatterns = [
+        RegExp(r'\b(meeting|project|task|deadline|schedule|plan)', caseSensitive: false),
+        RegExp(r'\b(action|todo|next step|follow up)', caseSensitive: false),
+        RegExp(r'\b(team|colleague|client|customer)', caseSensitive: false),
+      ];
+      
+      int productivityScore = 0;
+      for (final pattern in productivityPatterns) {
+        productivityScore += pattern.allMatches(transcription).length;
+      }
+
+      // Check for personal reflection patterns
+      final personalPatterns = [
+        RegExp(r'\b(feel|think|believe|opinion|experience)', caseSensitive: false),
+        RegExp(r'\b(personal|myself|I think|I feel)', caseSensitive: false),
+        RegExp(r'\b(reflection|thought|musing|contemplation)', caseSensitive: false),
+      ];
+      
+      int personalScore = 0;
+      for (final pattern in personalPatterns) {
+        personalScore += pattern.allMatches(transcription).length;
+      }
+
+      // Determine content type based on scores
+      if (learningScore >= 2) {
+        return ContentType.learning;
+      } else if (productivityScore >= 2) {
+        return ContentType.productivity;
+      } else if (personalScore >= 2) {
+        return ContentType.personal;
+      } else {
+        return ContentType.general;
+      }
+    } catch (e) {
+      debugPrint('Error detecting content type: $e');
+      return ContentType.general;
+    }
+  }
+
+  /// Generate adaptive prompt based on content type and summary length
+  String _generateAdaptivePrompt(
+    String transcription,
+    String? languageName,
+    String? detectedLanguage,
+    ContentType contentType,
+    SummaryLength summaryLength,
+  ) {
+    final languageInstruction = languageName != null 
+        ? 'The user spoke in $languageName (detected: $detectedLanguage). You MUST respond in $languageName ONLY.'
+        : 'DETECT the language of the input text above and respond in THE EXACT SAME LANGUAGE.';
+
+    final basePrompt = '''You are an expert at creating concise, insightful summaries. Create a BEAUTIFUL, WELL-STRUCTURED summary that captures the essence of this note.
+
+INPUT TRANSCRIPTION:
+"$transcription"
+
+🚨 CRITICAL RULE - LANGUAGE PRESERVATION:
+$languageInstruction
+- German input → German output
+- English input → English output  
+- Spanish input → Spanish output
+DO NOT TRANSLATE. DO NOT SWITCH LANGUAGES.''';
+
+    // Add content-specific instructions
+    String contentInstructions = '';
+    String sectionStructure = '';
+    String examples = '';
+
+    switch (contentType) {
+      case ContentType.list:
+        contentInstructions = '''
+🚨 CONTENT TYPE: SIMPLE LIST
+This appears to be a list of items (groceries, shopping, tasks, etc.). Create a clean, organized list format.
+
+SUMMARY REQUIREMENTS:
+✓ Keep it simple and organized
+✓ Group similar items together
+✓ Use clear, direct language
+✓ Focus on the items themselves, not analysis''';
+
+        sectionStructure = '''
+[MAIN_TOPIC]
+Brief description of what this list is for.
+
+[ITEMS]
+- Item 1
+- Item 2
+- Item 3
+(Organize items logically, group similar ones together)''';
+
+        examples = '''
+Example for grocery list:
+[MAIN_TOPIC]
+Grocery shopping for breakfast items.
+
+[ITEMS]
+- Dairy: milk, cheese
+- Fruits: kiwis, oranges, lemons
+- Other: bread''';
+
+      case ContentType.learning:
+        contentInstructions = '''
+🚨 CONTENT TYPE: LEARNING CONTENT
+This appears to be educational content, explanations, or learning material. Create a detailed summary with key concepts and examples.
+
+SUMMARY REQUIREMENTS:
+✓ Extract key concepts and explanations
+✓ Include important examples or details
+✓ Organize information logically
+✓ Preserve technical terms and definitions''';
+
+        sectionStructure = '''
+[MAIN_TOPIC]
+Clear description of what is being learned or explained.
+
+[KEY_CONCEPTS]
+- Main concept 1 with brief explanation
+- Main concept 2 with brief explanation
+- Main concept 3 with brief explanation
+
+[EXAMPLES]
+- Example 1 (if mentioned)
+- Example 2 (if mentioned)
+
+[TAKEAWAYS]
+- Key insight or learning point
+- Important detail to remember''';
+
+      case ContentType.productivity:
+        contentInstructions = '''
+🚨 CONTENT TYPE: PRODUCTIVITY/WORK CONTENT
+This appears to be work-related content, meetings, tasks, or projects. Focus on action items and decisions.
+
+SUMMARY REQUIREMENTS:
+✓ Emphasize action items and deadlines
+✓ Capture decisions and next steps
+✓ Include important people and dates
+✓ Focus on what needs to be done''';
+
+        sectionStructure = '''
+[MAIN_TOPIC]
+Brief description of the meeting, project, or work topic.
+
+[KEY_POINTS]
+- Main point or decision
+- Important detail or context
+- Relevant information
+
+[ACTION_ITEMS]
+- Action item 1 with deadline (if mentioned)
+- Action item 2 with deadline (if mentioned)
+
+[NEXT_STEPS]
+- Next step or follow-up required''';
+
+      case ContentType.personal:
+        contentInstructions = '''
+🚨 CONTENT TYPE: PERSONAL REFLECTION
+This appears to be personal thoughts, experiences, or reflections. Capture emotions, insights, and context.
+
+SUMMARY REQUIREMENTS:
+✓ Preserve emotional context and insights
+✓ Include personal experiences and thoughts
+✓ Capture the essence of the reflection
+✓ Maintain the personal tone''';
+
+        sectionStructure = '''
+[MAIN_TOPIC]
+What this personal reflection is about.
+
+[KEY_THOUGHTS]
+- Main thought or insight
+- Important realization
+- Personal observation
+
+[CONTEXT]
+- Background or situation
+- Emotions or feelings mentioned
+- Personal significance''';
+
+      case ContentType.general:
+        contentInstructions = '''
+🚨 CONTENT TYPE: GENERAL CONTENT
+This appears to be general content. Use the standard summary format.
+
+SUMMARY REQUIREMENTS:
+✓ Extract the most important information
+✓ Remove filler words and redundancy
+✓ Clear, direct language
+✓ Preserve all important details, names, dates, numbers''';
+
+        sectionStructure = '''
+[MAIN_TOPIC]
+A single clear sentence describing what this note is about.
+
+[KEY_POINTS]
+- First key point or main idea
+- Second key point or main idea
+- Third key point or main idea
+
+[ACTION_ITEMS]
+- Action item 1
+- Action item 2
+(ONLY include this section if there are clear action items, todos, or things to do. Otherwise OMIT this section entirely.)
+
+[CONTEXT]
+Any additional important context, dates, people mentioned, or relevant details that provide understanding.
+(ONLY include if there's meaningful context. Otherwise OMIT this section.)''';
+    }
+
+    // Add summary length instructions
+    String lengthInstructions = '';
+    switch (summaryLength) {
+      case SummaryLength.concise:
+        lengthInstructions = '✓ Keep summary concise (2-3 key points)';
+        break;
+      case SummaryLength.standard:
+        lengthInstructions = '✓ Standard length summary (3-5 key points)';
+        break;
+      case SummaryLength.comprehensive:
+        lengthInstructions = '✓ Comprehensive summary (5-8 key points, include more detail)';
+        break;
+    }
+
+    return '''$basePrompt
+
+$contentInstructions
+
+🚨 CRITICAL RULE - STRUCTURED FORMAT:
+Output in a SPECIFIC structure using these section markers:
+
+$sectionStructure
+
+SUMMARY REQUIREMENTS:
+$lengthInstructions
+✓ Extract the most important information
+✓ Remove filler words and redundancy
+✓ Clear, direct language
+✓ Preserve all important details, names, dates, numbers
+✓ Each section must be clearly marked with [SECTION_NAME]
+✓ Use plain text, no markdown (no **, no ##, no bullets except - for lists)
+
+$examples
+
+Return ONLY the structured summary with clear section markers. No explanations. No translations.''';
+  }
+
+  /// Get appropriate temperature for content type
+  double _getTemperatureForContentType(ContentType contentType) {
+    switch (contentType) {
+      case ContentType.list:
+        return 0.1;  // Very low for consistent list formatting
+      case ContentType.productivity:
+        return 0.2;  // Low for factual work content
+      case ContentType.learning:
+        return 0.3;  // Balanced for educational content
+      case ContentType.personal:
+        return 0.4;  // Slightly higher for personal reflections
+      case ContentType.general:
+        return 0.3;  // Default balanced temperature
     }
   }
 }

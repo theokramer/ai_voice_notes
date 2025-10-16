@@ -135,7 +135,7 @@ class NoteOrganizationCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Unsichere Zuordnung - Bitte überprüfen',
+                      'Uncertain assignment - Please review',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.orange.shade300,
@@ -179,7 +179,7 @@ class NoteOrganizationCard extends StatelessWidget {
                         foregroundColor: Colors.red.shade400,
                         backgroundColor: Colors.red.shade900.withOpacity(0.2),
                       ),
-                      tooltip: 'Löschen',
+                      tooltip: 'Delete',
                     ),
                     const SizedBox(width: 8),
                     
@@ -189,7 +189,7 @@ class NoteOrganizationCard extends StatelessWidget {
                         onPressed: () => _showFolderPicker(context),
                         icon: const Icon(Icons.folder_outlined, size: 16),
                         label: const Text(
-                          'Ordner ändern',
+                          'Change Folder',
                           style: TextStyle(fontSize: 13),
                         ),
                         style: OutlinedButton.styleFrom(

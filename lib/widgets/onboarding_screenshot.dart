@@ -25,44 +25,26 @@ class OnboardingScreenshot extends StatelessWidget {
         
         return Container(
           constraints: BoxConstraints(
-            maxHeight: isSmallScreen ? screenHeight * 0.35 : screenHeight * 0.4,
-            maxWidth: 300,
+            maxHeight: isSmallScreen ? screenHeight * 0.45 : screenHeight * 0.5,
+            maxWidth: 350,
           ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Glow effect
-              Container(
+          child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusXLarge + 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.primary.withValues(alpha: 0.4),
-                      blurRadius: 40,
-                      spreadRadius: 10,
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Device frame with screenshot
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? AppTheme.radiusMedium : AppTheme.radiusXLarge),
                   border: Border.all(
-                    color: theme.primary.withValues(alpha: 0.6),
-                    width: 3,
+                    color: Colors.white,
+                    width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+                      color: theme.primary.withValues(alpha: 0.15),
+                      blurRadius: isSmallScreen ? 8 : 15,
+                      spreadRadius: isSmallScreen ? 1 : 2,
                     ),
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusXLarge - 2),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? AppTheme.radiusMedium - 2 : AppTheme.radiusXLarge - 2),
                   child: Image.asset(
                     screenshotPath,
                     fit: BoxFit.contain,
@@ -91,8 +73,6 @@ class OnboardingScreenshot extends StatelessWidget {
                   ),
                 ),
               ),
-            ],
-          ),
         )
             .animate()
             .fadeIn(

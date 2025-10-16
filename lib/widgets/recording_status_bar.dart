@@ -641,12 +641,6 @@ class _FolderPickerDialogState extends State<_FolderPickerDialog> {
                                   ],
                                 ],
                               ),
-                              subtitle: Text(
-                                folder.noteCount == 1 
-                                    ? LocalizationService().t('note_count_single')
-                                    : LocalizationService().t('note_count_plural', {'count': folder.noteCount.toString()}),
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
                               trailing: isSelected
                                   ? const Icon(Icons.check, color: Colors.green)
                                   : null,

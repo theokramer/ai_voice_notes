@@ -7,8 +7,8 @@ import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
 import 'waveform_visualizer.dart';
 
-/// Overlay widget that shows voice command hints during recording
-class RecordingOverlay extends StatelessWidget {
+/// Stunning overlay widget that shows voice command hints during recording
+class RecordingOverlay extends StatefulWidget {
   final bool isLocked;
   final bool isPaused;
   final VoidCallback? onStop;
@@ -33,499 +33,432 @@ class RecordingOverlay extends StatelessWidget {
   });
 
   @override
+  State<RecordingOverlay> createState() => _RecordingOverlayState();
+}
+
+class _RecordingOverlayState extends State<RecordingOverlay> with TickerProviderStateMixin {
+  late PageController _pageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.92);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final settingsProvider = context.read<SettingsProvider>();
     final currentLanguage = settingsProvider.preferredLanguage;
     final themeConfig = settingsProvider.currentThemeConfig;
 
     // Get voice command examples based on current language
-    final examples = _getVoiceCommandExamples(currentLanguage);
+    final commands = _getVoiceCommands(currentLanguage);
 
     // Format duration as M:SS
-    final minutes = recordingDuration.inMinutes;
-    final seconds = recordingDuration.inSeconds % 60;
+    final minutes = widget.recordingDuration.inMinutes;
+    final seconds = widget.recordingDuration.inSeconds % 60;
     final durationText = '${minutes}:${seconds.toString().padLeft(2, '0')}';
 
     return Positioned.fill(
       child: Container(
         color: Colors.black.withOpacity(0.5),
-      child: BackdropFilter(
+        child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Stack(
-          children: [
-              // Main content area
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    children: [
-                      // Status with timer and save indicator (top)
-                      _buildCompactStatusBar(context, themeConfig, durationText),
-                      
-                      const SizedBox(height: 28),
-                      
-                      // Voice Commands Available (persistent, no fade out)
-                      _buildVoiceCommands(context, themeConfig, examples),
-                      
-                      const SizedBox(height: 28),
-                      
-                      // Action buttons (ONLY when locked)
-                      if (isLocked) ...[
-                        _buildActionButtons(context, themeConfig),
-                        const SizedBox(height: 28),
-                      ],
-                      
-                      const Spacer(),
-                      
-                      // Waveform visualization (at bottom above mic)
-                      _buildWaveform(context, themeConfig),
-                      
-                      const SizedBox(height: 100), // Space for microphone button above
-                    ],
-                  ),
-                ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(28.0),
+              child: Column(
+                children: [
+                  // Enhanced Status Bar
+                  _buildEnhancedStatusBar(context, themeConfig, durationText),
+                  
+                  const SizedBox(height: 28),
+                  
+                  // Voice Commands - Horizontal Scroll (No Cropping!)
+                  _buildHorizontalVoiceCommands(context, themeConfig, commands),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // Professional Action Buttons (ONLY when locked)
+                  if (widget.isLocked) ...[
+                    _buildStunningActionButtons(context, themeConfig),
+                    const SizedBox(height: 24),
+                  ],
+                  
+                  const Spacer(),
+                  
+                  // Waveform Visualization
+                  _buildHeroWaveform(context, themeConfig),
+                  
+                  const SizedBox(height: 140), // Space for microphone button
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCompactStatusBar(BuildContext context, ThemeConfig themeConfig, String durationText) {
+  /// Enhanced status bar with better animations and visual hierarchy
+  Widget _buildEnhancedStatusBar(BuildContext context, ThemeConfig themeConfig, String durationText) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: themeConfig.accentLight.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(16),
+        color: AppTheme.glassRecordingSurface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         border: Border.all(
-          color: themeConfig.accentLight.withOpacity(0.3),
+          color: themeConfig.accentLight.withOpacity(0.25),
           width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-          // Recording indicator
-                        Container(
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Subtle pulsing recording indicator
+          Container(
             width: 6,
             height: 6,
             decoration: BoxDecoration(
               color: themeConfig.accentLight,
-                            shape: BoxShape.circle,
-                          ),
-                        ).animate(onPlay: (controller) => controller.repeat())
-                            .fadeIn(duration: 500.ms)
-                            .then()
-                            .fadeOut(duration: 500.ms),
-                        const SizedBox(width: 8),
-          // Compact status text
-                        Text(
-            isPaused 
+              shape: BoxShape.circle,
+            ),
+          ).animate(onPlay: (controller) => controller.repeat())
+              .fadeIn(duration: 600.ms)
+              .then()
+              .fadeOut(duration: 600.ms),
+          
+          const SizedBox(width: 10),
+          
+          // Status text - professional size
+          Text(
+            widget.isPaused 
                 ? 'Paused $durationText'
-                : isLocked 
+                : widget.isLocked 
                     ? 'Locked $durationText' 
                     : 'Recording $durationText',
-            style: TextStyle(
+            style: const TextStyle(
               color: AppTheme.textPrimary,
-              fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-          const SizedBox(width: 8),
-          // Save status indicator (smaller)
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
+          ),
+          
+          const SizedBox(width: 10),
+          
+          // Auto-save indicator
           Icon(
-            Icons.cloud_upload_outlined,
-            size: 14,
+            Icons.cloud_done_outlined,
+            size: 16,
             color: themeConfig.accentLight.withOpacity(0.7),
-          ).animate(onPlay: (controller) => controller.repeat())
-              .scale(begin: const Offset(1.0, 1.0), end: const Offset(1.1, 1.1), duration: 1000.ms)
-              .then()
-              .scale(begin: const Offset(1.1, 1.1), end: const Offset(1.0, 1.0), duration: 1000.ms),
+          ),
         ],
       ),
-    );
+    )
+        .animate()
+        .fadeIn(duration: 500.ms, curve: Curves.easeOutCubic)
+        .slideY(begin: -0.2, end: 0, duration: 500.ms, curve: Curves.easeOutCubic);
   }
 
-
-  Widget _buildVoiceCommands(BuildContext context, ThemeConfig themeConfig, List<String> examples) {
-    // Parse commands with their icons
-    final commands = _parseCommandExamples(examples);
-    
+  /// Horizontal scrollable voice commands with full text visibility
+  Widget _buildHorizontalVoiceCommands(BuildContext context, ThemeConfig themeConfig, List<_VoiceCommand> commands) {
     return Column(
       children: [
-        // Compact Header with instruction
+        // Header with instruction
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: themeConfig.accentLight.withOpacity(0.1),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                themeConfig.accentLight.withOpacity(0.15),
+                themeConfig.accentDark.withOpacity(0.1),
+              ],
+            ),
             borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
             border: Border.all(
               color: themeConfig.accentLight.withOpacity(0.3),
-              width: 1,
+              width: 1.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: themeConfig.accentLight.withOpacity(0.1),
+                blurRadius: 12,
+                spreadRadius: 0,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: Column(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.mic_rounded,
-                    color: themeConfig.accentLight,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-              Text(
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: themeConfig.accentLight.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.mic_rounded,
+                  color: themeConfig.accentLight,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
                 'Voice Commands',
                 style: TextStyle(
                   color: AppTheme.textPrimary,
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.2,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Say commands after recording starts',
-            style: TextStyle(
-              color: AppTheme.textSecondary.withOpacity(0.8),
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-            ],
-          ),
         )
             .animate()
-            .fadeIn(duration: 600.ms, curve: Curves.easeOutCubic)
-            .slideY(begin: -0.1, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
+            .fadeIn(duration: 500.ms, curve: Curves.easeOutCubic)
+            .slideY(begin: -0.15, end: 0, duration: 500.ms, curve: Curves.easeOutCubic),
         
-        // Compact Command Cards in rows
-        _buildCompactCommandCards(themeConfig, commands),
-      ],
-    );
-  }
-
-  Widget _buildCompactCommandCards(ThemeConfig themeConfig, List<_VoiceCommandDisplay> commands) {
-    final nonTipCommands = commands.where((cmd) => !cmd.isTip).toList();
-    
-    return Column(
-      children: [
-        // All three commands in a single row with equal heights
-        IntrinsicHeight(
-          child: Row(
-            children: [
-              Expanded(
-                child: _buildCompactCommandCard(themeConfig, nonTipCommands[0])
-                    .animate(delay: 0.ms)
-                    .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
-                    .slideX(begin: -0.2, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildCompactCommandCard(themeConfig, nonTipCommands[1])
-                    .animate(delay: 80.ms)
-                    .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
-                    .slideY(begin: -0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildCompactCommandCard(themeConfig, nonTipCommands[2])
-                    .animate(delay: 160.ms)
-                    .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
-                    .slideX(begin: 0.2, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
-              ),
-            ],
+        const SizedBox(height: 14),
+        
+        // Horizontal PageView for commands
+        SizedBox(
+          height: 135,
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (page) {
+              setState(() {
+                _currentPage = page;
+              });
+            },
+            itemCount: commands.length,
+            itemBuilder: (context, index) {
+              return _buildCommandCard(
+                context, 
+                themeConfig, 
+                commands[index],
+                index,
+              );
+            },
           ),
         ),
-        const SizedBox(height: 16),
-        // Combination note
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          decoration: BoxDecoration(
-            color: themeConfig.accentLight.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-            border: Border.all(
-              color: themeConfig.accentLight.withOpacity(0.15),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.lightbulb_outline,
-                    color: themeConfig.accentLight.withOpacity(0.7),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'You can combine commands:',
-                    style: TextStyle(
-                      color: AppTheme.textSecondary.withOpacity(0.8),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
+        
+        const SizedBox(height: 10),
+        
+        // Page indicators
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            commands.length,
+            (index) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: _currentPage == index ? 20 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: _currentPage == index
+                    ? themeConfig.accentLight
+                    : themeConfig.accentLight.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(3),
               ),
-              const SizedBox(height: 6),
-              Text(
-                '"title Meeting in folder Work"',
-                style: TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
+            ).animate(target: _currentPage == index ? 1 : 0)
+                .scaleX(duration: 300.ms, curve: Curves.easeOutCubic),
           ),
-        )
-            .animate(delay: 240.ms)
-            .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
-            .slideY(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic),
+        ),
       ],
     );
   }
 
-  Widget _buildCompactCommandCard(ThemeConfig themeConfig, _VoiceCommandDisplay cmd) {
+  /// Individual command card with full text (no cropping!)
+  Widget _buildCommandCard(BuildContext context, ThemeConfig themeConfig, _VoiceCommand command, int index) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      margin: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: themeConfig.accentDark.withOpacity(0.6),
-        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-        border: Border.all(
-          color: themeConfig.accentLight.withOpacity(0.2),
-          width: 1,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            themeConfig.accentLight.withOpacity(0.12),
+            themeConfig.accentDark.withOpacity(0.08),
+          ],
         ),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(
+          color: themeConfig.accentLight.withOpacity(0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: themeConfig.accentLight.withOpacity(0.08),
+            blurRadius: 12,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Command text - reasonable size
+          // Icon with enhanced background
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: themeConfig.accentLight.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              command.icon,
+              color: themeConfig.accentLight,
+              size: 20,
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Command text - full visibility
           Text(
-            cmd.command,
-            style: TextStyle(
+            command.command,
+            style: const TextStyle(
               color: AppTheme.textPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.1,
-              height: 1.2,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          
-          // Description - reasonable size
-          Text(
-            cmd.description,
-            style: TextStyle(
-              color: AppTheme.textSecondary.withOpacity(0.85),
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.05,
               height: 1.3,
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            overflow: TextOverflow.visible,
+          ),
+          
+          const SizedBox(height: 6),
+          
+          // Description - full visibility
+          Flexible(
+            child: Text(
+              command.description,
+              style: TextStyle(
+                color: AppTheme.textSecondary.withOpacity(0.9),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.05,
+                height: 1.35,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.visible,
+            ),
           ),
         ],
       ),
-    );
-  }
-  
-  List<_VoiceCommandDisplay> _parseCommandExamples(List<String> examples) {
-    final commands = <_VoiceCommandDisplay>[];
-    
-    for (final example in examples) {
-      if (example.isEmpty) continue;
-      
-      // Check if it's the tip
-      if (example.startsWith('💡')) {
-        commands.add(_VoiceCommandDisplay(
-          isTip: true,
-          text: example.substring(2).trim(),
-          icon: Icons.lightbulb,
-          command: '',
-          description: '',
-        ));
-        continue;
-      }
-      
-      // Parse command format: "command" → description
-      final parts = example.split('→');
-      if (parts.length != 2) continue;
-      
-      final commandPart = parts[0].trim().replaceAll('"', '').replaceAll('•', '').trim();
-      final description = parts[1].trim();
-      
-      // Determine icon based on description/command
-      IconData icon;
-      if (commandPart.contains('neu') || commandPart.contains('new') || 
-          commandPart.contains('nouvelle') || commandPart.contains('nuevo')) {
-        icon = Icons.create_new_folder_outlined;
-      } else if (commandPart.contains('ergänzung') || commandPart.contains('addition') || 
-                 commandPart.contains('ajout') || commandPart.contains('adición') ||
-                 commandPart.contains('letzten') || commandPart.contains('last') ||
-                 commandPart.contains('última') || commandPart.contains('dernière')) {
-        icon = Icons.add_circle_outline;
-      } else if (commandPart.contains('titel') || commandPart.contains('title') || 
-                 commandPart.contains('titre') || commandPart.contains('título')) {
-        icon = Icons.title;
-      } else if (commandPart.contains('ordner') || commandPart.contains('folder') || 
-                 commandPart.contains('dossier') || commandPart.contains('carpeta')) {
-        icon = Icons.folder_outlined;
-      } else {
-        icon = Icons.layers_outlined; // For combined commands
-      }
-      
-      commands.add(_VoiceCommandDisplay(
-        isTip: false,
-        text: commandPart,
-        icon: icon,
-        command: commandPart.split('/').first.trim(), // Take first variant for display
-        description: description,
-      ));
-    }
-    
-    return commands;
+    )
+        .animate(delay: (index * 80).ms)
+        .fadeIn(duration: 400.ms, curve: Curves.easeOutCubic)
+        .slideX(
+          begin: index.isEven ? -0.2 : 0.2, 
+          end: 0, 
+          duration: 400.ms, 
+          curve: Curves.easeOutCubic,
+        );
   }
 
-  Widget _buildActionButtons(BuildContext context, ThemeConfig themeConfig) {
+  /// Professional action buttons with clear labels
+  Widget _buildStunningActionButtons(BuildContext context, ThemeConfig themeConfig) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        // Discard button (icon only)
-        _buildCompactActionButton(
+        // Discard button
+        _buildPremiumActionButton(
           context: context,
           themeConfig: themeConfig,
           icon: Icons.delete_outline,
-          onPressed: () => _showDiscardConfirmation(context),
+          label: 'Discard',
+          onPressed: () => _showModernDiscardDialog(context, themeConfig),
           isDestructive: true,
         ),
-        // Pause/Play button (icon only)
-        _buildCompactActionButton(
+        
+        // Pause/Resume button
+        _buildPremiumActionButton(
           context: context,
           themeConfig: themeConfig,
-          icon: isPaused ? Icons.play_arrow : Icons.pause,
-          onPressed: isPaused ? onResume : onPause,
+          icon: widget.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+          label: widget.isPaused ? 'Resume' : 'Pause',
+          onPressed: widget.isPaused ? widget.onResume : widget.onPause,
           isDestructive: false,
         ),
-        // Stop button (icon only)
-        _buildCompactActionButton(
+        
+        // Stop button
+        _buildPremiumActionButton(
           context: context,
           themeConfig: themeConfig,
-          icon: Icons.stop,
-          onPressed: onStop,
+          icon: Icons.stop_rounded,
+          label: 'Stop',
+          onPressed: widget.onStop,
           isDestructive: false,
         ),
       ],
-    );
+    )
+        .animate()
+        .fadeIn(duration: 500.ms, curve: Curves.easeOutCubic)
+        .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOutCubic);
   }
 
-  Widget _buildCompactActionButton({
+  /// Professional action button with solid colors and clear label
+  Widget _buildPremiumActionButton({
     required BuildContext context,
     required ThemeConfig themeConfig,
     required IconData icon,
+    required String label,
     required VoidCallback? onPressed,
     required bool isDestructive,
   }) {
-    final backgroundColor = isDestructive 
-        ? Colors.red.withOpacity(0.2)
-        : themeConfig.accentLight.withOpacity(0.2);
-    final borderColor = isDestructive 
-        ? Colors.red.withOpacity(0.5)
-        : themeConfig.accentLight.withOpacity(0.5);
-    final iconColor = isDestructive 
-        ? Colors.red
-        : themeConfig.accentLight;
-
     return GestureDetector(
       onTap: onPressed,
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: borderColor, width: 1),
-        ),
-        child: Icon(
-          icon,
-          color: iconColor,
-          size: 24,
-        ),
-      ),
-    );
-  }
-
-
-  Widget _buildWaveform(BuildContext context, ThemeConfig themeConfig) {
-    return Container(
-      height: 120, // Increased height for prominence
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: VoiceMemoWaveform(
-        isActive: !isPaused, // Don't animate when paused
-        height: 120,
-        color: themeConfig.accentLight,
-        currentAmplitude: amplitude,
-        amplitudeHistory: amplitudeHistory,
-      ),
-    );
-  }
-
-  void _showDiscardConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.glassStrongSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          side: const BorderSide(color: AppTheme.glassBorder),
-        ),
-        title: Text(
-          'Discard Recording?',
-          style: TextStyle(
-            color: AppTheme.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-        ),
-        content: Text(
-          'This will permanently delete the current recording.',
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-            fontSize: 14,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppTheme.textSecondary),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: isDestructive 
+                  ? Colors.red.withOpacity(0.2)
+                  : themeConfig.accentLight.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDestructive 
+                    ? Colors.red.withOpacity(0.5)
+                    : themeConfig.accentLight.withOpacity(0.4),
+                width: 1.5,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: isDestructive 
+                  ? Colors.red.shade300
+                  : themeConfig.accentLight,
+              size: 26,
             ),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              onDiscard?.call();
-            },
-            child: const Text(
-              'Discard',
-              style: TextStyle(color: Colors.red),
+          
+          const SizedBox(height: 6),
+          
+          // Label
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.1,
             ),
           ),
         ],
@@ -533,48 +466,263 @@ class RecordingOverlay extends StatelessWidget {
     );
   }
 
-  List<String> _getVoiceCommandExamples(AppLanguage? language) {
-    language ??= AppLanguage.english; // Default fallback
+  /// Waveform visualization with professional styling
+  Widget _buildHeroWaveform(BuildContext context, ThemeConfig themeConfig) {
+    return Container(
+      height: 120,
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.glassRecordingSurface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(
+          color: themeConfig.accentLight.withOpacity(0.25),
+          width: 1,
+        ),
+      ),
+      child: VoiceMemoWaveform(
+        isActive: !widget.isPaused,
+        height: 120,
+        color: themeConfig.accentLight,
+        currentAmplitude: widget.amplitude,
+        amplitudeHistory: widget.amplitudeHistory,
+      ),
+    )
+        .animate()
+        .fadeIn(duration: 500.ms, curve: Curves.easeOutCubic)
+        .slideY(begin: 0.2, end: 0, duration: 500.ms, curve: Curves.easeOutCubic);
+  }
+
+  /// Professional discard confirmation dialog
+  void _showModernDiscardDialog(BuildContext context, ThemeConfig themeConfig) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.7),
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xEE1A1F2E),
+              borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+              border: Border.all(
+                color: themeConfig.accentLight.withOpacity(0.25),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Warning icon - subtle
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.warning_rounded,
+                    color: Colors.red.shade300,
+                    size: 28,
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Title
+                const Text(
+                  'Discard Recording?',
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 10),
+                
+                // Description
+                Text(
+                  'This will permanently delete the current recording. This action cannot be undone.',
+                  style: TextStyle(
+                    color: AppTheme.textSecondary.withOpacity(0.85),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                
+                const SizedBox(height: 24),
+                
+                // Action buttons
+                Row(
+                  children: [
+                    // Cancel button
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: AppTheme.glassStrongSurface,
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                            border: Border.all(
+                              color: AppTheme.glassBorder.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.1,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(width: 12),
+                    
+                    // Discard button
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          widget.onDiscard?.call();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                            border: Border.all(
+                              color: Colors.red.withOpacity(0.5),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            'Discard',
+                            style: TextStyle(
+                              color: Colors.red.shade300,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.1,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          )
+              .animate()
+              .fadeIn(duration: 250.ms)
+              .scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0), duration: 250.ms, curve: Curves.easeOutCubic),
+        ),
+      ),
+    );
+  }
+
+  /// Get voice commands based on language
+  List<_VoiceCommand> _getVoiceCommands(AppLanguage? language) {
+    language ??= AppLanguage.english;
+    
     switch (language) {
       case AppLanguage.german:
         return [
-          '"ergänzung" / "zur letzten notiz" → An die letzte Notiz anhängen',
-          '"titel [Titel]" → Titel für diese Notiz setzen',
-          '"ordner [Name]" → In Ordner speichern',
+          _VoiceCommand(
+            icon: Icons.add_circle_outline,
+            command: '"Addition" / "Add to last note"',
+            description: 'Append to the last note',
+          ),
+          _VoiceCommand(
+            icon: Icons.title,
+            command: '"Title [title]"',
+            description: 'Set title for this note',
+          ),
+          _VoiceCommand(
+            icon: Icons.folder_outlined,
+            command: '"Folder [name]"',
+            description: 'Save to folder',
+          ),
         ];
       case AppLanguage.spanish:
         return [
-          '"adición" / "añadir a la última" → Añadir a la última nota',
-          '"título [título]" → Establecer título para esta nota',
-          '"carpeta [nombre]" → Guardar en carpeta',
+          _VoiceCommand(
+            icon: Icons.add_circle_outline,
+            command: '"Addition" / "Add to last note"',
+            description: 'Append to the last note',
+          ),
+          _VoiceCommand(
+            icon: Icons.title,
+            command: '"Title [title]"',
+            description: 'Set title for this note',
+          ),
+          _VoiceCommand(
+            icon: Icons.folder_outlined,
+            command: '"Folder [name]"',
+            description: 'Save to folder',
+          ),
         ];
       case AppLanguage.french:
         return [
-          '"ajout" / "ajouter à dernière note" → Ajouter à la dernière note',
-          '"titre [titre]" → Définir titre pour cette note',
-          '"dossier [nom]" → Sauvegarder dans dossier',
+          _VoiceCommand(
+            icon: Icons.add_circle_outline,
+            command: '"Addition" / "Add to last note"',
+            description: 'Append to the last note',
+          ),
+          _VoiceCommand(
+            icon: Icons.title,
+            command: '"Title [title]"',
+            description: 'Set title for this note',
+          ),
+          _VoiceCommand(
+            icon: Icons.folder_outlined,
+            command: '"Folder [name]"',
+            description: 'Save to folder',
+          ),
         ];
       case AppLanguage.english:
         return [
-          '"addition" / "add to last note" → Append to the last note',
-          '"title [title]" → Set title for this note',
-          '"folder [name]" → Save to folder',
+          _VoiceCommand(
+            icon: Icons.add_circle_outline,
+            command: '"Addition" / "Add to last note"',
+            description: 'Append to the last note',
+          ),
+          _VoiceCommand(
+            icon: Icons.title,
+            command: '"Title [title]"',
+            description: 'Set title for this note',
+          ),
+          _VoiceCommand(
+            icon: Icons.folder_outlined,
+            command: '"Folder [name]"',
+            description: 'Save to folder',
+          ),
         ];
     }
   }
 }
 
-/// Helper class to parse and display voice commands
-class _VoiceCommandDisplay {
-  final bool isTip;
-  final String text;
+/// Helper class for voice commands
+class _VoiceCommand {
   final IconData icon;
   final String command;
   final String description;
   
-  _VoiceCommandDisplay({
-    required this.isTip,
-    required this.text,
+  _VoiceCommand({
     required this.icon,
     required this.command,
     required this.description,

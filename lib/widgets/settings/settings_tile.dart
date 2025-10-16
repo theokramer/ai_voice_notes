@@ -55,14 +55,17 @@ class SettingsTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
                   ),
                   const SizedBox(height: AppTheme.spacing4),
                   Text(
                     subtitle,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.textTertiary,
-                          fontSize: 13,
+                          fontSize: 12,
                         ),
                   ),
                 ],
@@ -138,7 +141,8 @@ class SettingsToggleTile extends StatelessWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
                         ),
                   ),
                   const SizedBox(height: 4),
@@ -146,6 +150,7 @@ class SettingsToggleTile extends StatelessWidget {
                     subtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppTheme.textSecondary,
+                          fontSize: 12,
                         ),
                   ),
                 ],

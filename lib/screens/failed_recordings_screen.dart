@@ -32,9 +32,7 @@ class _FailedRecordingsScreenState extends State<FailedRecordingsScreen> {
         final themeConfig = settingsProvider.currentThemeConfig;
         return Scaffold(
           body: AnimatedBackground(
-            style: settingsProvider.settings.backgroundStyle,
             themeConfig: themeConfig,
-            isSimpleMode: settingsProvider.isSimpleMode,
             child: SafeArea(
               top: false,
               child: CustomScrollView(

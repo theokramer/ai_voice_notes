@@ -298,12 +298,6 @@ class _QuickMoveDialogState extends State<QuickMoveDialog> {
                         ],
                       ],
                     ),
-                    subtitle: Text(
-                      folder.noteCount == 1 
-                          ? LocalizationService().t('note_count_single')
-                          : LocalizationService().t('note_count_plural', {'count': folder.noteCount.toString()}),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
                     trailing: isSelected
                         ? Icon(Icons.check, color: Theme.of(context).primaryColor)
                         : null,
